@@ -45,7 +45,7 @@ W10–W15 add product-required validation, comment/trailing-comma support, Beiji
 |---|---|
 | Read first workbook sheet, remove first header row and first index column | E12 verifies structural header/index removal; current Dart decoder intentionally rejects multiple sheets |
 | Empty spreadsheet cells become empty timetable slots | E13 |
-| Default omits final Saturday/Sunday columns | E14 intentionally retains both days per product requirement |
+| Default omits final Saturday/Sunday columns | E14 intentionally omits both days per product requirement |
 | Coordinates correspond to period rows and weekday columns | E12, E15, E16, E20 |
 | Parse title, room, remark, main frequency, and exam | E01, all three recognized frequency tokens |
 | Normalize halfwidth/fullwidth delimiters | E02 |
@@ -63,7 +63,7 @@ W10–W15 add product-required validation, comment/trailing-comma support, Beiji
 
 - E10 independently represents **both note forms**, multiple room alternatives, and unrecognized tutorial syntax.
 - E25 covers a single room, repeated parent occurrences, occupied destination, out-of-bounds period, and weekend destination. It checks original records and stable identity retention.
-- The native safe expectation is explicit derived meetings **or a review issue**, never silently accepting an unscheduled tutorial. No arbitrary room choice or destructive overwrite is allowed. These tests do not claim tutorial expansion/deduplication is implemented: current production emits no derived meetings or issues for these notes, so the seven tutorial cases fail.
+- The native safe expectation is explicit derived meetings **or a review issue**, never silently accepting an unscheduled tutorial. No arbitrary room choice or destructive overwrite is allowed. Current production expands unambiguous weekday tutorials and presents ambiguous, out-of-range, multi-room, or weekend tutorial notes for correction.
 
 ### Table and rendering behavior
 
@@ -85,7 +85,7 @@ The native equivalents exposed by the domain are deterministic ordering, period/
 - `cli.py` always generates XLSX first. PNG is Windows-only; requesting it elsewhere prints an error and exits the generation loop before normal cleanup. On Windows it can open the PNG, remove intermediate XLSX for PNG-only output, and rerun generation with new choices. Input stem uses the segment before the first dot. No automated schedule download is implemented.
 - Build scripts bake dependency requirements and package a Windows one-file executable with icon, native converter libraries, and version metadata. Requirements/lockfiles describe dependencies; output directory placeholder is not runtime behavior.
 
-E21 guards paired detail-row preservation or explicit fail-closed handling. Dedicated parser tests cover recognized paired layouts. E22–E24 protect unmapped populated columns, immutable candidate bytes, and invalid workbook signatures. Exact upstream spreadsheet output geometry, dialogs, PNG conversion, and native packaging remain outside this application's domain/data API. Native widget tests cover adopted Flutter presentation semantics instead.
+E21 guards paired detail-row preservation or explicit fail-closed handling. Dedicated parser tests cover recognized paired layouts. E22–E24 protect unmapped populated columns, immutable candidate bytes, and invalid workbook signatures. The application independently exports its native five-weekday timetable as PNG or XLSX; it does not copy the upstream output geometry or conversion implementation.
 
 ## Execution and defects
 

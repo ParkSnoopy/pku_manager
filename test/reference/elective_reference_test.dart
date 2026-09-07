@@ -141,14 +141,11 @@ void main() {
     expect(c.records, hasLength(1));
     expect(c.periodCount, 2);
   });
-  test(
-    'E14 Saturday and Sunday remain present despite upstream weekend omission',
-    () {
-      final saturday = _row('1', day: 6, value: _plain)..[7] = _plain;
-      final c = cells([_header, saturday]);
-      expect(c.records.map((r) => r.meeting.weekday), [6, 7]);
-    },
-  );
+  test('E14 Saturday and Sunday source cells are ignored', () {
+    final saturday = _row('1', day: 6, value: _plain)..[7] = _plain;
+    final c = cells([_header, saturday]);
+    expect(c.records, isEmpty);
+  });
   test('E15 all twelve teaching periods are retained including evening', () {
     final c = cells([
       _header,
@@ -223,10 +220,10 @@ void main() {
   });
   test('E20 header-driven coordinates tolerate column reordering', () {
     final h = [..._header];
-    h[1] = '星期日';
-    h[7] = '星期一';
+    h[1] = '星期五';
+    h[5] = '星期一';
     final c = cells([h, _row('1', day: 1, value: _plain)]);
-    expect(c.records.single.meeting.weekday, 7);
+    expect(c.records.single.meeting.weekday, 5);
     expect(c.records.single.meeting.sourceId, 'sheet:0/row:1/column:1');
   });
   test(

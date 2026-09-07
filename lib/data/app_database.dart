@@ -8,8 +8,14 @@ class AppDatabase {
     database.execute('PRAGMA foreign_keys = ON');
     database.execute('PRAGMA busy_timeout = 5000');
     database.execute('PRAGMA synchronous = FULL');
-    final version = database.select('PRAGMA user_version').first.values.first;
-    if (version != 0 && version != 1 && version != 2 && version != 3) {
+    final version =
+        database.select('PRAGMA user_version').first.values.first as int;
+    if (version != 0 &&
+        version != 1 &&
+        version != 2 &&
+        version != 3 &&
+        version != 4 &&
+        version != 5) {
       database.close();
       throw const FormatException('Unsupported database version');
     }
@@ -60,10 +66,42 @@ PRAGMA user_version = 2;
         database.execute('''
 CREATE TABLE appearance(
  id INTEGER PRIMARY KEY CHECK(id = 1),
- dark INTEGER NOT NULL CHECK(dark IN (0, 1)),
  accent INTEGER NOT NULL,
- palette_seed INTEGER NOT NULL CHECK(palette_seed >= 0));
-PRAGMA user_version = 3;
+ palette_seed INTEGER NOT NULL CHECK(palette_seed >= 0),
+ language TEXT NOT NULL CHECK(language IN ('ko', 'en', 'zh')));
+PRAGMA user_version = 4;
+''');
+      });
+    }
+    if (version == 3) {
+      transaction(() {
+        database.execute('''
+CREATE TABLE appearance_new(
+ id INTEGER PRIMARY KEY CHECK(id = 1),
+ accent INTEGER NOT NULL,
+ palette_seed INTEGER NOT NULL CHECK(palette_seed >= 0),
+ language TEXT NOT NULL CHECK(language IN ('ko', 'en', 'zh')));
+INSERT INTO appearance_new(id, accent, palette_seed, language)
+ SELECT id, accent, palette_seed, 'ko' FROM appearance;
+DROP TABLE appearance;
+ALTER TABLE appearance_new RENAME TO appearance;
+PRAGMA user_version = 4;
+''');
+      });
+    }
+    if (version <= 4) {
+      transaction(() {
+        database.execute('''
+CREATE TABLE user_meetings(
+ source INTEGER NOT NULL REFERENCES sources(id),
+ identity TEXT NOT NULL, name TEXT NOT NULL,
+ weekday INTEGER NOT NULL CHECK(weekday BETWEEN 1 AND 5),
+ first_period INTEGER NOT NULL CHECK(first_period > 0),
+ last_period INTEGER NOT NULL CHECK(last_period >= first_period),
+ room TEXT NOT NULL, frequency TEXT NOT NULL,
+ note TEXT NOT NULL, exam TEXT NOT NULL,
+ PRIMARY KEY(source, identity));
+PRAGMA user_version = 5;
 ''');
       });
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_strings.dart';
 import 'appearance_controller.dart';
 
 const appearanceAccents = <Color>[
@@ -24,17 +25,17 @@ class SettingsPage extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          Text('Settings', style: Theme.of(context).textTheme.headlineMedium),
+          Text(
+            AppStrings.of(context).text(AppText.settings),
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
           const SizedBox(height: 32),
-          Text('Theme', style: Theme.of(context).textTheme.titleLarge),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Dark'),
-            value: controller.dark,
-            onChanged: controller.setDark,
+          Text(
+            AppStrings.of(context).text(AppText.theme),
+            style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
-          const Text('Accent color'),
+          Text(AppStrings.of(context).text(AppText.accentColor)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 12,
@@ -62,10 +63,30 @@ class SettingsPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 32),
-          FilledButton.tonalIcon(
-            onPressed: controller.rollPalette,
-            icon: const Icon(Icons.casino_outlined),
-            label: const Text('Roll timetable colors'),
+          Text(
+            AppStrings.of(context).text(AppText.language),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<AppLanguage>(
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment(
+                value: AppLanguage.ko,
+                label: Text(AppStrings.of(context).text(AppText.korean)),
+              ),
+              ButtonSegment(
+                value: AppLanguage.en,
+                label: Text(AppStrings.of(context).text(AppText.english)),
+              ),
+              ButtonSegment(
+                value: AppLanguage.zhHans,
+                label: Text(AppStrings.of(context).text(AppText.chinese)),
+              ),
+            ],
+            selected: {controller.language},
+            onSelectionChanged: (values) =>
+                controller.setLanguage(values.single),
           ),
         ],
       ),

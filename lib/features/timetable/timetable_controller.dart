@@ -104,6 +104,26 @@ class TimetableController extends ChangeNotifier {
     _notify();
   }
 
+  void saveMeeting(CourseMeeting meeting) {
+    try {
+      timetable = schedules.saveMeeting(meeting);
+      error = null;
+    } catch (_) {
+      error = 'Course changes could not be saved.';
+    }
+    _notify();
+  }
+
+  void removeUserMeeting(String sourceId) {
+    try {
+      timetable = schedules.removeUserMeeting(sourceId);
+      error = null;
+    } catch (_) {
+      error = 'Course could not be removed.';
+    }
+    _notify();
+  }
+
   void _notify() {
     if (!_disposed) notifyListeners();
   }

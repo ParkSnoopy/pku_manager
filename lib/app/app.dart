@@ -10,13 +10,21 @@ import '../data/week_config_parser.dart';
 import '../data/week_config_repository.dart';
 import '../domain/semester.dart';
 import '../features/timetable/timetable_controller.dart';
+import '../features/timetable/timetable_export.dart';
 import '../features/timetable/timetable_page.dart';
 import '../features/settings/appearance_controller.dart';
+import '../l10n/app_strings.dart';
 
 class PkuManagerApp extends StatefulWidget {
-  const PkuManagerApp({super.key, this.controller, this.appearance});
+  const PkuManagerApp({
+    super.key,
+    this.controller,
+    this.appearance,
+    this.exporter,
+  });
   final TimetableController? controller;
   final AppearanceController? appearance;
+  final TimetableExporter? exporter;
   @override
   State<PkuManagerApp> createState() => _PkuManagerAppState();
 }
@@ -25,12 +33,14 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
   AppDatabase? _database;
   TimetableController? _controller;
   late AppearanceController _appearance;
+  late final TimetableExporter _exporter;
   String? _failure;
   @override
   void initState() {
     super.initState();
     _appearance =
         widget.appearance ?? AppearanceController(MemoryAppearanceStore());
+    _exporter = widget.exporter ?? TimetableExporter(NativeExportFileWriter());
     if (widget.controller != null) {
       _controller = widget.controller;
     } else {
@@ -78,11 +88,16 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
     builder: (context, _) => MaterialApp(
       title: 'PKU Manager',
       debugShowCheckedModeBanner: false,
-      themeMode: _appearance.dark ? ThemeMode.dark : ThemeMode.light,
-      theme: _theme(Brightness.light),
-      darkTheme: _theme(Brightness.dark),
+      locale: _appearance.language.locale,
+      supportedLocales: AppStrings.supportedLocales,
+      localizationsDelegates: AppStrings.localizationsDelegates,
+      theme: _theme(),
       home: _controller != null
-          ? TimetablePage(controller: _controller!, appearance: _appearance)
+          ? TimetablePage(
+              controller: _controller!,
+              appearance: _appearance,
+              exporter: _exporter,
+            )
           : Scaffold(
               body: Center(
                 child: _failure == null
@@ -93,10 +108,10 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
     ),
   );
 
-  ThemeData _theme(Brightness brightness) {
+  ThemeData _theme() {
     final scheme = ColorScheme.fromSeed(
       seedColor: _appearance.accent,
-      brightness: brightness,
+      brightness: Brightness.light,
     );
     return ThemeData(
       useMaterial3: true,

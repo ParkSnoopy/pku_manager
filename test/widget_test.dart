@@ -12,6 +12,8 @@ import 'package:pku_manager/domain/schedule_import.dart';
 import 'package:pku_manager/domain/semester.dart';
 import 'package:pku_manager/features/timetable/timetable_controller.dart';
 import 'package:pku_manager/features/timetable/timetable_grid.dart';
+import 'package:pku_manager/features/settings/appearance_controller.dart';
+import 'package:pku_manager/l10n/app_strings.dart';
 
 class Picker implements SchedulePicker {
   @override
@@ -39,7 +41,12 @@ void main() {
       addTearDown(() {
         db.close();
       });
-      await tester.pumpWidget(PkuManagerApp(controller: controller));
+      final appearance = AppearanceController(MemoryAppearanceStore())
+        ..setLanguage(AppLanguage.en);
+      await tester.pumpWidget(
+        PkuManagerApp(controller: controller, appearance: appearance),
+      );
+      await tester.pump();
       expect(find.textContaining('Import your exported'), findsOneWidget);
       await tester.tap(find.byTooltip('Import'));
       await tester.pumpAndSettle();

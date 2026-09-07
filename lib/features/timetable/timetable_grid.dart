@@ -7,16 +7,8 @@ import 'package:flutter/material.dart';
 import '../../domain/course_meeting.dart';
 import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
-
-const weekdays = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
+import '../../l10n/app_strings.dart';
+import 'timetable_color.dart';
 
 class TimetableGrid extends StatelessWidget {
   const TimetableGrid({
@@ -24,6 +16,7 @@ class TimetableGrid extends StatelessWidget {
     required this.timetable,
     required this.days,
     required this.paletteSeed,
+    required this.onEdit,
     this.parity,
     this.previousDay,
     this.nextDay,
@@ -31,6 +24,7 @@ class TimetableGrid extends StatelessWidget {
   final Timetable timetable;
   final List<int> days;
   final int paletteSeed;
+  final void Function(int weekday, int period, CourseMeeting? meeting) onEdit;
   final WeekParity? parity;
   final VoidCallback? previousDay;
   final VoidCallback? nextDay;
@@ -42,18 +36,18 @@ class TimetableGrid extends StatelessWidget {
         height: 48,
         child: Row(
           children: [
-            const SizedBox(width: 56, child: Center(child: Text('Period'))),
+            const SizedBox(width: 56),
             if (days.length == 1)
               IconButton(
                 onPressed: previousDay,
-                tooltip: 'Previous day',
+                tooltip: AppStrings.of(context).text(AppText.previousDay),
                 icon: const Icon(Icons.chevron_left),
               ),
             for (final day in days)
               Expanded(
                 child: Center(
                   child: Text(
-                    weekdays[day - 1],
+                    AppStrings.of(context).weekday(day),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -62,7 +56,7 @@ class TimetableGrid extends StatelessWidget {
             if (days.length == 1)
               IconButton(
                 onPressed: nextDay,
-                tooltip: 'Next day',
+                tooltip: AppStrings.of(context).text(AppText.nextDay),
                 icon: const Icon(Icons.chevron_right),
               ),
           ],
@@ -78,29 +72,34 @@ class TimetableGrid extends StatelessWidget {
                 SizedBox(width: 56, child: Center(child: Text('${index + 1}'))),
                 for (final day in days)
                   Expanded(
-                    child: Container(
-                      constraints: const BoxConstraints(minHeight: 60),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(
-                            color: Theme.of(context).dividerColor,
+                    child: InkWell(
+                      key: ValueKey('timetable-cell-$day-${index + 1}'),
+                      onTap: () => onEdit(day, index + 1, null),
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 60),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(
+                              color: Theme.of(context).dividerColor,
+                            ),
                           ),
                         ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (final meeting in timetable.atPeriod(
-                            day,
-                            index + 1,
-                            currentParity: parity,
-                          ))
-                            _MeetingTile(
-                              meeting,
-                              isCurrent: meeting.frequency.isCurrent(parity),
-                              paletteSeed: paletteSeed,
-                            ),
-                        ],
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final meeting in timetable.atPeriod(
+                              day,
+                              index + 1,
+                              currentParity: parity,
+                            ))
+                              _MeetingTile(
+                                meeting,
+                                isCurrent: meeting.frequency.isCurrent(parity),
+                                paletteSeed: paletteSeed,
+                                onEdit: () => onEdit(day, index + 1, meeting),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -118,11 +117,13 @@ class _MeetingTile extends StatefulWidget {
     this.meeting, {
     required this.isCurrent,
     required this.paletteSeed,
+    required this.onEdit,
   });
 
   final CourseMeeting meeting;
   final bool isCurrent;
   final int paletteSeed;
+  final VoidCallback onEdit;
 
   @override
   State<_MeetingTile> createState() => _MeetingTileState();
@@ -194,16 +195,7 @@ class _MeetingTileState extends State<_MeetingTile> {
   @override
   Widget build(BuildContext context) {
     final meeting = widget.meeting;
-    final hash = meeting.name.runes.fold(
-      0,
-      (value, rune) => (value * 31 + rune) & 0x7fffffff,
-    );
-    final background = HSLColor.fromAHSL(
-      1,
-      ((hash + widget.paletteSeed * 67) % 360).toDouble(),
-      .38,
-      .91,
-    ).toColor();
+    final background = timetableCourseColor(meeting, widget.paletteSeed);
     final foreground = background.computeLuminance() > .5
         ? Colors.black
         : Colors.white;
@@ -221,17 +213,7 @@ class _MeetingTileState extends State<_MeetingTile> {
             key: ValueKey('meeting-color-${meeting.sourceId}'),
             color: background,
             child: InkWell(
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => Scaffold(
-                    appBar: AppBar(title: const Text('Course details')),
-                    body: ListView(
-                      padding: const EdgeInsets.all(24),
-                      children: [_Details(meeting: meeting)],
-                    ),
-                  ),
-                ),
-              ),
+              onTap: widget.onEdit,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: DefaultTextStyle(
@@ -246,9 +228,10 @@ class _MeetingTileState extends State<_MeetingTile> {
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       Text(
-                        meeting.room,
+                        '  ${meeting.room}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),

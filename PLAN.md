@@ -23,7 +23,7 @@ Build an offline-first school life management application for Android, iOS, Linu
 - Preserve imported workbook bytes exactly. Store source bytes, parsed records, issues, user completion fields, and week data in one application SQLite database.
 - Keep all timetable processing local; network access is limited to public Week Parity configuration.
 - Do not silently omit malformed or unsupported class records.
-- Preserve Monday through Sunday even if a reference renderer hides weekends.
+- Present Monday through Friday; intentionally ignore Saturday and Sunday source columns.
 - Use a native Flutter interface rather than a WebView around either reference site.
 - Avoid copying AGPL-licensed implementation unless the project explicitly adopts compatible licensing obligations or obtains permission.
 - Independently reimplement relevant Week Parity and elective-prettifier behavior in Dart and recreate every applicable reference test scenario without copying unapproved code or fixtures.
@@ -73,7 +73,9 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - `lib/features/timetable/week_status.dart`: semester week, parity, freshness, and refresh status.
 - `lib/features/schedule_import/schedule_import_action.dart`: import affordance and user-facing validation failures.
 - `lib/features/schedule_import/schedule_import_review.dart`: complete every reported required field or reject the candidate without mutation.
-- `lib/features/settings/appearance_controller.dart` and `settings_page.dart`: persistent light/dark, accent, and repeatable timetable color rolls.
+- `lib/features/settings/appearance_controller.dart` and `settings_page.dart`: persistent accent, language, and repeatable timetable color rolls.
+- `lib/features/timetable/course_editor_dialog.dart`: add weekday meetings and edit imported records through separate overlays.
+- `lib/features/timetable/timetable_export.dart`: complete Monday–Friday PNG and XLSX export.
 
 ### Runtime Data Flow
 
@@ -108,7 +110,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Create `lib/domain/semester.dart` and `test/domain/semester_test.dart`.
 - Verify semester start day, Sunday boundary, next Monday, odd/even transitions, pre-semester dates, and Beijing-date handling.
 - Create `lib/domain/course_meeting.dart` and `lib/domain/timetable.dart`.
-- Verify stable ordering, Monday-through-Sunday retention, period bounds, and consecutive meeting grouping.
+- Verify stable ordering, Monday-through-Friday retention, period bounds, and consecutive meeting grouping.
 - Add stable source-record identity and separate typed completion fields; neither can mutate source workbook bytes.
 - Add validated build configuration for semester length. Default builds use 16 weeks; values outside 1–53 weeks fail startup or build validation.
 
@@ -143,7 +145,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Preserve unrecognized nonempty cells as explicit import issues instead of dropping them.
 - Normalize only structural punctuation and whitespace needed by the source format; preserve user-visible text.
 - Support repeated and consecutive meetings without duplicating durable course identity fields.
-- Add fixture-backed tests for both supported layouts, blank cells, unavailable rooms, mixed frequency/exam text, malformed rows, weekend classes, and unsupported workbooks.
+- Add fixture-backed tests for both supported layouts, blank cells, unavailable rooms, mixed frequency/exam text, malformed rows, ignored weekend columns, and unsupported workbooks.
 - Return stable source identities, parsed values, and all issues as one candidate. Do not persist during parsing.
 
 ### 5. Implement SQLite Storage and Authoritative Schedule Import
@@ -183,10 +185,12 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Create `lib/app/app.dart`, `lib/app/home_page.dart`, and timetable feature widgets.
 - Show import guidance when no stored schedule exists.
 - Show week number and odd/even status without blocking local timetable use. Refresh automatically at startup and after every foreground resume.
-- Render full weekly grid on wide layouts.
-- On narrow layouts, keep one fixed period-index column and one day column visible; horizontal swipes move between Monday and Sunday while the visible weekday remains explicit.
+- Render Monday through Friday on wide layouts.
+- On narrow layouts, keep one fixed period-index column and one day column visible; horizontal swipes move between Monday and Friday while the visible weekday remains explicit.
 - Map unsupported frequency tokens to `每周`.
 - Derive course colors from course identity plus a persistent roll seed, allow repeated color rolls after import, and maintain readable foreground contrast.
+- Default to Korean, persist English and Simplified Chinese alternatives, and localize all application controls.
+- Add and edit weekday meetings without mutating imported source bytes; export the complete timetable as PNG or XLSX.
 - Use flat visual hierarchy, no gradients, bounded labels, accessible semantics, and keyboard navigation on desktop.
 - Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation, compact course-and-room full-cell color, repeated color rolls, persistent theme editing, 1000 ms pointer-following details, and foreground refresh.
 
@@ -268,8 +272,8 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Invalid import never replaces the prior valid schedule.
 - Incomplete import reports every issue and changes data only after the user completes all required fields; rejection changes nothing.
 - App displays the correct Beijing-calendar semester week and odd/even status from validated fresh or cached configuration.
-- `每周`, `单周`, and `双周` meetings appear in correct current-week views; unknown frequencies remain visible with warnings.
+- `每周`, `单周`, and `双周` meetings receive correct current-week emphasis; unsupported frequency text maps to `每周`.
 - Timetable remains usable offline and when Week Parity refresh fails.
-- Monday-through-Sunday classes and all nonempty source details remain represented.
+- Monday-through-Friday classes and all in-scope nonempty source details remain represented.
 - Android, iOS, Linux AppImage, macOS, and Windows NSIS artifacts build and pass their declared runtime checks.
 - No release artifact or source path contains automated elective-site access.

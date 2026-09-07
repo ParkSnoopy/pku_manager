@@ -25,7 +25,7 @@
 
 - Semester: ordered start date, Beijing timezone interpretation, current week number, and parity.
 - Week configuration: small validated public configuration cached only after a complete successful parse.
-- Course meeting: one normalized course occurrence with weekday, period range, room, frequency, note, and exam information.
+- Course meeting: one normalized Monday–Friday course occurrence with period range, room, frequency, note, and exam information.
 - Timetable: ordered collection of course meetings derived from the stored spreadsheet.
 - Timetable visibility: every meeting is shown by default. Current-week meetings remain opaque; meetings outside the current week render at half opacity.
 - Schedule repository: sole authority for importing immutable workbook bytes and publishing parsed timetable records through one SQLite transaction.
@@ -46,15 +46,17 @@
 - Week refresh failure never blocks viewing a stored timetable.
 - Only validated Week Parity configuration can replace the last valid cache.
 - Parity uses Beijing calendar dates, not an arbitrary device-local midnight.
-- Unsupported source records cause an explicit import issue and are never silently discarded; unsupported frequency tokens alone map to `每周`.
-- Weekend classes remain supported.
+- Unsupported weekday source records cause an explicit import issue and are never silently discarded; unsupported frequency tokens alone map to `每周`. Saturday and Sunday source columns are intentionally outside the product timetable.
 - UI is native Flutter, responsive, flat, readable, accessible, and uses no gradients.
 - Mobile timetable view shows one fixed period-index column and one day column; horizontal swipes change the visible day.
 - A left vertical navigation rail owns primary application destinations.
 - Timetable colors fill complete compact cells containing course and room only. Repeated adjacent source cells render identically without continuation labels.
 - Pointer hover for 1000 ms opens a detail box positioned beside and following the pointer until exit.
 - Week configuration refresh runs at startup and whenever the application returns to foreground; no manual refresh control is shown.
-- Settings provides persistent light/dark and accent editing. A persistent color-roll seed lets users generate another deterministic timetable color combination repeatedly after import.
+- Korean is the default interface language. Settings persists Korean, English, or Simplified Chinese plus the accent color.
+- Imported meetings can be edited and empty weekday cells can create user meetings. These overlays are stored separately from immutable workbook bytes.
+- A persistent color-roll seed lets users generate another deterministic timetable color combination repeatedly after import.
+- The complete Monday–Friday timetable exports locally as PNG or XLSX.
 - Product identity must be consistent across Flutter, Android, iOS, Linux, macOS, Windows, AppImage, and NSIS metadata.
 - Platform support means packaged-runtime verification, not compilation alone.
 - Product behavior stays in Dart. Flutter plugins or narrow Dart wrappers may bridge native platform or SQLite facilities, but native code does not own timetable or parity rules.

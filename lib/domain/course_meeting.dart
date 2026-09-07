@@ -17,7 +17,7 @@ final class CourseMeeting {
     if (sourceId.trim().isEmpty || name.trim().isEmpty) {
       throw ArgumentError('Source identity and course name must be nonempty');
     }
-    RangeError.checkValueInInterval(weekday, 1, 7, 'weekday');
+    RangeError.checkValueInInterval(weekday, 1, 5, 'weekday');
     if (firstPeriod < 1 || lastPeriod < firstPeriod) {
       throw ArgumentError('Periods must be positive and ordered');
     }

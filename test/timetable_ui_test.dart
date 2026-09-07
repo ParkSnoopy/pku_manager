@@ -11,7 +11,9 @@ import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
 import 'package:pku_manager/domain/week_source.dart';
 import 'package:pku_manager/features/timetable/timetable_controller.dart';
+import 'package:pku_manager/features/timetable/timetable_export.dart';
 import 'package:pku_manager/features/settings/appearance_controller.dart';
+import 'package:pku_manager/l10n/app_strings.dart';
 
 final class _Store implements ScheduleStore {
   _Store(this.value);
@@ -23,6 +25,16 @@ final class _Store implements ScheduleStore {
     ScheduleCandidate candidate,
     Map<String, CourseMeeting> completions,
   ) => value;
+  @override
+  Timetable saveMeeting(CourseMeeting meeting) => value = Timetable([
+    ...value.meetings.where((item) => item.sourceId != meeting.sourceId),
+    meeting,
+  ], periodCount: value.periodCount);
+  @override
+  Timetable removeUserMeeting(String sourceId) => value = Timetable(
+    value.meetings.where((meeting) => meeting.sourceId != sourceId),
+    periodCount: value.periodCount,
+  );
 }
 
 final class _Picker implements SchedulePicker {
@@ -46,6 +58,26 @@ final class _Weeks implements WeekSource {
     refreshes++;
     return status;
   }
+}
+
+final class _ExportWriter implements ExportFileWriter {
+  ExportFile? file;
+  bool fail = false;
+
+  @override
+  Future<void> save(ExportFile value) async {
+    if (fail) throw StateError('save failed');
+    file = value;
+  }
+}
+
+final class _PngEncoder implements TimetablePngEncoder {
+  @override
+  Future<Uint8List> encode(
+    Timetable timetable,
+    AppStrings strings,
+    int paletteSeed,
+  ) async => Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
 }
 
 CourseMeeting _meeting(String id, int period, WeekFrequency frequency) =>
@@ -84,7 +116,7 @@ void main() {
         _meeting('first', 1, WeekFrequency.every),
         _meeting('second', 2, WeekFrequency.every),
         _meeting('even', 3, WeekFrequency.even),
-      ], periodCount: 3);
+      ], periodCount: 4);
       final controller = TimetableController(
         schedules: _Store(table),
         decoder: _Decoder(),
@@ -93,8 +125,14 @@ void main() {
         clock: () => DateTime.utc(2026, 9, 7),
       )..start();
       final appearance = AppearanceController(MemoryAppearanceStore());
+      appearance.setLanguage(AppLanguage.en);
+      final writer = _ExportWriter();
       await tester.pumpWidget(
-        PkuManagerApp(controller: controller, appearance: appearance),
+        PkuManagerApp(
+          controller: controller,
+          appearance: appearance,
+          exporter: TimetableExporter(writer, pngEncoder: _PngEncoder()),
+        ),
       );
       await tester.pump();
       expect(find.byType(NavigationRail), findsOneWidget);
@@ -133,6 +171,19 @@ void main() {
           .color;
       expect({firstColor, secondColor, thirdColor}, hasLength(3));
 
+      await tester.tap(find.byTooltip('Export'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Export XLSX'));
+      await tester.pumpAndSettle();
+      expect(writer.file?.extension, 'xlsx');
+
+      writer.fail = true;
+      await tester.tap(find.byTooltip('Export'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Export PNG'));
+      await tester.pumpAndSettle();
+      expect(find.text('Export failed'), findsOneWidget);
+
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await mouse.addPointer(
         location: tester.getCenter(
@@ -149,6 +200,21 @@ void main() {
       await tester.pump();
       expect(tester.getTopLeft(hover), isNot(before));
       await mouse.removePointer();
+
+      await tester.tap(find.byKey(const ValueKey('timetable-cell-1-4')));
+      await tester.pumpAndSettle();
+      expect(find.text('Add course'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('course-name')),
+        'New course',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('course-room')),
+        'New room',
+      );
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(controller.timetable!.atPeriod(1, 4).single.name, 'New course');
 
       final initialRefreshes = weeks.refreshes;
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);

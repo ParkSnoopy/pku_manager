@@ -39,7 +39,7 @@ final class Timetable {
     bool showAll = true,
     WeekParity? currentParity,
   }) {
-    RangeError.checkValueInInterval(weekday, 1, 7, 'weekday');
+    RangeError.checkValueInInterval(weekday, 1, 5, 'weekday');
     return List.unmodifiable(
       visible(
         showAll: showAll,

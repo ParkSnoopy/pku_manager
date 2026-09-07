@@ -166,7 +166,7 @@ void main() {
     final completed = CourseMeeting(
       sourceId: id,
       name: 'Completed course',
-      weekday: 7,
+      weekday: 5,
       firstPeriod: 1,
       lastPeriod: 2,
       room: 'Room C',

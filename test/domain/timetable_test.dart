@@ -31,23 +31,18 @@ void main() {
     'coordinate sort is deterministic with input source order as final key',
     () {
       final table = Timetable([
-        meeting('sun', day: 7),
         meeting('late', first: 3, last: 4),
         meeting('z'),
         meeting('a'),
         meeting('short', last: 1),
-        meeting('sat', day: 6),
       ]);
       expect(table.meetings.map((m) => m.sourceId), [
         'short',
         'z',
         'a',
         'late',
-        'sat',
-        'sun',
       ]);
-      expect(table.forDay(6).single.sourceId, 'sat');
-      expect(table.forDay(7).single.sourceId, 'sun');
+
       expect(table.periodCount, 4);
     },
   );
@@ -90,7 +85,7 @@ void main() {
   });
 
   test('invalid coordinates, empty identities, duplicate identities and bounds reject', () {
-    for (final day in [0, 8]) {
+    for (final day in [0, 6, 7, 8]) {
       expect(() => meeting('a', day: day), throwsRangeError);
       expect(() => Timetable([]).forDay(day), throwsRangeError);
     }
@@ -141,35 +136,27 @@ void main() {
         meeting('b', first: 3, last: 4),
         meeting('gap', first: 6, last: 6),
         meeting('different-room', first: 7, last: 7, room: '二教'),
-        meeting('weekend', day: 7),
       ]);
       final groups = table.consecutiveGroups();
       expect(groups.map((g) => g.map((m) => m.sourceId).toList()), [
         ['a', 'b'],
         ['gap'],
         ['different-room'],
-        ['weekend'],
       ]);
-      expect(table.meetings, hasLength(5));
+      expect(table.meetings, hasLength(4));
       expect(() => groups.clear(), throwsUnsupportedError);
       expect(() => groups.first.clear(), throwsUnsupportedError);
     },
   );
 
-  test(
-    'frequency text, notes and exams prevent incorrect grouping',
-    () {
-      for (final next in [
-        meeting('b', first: 3, last: 4, frequency: WeekFrequency.odd),
-        meeting('b', first: 3, last: 4, text: '保留'),
-        meeting('b', first: 3, last: 4, note: '备注'),
-        meeting('b', first: 3, last: 4, exam: '考试'),
-      ]) {
-        expect(
-          Timetable([meeting('a'), next]).consecutiveGroups(),
-          hasLength(2),
-        );
-      }
-    },
-  );
+  test('frequency text, notes and exams prevent incorrect grouping', () {
+    for (final next in [
+      meeting('b', first: 3, last: 4, frequency: WeekFrequency.odd),
+      meeting('b', first: 3, last: 4, text: '保留'),
+      meeting('b', first: 3, last: 4, note: '备注'),
+      meeting('b', first: 3, last: 4, exam: '考试'),
+    ]) {
+      expect(Timetable([meeting('a'), next]).consecutiveGroups(), hasLength(2));
+    }
+  });
 }

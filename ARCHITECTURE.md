@@ -81,7 +81,7 @@ Initial scope has one timetable-focused home destination. Import, errors, and na
 
 - `course_meeting.dart` represents one normalized occurrence of a course.
 - A meeting owns stable source-record identity, course name, weekday, first and last periods, room, frequency, note, and exam information.
-- Weekday covers Monday through Sunday.
+- Weekday covers Monday through Friday. Source weekend columns are intentionally excluded from the application timetable.
 - Period ranges are positive, ordered, and bounded by the imported timetable structure.
 - Source text remains human-readable; parsing normalizes only format syntax needed to identify fields.
 
@@ -178,11 +178,13 @@ Incomplete-import review is separate from schedule state. It holds a transient c
 ### Timetable Presentation
 
 - `timetable_page.dart` owns page-level actions, state selection, and responsive layout choice.
-- `timetable_page.dart` presents a left navigation rail, semester week, parity, timetable, import/color-roll actions, and Settings destination. It refreshes week configuration on every foreground resume without a manual action.
-- `timetable_grid.dart` renders the complete week on wide layouts.
-- The same `timetable_grid.dart` renders one fixed period-index column and one day on narrow layouts. Page-level horizontal gestures and previous/next buttons select Monday through Sunday.
+- `timetable_page.dart` presents a left navigation rail, semester week, parity, timetable, import/export/color-roll actions, and Settings destination. It refreshes week configuration on every foreground resume without a manual action.
+- `timetable_grid.dart` renders Monday through Friday on wide layouts.
+- The same `timetable_grid.dart` renders one fixed period-index column and one day on narrow layouts. Page-level horizontal gestures and previous/next buttons select Monday through Friday.
 - Import feedback stays in `timetable_page.dart`; `schedule_import_review.dart` owns the completion form.
-- `features/settings/appearance_controller.dart` owns persistent theme and timetable-palette state; `settings_page.dart` edits it through toggles and color actions.
+- `course_editor_dialog.dart` creates user meetings and writes imported-record corrections without changing source bytes.
+- `timetable_export.dart` generates complete five-weekday PNG and XLSX files and passes bytes to the native save adapter.
+- `features/settings/appearance_controller.dart` owns persistent accent, language, and timetable-palette state; `settings_page.dart` edits accent and language.
 
 Widgets consume domain projections supplied by the controller. They do not filter frequency with local string checks. Every meeting is shown; meetings outside current parity render at half opacity.
 
@@ -198,7 +200,8 @@ Production storage uses one SQLite database in application support:
 | Parsed timetable | Normalized typed rows keyed to source identities | Parser plus accepted completion fields | Publish with source and active selection in one transaction. |
 | Import issues and completions | Typed rows keyed to source identities | Parser issues and explicit user input | Require complete resolution before publication. |
 | Week configuration | Validated TOML text and fetched-at timestamp; typed dates derived on load | Last valid public source response | Replace in one transaction after complete validation. |
-| Appearance | One typed SQLite row containing dark mode, accent color, and palette-roll seed | Explicit Settings and roll actions | Update transactionally; derive theme and per-course colors at display time. |
+| Appearance | One typed SQLite row containing accent color, language, and palette-roll seed | Explicit Settings and roll actions | Update transactionally; derive theme, labels, and per-course colors at display time. |
+| User meetings | Typed weekday rows linked to the active immutable source | Empty-cell additions | Insert, edit, or delete independently from source and parsed rows. |
 
 SQLite transactions provide publication and rollback. Database migrations are ordered and transactional. Startup integrity failure is surfaced; the app does not silently rebuild or discard source evidence.
 
@@ -253,6 +256,7 @@ If current parity is unavailable, beyond the build-configured semester length, o
 | Week config parse | Reject candidate and retain last valid cache. |
 | Parity resolution | Show unavailable state and unfiltered timetable. |
 | Presentation | Render bounded fallback text for long values without changing source data. |
+| Export generation/save | Report failure locally; never mutate timetable or source bytes. |
 
 ## Network and Privacy Boundary
 

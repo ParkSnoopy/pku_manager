@@ -96,7 +96,7 @@ class ScheduleXlsParser implements ScheduleDecoder {
           details = next;
         }
       }
-      for (var d = 0; d < 7; d++) {
+      for (var d = 0; d < 5; d++) {
         final raw = cell(columns[d]);
         if (raw.trim().isEmpty) continue;
         final detail = details != null && columns[d] < details.length
@@ -132,7 +132,8 @@ class ScheduleXlsParser implements ScheduleDecoder {
       final meeting = record.meeting;
       if (meeting.note.contains('习题课') &&
           seenTutorials.add((meeting.name, meeting.note))) {
-        tutorials.add(_tutorial(record, periodCount));
+        final tutorial = _tutorial(record, periodCount);
+        if (tutorial != null) tutorials.add(tutorial);
       }
     }
     return ScheduleCandidate(bytes, [...records, ...tutorials], periodCount);
@@ -293,7 +294,7 @@ class ScheduleXlsParser implements ScheduleDecoder {
     );
   }
 
-  ImportRecord _tutorial(ImportRecord parent, int periodCount) {
+  ImportRecord? _tutorial(ImportRecord parent, int periodCount) {
     final main = parent.meeting;
     final note = main.note;
     // Match the entire note: alternatives/multiple schedules must be reviewed,
@@ -316,13 +317,18 @@ class ScheduleXlsParser implements ScheduleDecoder {
         last <= periodCount;
     final unambiguousRoom =
         room.isNotEmpty && !RegExp(r'[、,，;；/\n]|或|待定|另行|习题课').hasMatch(room);
-    final complete = match != null && validTime && unambiguousRoom;
+    final complete =
+        match != null &&
+        day != null &&
+        day <= 5 &&
+        validTime &&
+        unambiguousRoom;
     return ImportRecord(
       meeting: CourseMeeting(
         sourceId: '${main.sourceId}/tutorial',
         name: '${main.name} 习题课',
         // Review placeholders are never published until the issue is completed.
-        weekday: day == null ? main.weekday : (day == 8 ? 7 : day),
+        weekday: complete ? day : main.weekday,
         firstPeriod: validTime ? first : main.firstPeriod,
         lastPeriod: validTime ? last : main.lastPeriod,
         room: room,

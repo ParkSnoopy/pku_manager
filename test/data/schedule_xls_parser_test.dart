@@ -79,24 +79,27 @@ void main() {
     expect(r.meeting.frequency, WeekFrequency.every);
   });
 
-  test('original formatted subtitle maps unsupported frequency to every week', () {
-    const upper = ' Synthetic Lab\n（Room A，隔三周）';
-    final c = parser.parseCells(bytes, [
-      ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'],
-      row('第 1 节\n08:00-08:50', upper),
-      row('', 'bring notes\n考试：later'),
-      row('第 2 节\n09:00-09:50'),
-    ]);
-    final r = c.records.single;
-    expect(r.issue, isNull);
-    expect(r.meeting.name, 'Synthetic Lab');
-    expect(r.meeting.room, 'Room A');
-    expect(r.meeting.frequencyText, '每周');
-    expect(r.meeting.frequency, WeekFrequency.every);
-    expect(r.meeting.note, 'bring notes');
-    expect(r.raw, '$upper\nbring notes\n考试：later');
-    expect(c.periodCount, 2);
-  });
+  test(
+    'original formatted subtitle maps unsupported frequency to every week',
+    () {
+      const upper = ' Synthetic Lab\n（Room A，隔三周）';
+      final c = parser.parseCells(bytes, [
+        ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+        row('第 1 节\n08:00-08:50', upper),
+        row('', 'bring notes\n考试：later'),
+        row('第 2 节\n09:00-09:50'),
+      ]);
+      final r = c.records.single;
+      expect(r.issue, isNull);
+      expect(r.meeting.name, 'Synthetic Lab');
+      expect(r.meeting.room, 'Room A');
+      expect(r.meeting.frequencyText, '每周');
+      expect(r.meeting.frequency, WeekFrequency.every);
+      expect(r.meeting.note, 'bring notes');
+      expect(r.raw, '$upper\nbring notes\n考试：later');
+      expect(c.periodCount, 2);
+    },
+  );
 
   test('unrecognized or orphan detail cells fail closed', () {
     for (final detail in [row('', 'unrecognized'), row('', '备注：orphan', 2)]) {
@@ -127,7 +130,7 @@ void main() {
       ];
       final c = parser.parseCells(bytes, matrix);
       final again = parser.parseCells(bytes, matrix);
-      expect(c.issues, isEmpty);
+      expect(c.issues, note.contains('周日') ? hasLength(1) : isEmpty);
       expect(c.records, hasLength(4));
       expect(c.records.where((r) => r.raw == raw), hasLength(2));
       final tutorials = c.records
@@ -140,7 +143,7 @@ void main() {
         expect(t.meeting.room, 'Room B');
         expect(t.meeting.firstPeriod, 8);
         expect(t.meeting.lastPeriod, 9);
-        expect(t.meeting.weekday, note.contains('周日') ? 7 : 4);
+        expect(t.meeting.weekday, note.contains('周日') ? 1 : 4);
         expect(
           t.meeting.frequency,
           note.contains('双周') ? WeekFrequency.even : WeekFrequency.every,

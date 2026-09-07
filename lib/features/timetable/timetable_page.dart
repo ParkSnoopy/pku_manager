@@ -2,10 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../domain/course_meeting.dart';
+import '../../l10n/app_strings.dart';
 import '../schedule_import/schedule_import_review.dart';
 import '../settings/appearance_controller.dart';
 import '../settings/settings_page.dart';
+import 'course_editor_dialog.dart';
 import 'timetable_controller.dart';
+import 'timetable_export.dart';
 import 'timetable_grid.dart';
 
 class TimetablePage extends StatefulWidget {
@@ -13,9 +17,11 @@ class TimetablePage extends StatefulWidget {
     super.key,
     required this.controller,
     required this.appearance,
+    required this.exporter,
   });
   final TimetableController controller;
   final AppearanceController appearance;
+  final TimetableExporter exporter;
   @override
   State<TimetablePage> createState() => _TimetablePageState();
 }
@@ -26,9 +32,11 @@ class _TimetablePageState extends State<TimetablePage>
       .clock()
       .toUtc()
       .add(const Duration(hours: 8))
-      .weekday;
+      .weekday
+      .clamp(1, 5);
   double _dragDistance = 0;
   int _destination = 0;
+  bool _exporting = false;
 
   @override
   void initState() {
@@ -50,7 +58,53 @@ class _TimetablePageState extends State<TimetablePage>
   }
 
   void _changeDay(int delta) {
-    setState(() => _day = (_day + delta).clamp(1, 7));
+    setState(() => _day = (_day + delta).clamp(1, 5));
+  }
+
+  Future<void> _editCell(
+    int weekday,
+    int period,
+    CourseMeeting? meeting,
+  ) async {
+    final result = await showDialog<CourseEditResult>(
+      context: context,
+      builder: (_) => CourseEditorDialog(
+        weekday: weekday,
+        period: period,
+        periodCount: widget.controller.timetable!.periodCount,
+        meeting: meeting,
+      ),
+    );
+    if (result == null) return;
+    if (result.remove) {
+      widget.controller.removeUserMeeting(meeting!.sourceId);
+    } else {
+      widget.controller.saveMeeting(result.meeting!);
+    }
+  }
+
+  Future<void> _export(TimetableExportFormat format) async {
+    final timetable = widget.controller.timetable;
+    if (timetable == null || _exporting) return;
+    setState(() => _exporting = true);
+    try {
+      await widget.exporter.export(
+        format,
+        timetable,
+        strings: AppStrings.of(context),
+        paletteSeed: widget.appearance.paletteSeed,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppStrings.of(context).text(AppText.exportFailed)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
   }
 
   @override
@@ -59,6 +113,7 @@ class _TimetablePageState extends State<TimetablePage>
     builder: (context, _) {
       final c = widget.controller;
       final semesterWeek = c.week.calendar?.weekAt(c.clock());
+      final strings = AppStrings.of(context);
       return Scaffold(
         body: Row(
           children: [
@@ -67,16 +122,16 @@ class _TimetablePageState extends State<TimetablePage>
               onDestinationSelected: (value) =>
                   setState(() => _destination = value),
               labelType: NavigationRailLabelType.all,
-              destinations: const [
+              destinations: [
                 NavigationRailDestination(
-                  icon: Icon(Icons.calendar_view_week_outlined),
-                  selectedIcon: Icon(Icons.calendar_view_week),
-                  label: Text('Timetable'),
+                  icon: const Icon(Icons.calendar_view_week_outlined),
+                  selectedIcon: const Icon(Icons.calendar_view_week),
+                  label: Text(strings.text(AppText.timetable)),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(Icons.settings),
-                  label: Text('Settings'),
+                  icon: const Icon(Icons.settings_outlined),
+                  selectedIcon: const Icon(Icons.settings),
+                  label: Text(strings.text(AppText.settings)),
                 ),
               ],
               trailing: Expanded(
@@ -89,14 +144,37 @@ class _TimetablePageState extends State<TimetablePage>
                         onPressed: c.timetable == null
                             ? null
                             : widget.appearance.rollPalette,
-                        tooltip: 'Roll colors',
+                        tooltip: strings.text(AppText.rollColors),
                         icon: const Icon(Icons.casino_outlined),
+                      ),
+                      PopupMenuButton<TimetableExportFormat>(
+                        enabled: c.timetable != null && !_exporting,
+                        tooltip: strings.text(AppText.export),
+                        icon: _exporting
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.ios_share_outlined),
+                        onSelected: _export,
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: TimetableExportFormat.png,
+                            child: Text(strings.text(AppText.exportPng)),
+                          ),
+                          PopupMenuItem(
+                            value: TimetableExportFormat.xlsx,
+                            child: Text(strings.text(AppText.exportXlsx)),
+                          ),
+                        ],
                       ),
                       IconButton(
                         onPressed: c.importing || c.candidate != null
                             ? null
                             : c.import,
-                        tooltip: 'Import',
+                        tooltip: strings.text(AppText.import),
                         icon: c.importing
                             ? const SizedBox.square(
                                 dimension: 20,
@@ -118,25 +196,18 @@ class _TimetablePageState extends State<TimetablePage>
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-                          child: Text(
-                            'PKU Manager',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                           child: Row(
                             children: [
                               Expanded(
                                 child: Text(
                                   semesterWeek == null
-                                      ? 'Week unavailable · all classes shown'
-                                      : 'Week ${semesterWeek.weekNumber} · ${semesterWeek.isOdd ? "Odd" : "Even"}',
+                                      ? strings.text(AppText.weekUnavailable)
+                                      : strings.weekLabel(
+                                          semesterWeek.weekNumber,
+                                          semesterWeek.isOdd,
+                                        ),
                                 ),
                               ),
                             ],
@@ -166,11 +237,11 @@ class _TimetablePageState extends State<TimetablePage>
                                   controller: c,
                                 )
                               : c.timetable == null
-                              ? const Center(
+                              ? Center(
                                   child: Padding(
-                                    padding: EdgeInsets.all(24),
+                                    padding: const EdgeInsets.all(24),
                                     child: Text(
-                                      'Import your exported schedule.xls.\nYour timetable stays on this device.',
+                                      strings.text(AppText.noTimetable),
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
@@ -178,12 +249,22 @@ class _TimetablePageState extends State<TimetablePage>
                               : LayoutBuilder(
                                   builder: (context, constraints) =>
                                       constraints.maxWidth >= 1000
-                                      ? TimetableGrid(
-                                          timetable: c.timetable!,
-                                          days: List.generate(7, (i) => i + 1),
-                                          paletteSeed:
-                                              widget.appearance.paletteSeed,
-                                          parity: semesterWeek?.parity,
+                                      ? Align(
+                                          alignment: Alignment.topLeft,
+                                          child: FractionallySizedBox(
+                                            widthFactor: 6 / 7,
+                                            child: TimetableGrid(
+                                              timetable: c.timetable!,
+                                              days: List.generate(
+                                                5,
+                                                (i) => i + 1,
+                                              ),
+                                              paletteSeed:
+                                                  widget.appearance.paletteSeed,
+                                              parity: semesterWeek?.parity,
+                                              onEdit: _editCell,
+                                            ),
+                                          ),
                                         )
                                       : GestureDetector(
                                           onHorizontalDragStart: (_) =>
@@ -203,12 +284,13 @@ class _TimetablePageState extends State<TimetablePage>
                                             previousDay: _day > 1
                                                 ? () => _changeDay(-1)
                                                 : null,
-                                            nextDay: _day < 7
+                                            nextDay: _day < 5
                                                 ? () => _changeDay(1)
                                                 : null,
                                             paletteSeed:
                                                 widget.appearance.paletteSeed,
                                             parity: semesterWeek?.parity,
+                                            onEdit: _editCell,
                                           ),
                                         ),
                                 ),
