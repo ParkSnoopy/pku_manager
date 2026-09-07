@@ -28,7 +28,9 @@ ORDER BY m.rowid''');
             as int;
     return Timetable(
       rows.map((r) {
-        final token = (r['completed_frequency'] ?? r['frequency']) as String;
+        final token = _frequencyText(
+          (r['completed_frequency'] ?? r['frequency']) as String,
+        );
         return CourseMeeting(
           sourceId: r['identity'] as String,
           name: (r['completed_name'] ?? r['name']) as String,
@@ -93,7 +95,7 @@ ORDER BY m.rowid''');
             m.firstPeriod,
             m.lastPeriod,
             m.room,
-            m.frequencyText,
+            _frequencyText(m.frequencyText),
             m.note,
             m.exam,
             r.raw,
@@ -115,7 +117,7 @@ ORDER BY m.rowid''');
               m.sourceId,
               c.name,
               c.room,
-              c.frequencyText,
+              _frequencyText(c.frequencyText),
               c.weekday,
               c.firstPeriod,
               c.lastPeriod,
@@ -133,3 +135,6 @@ ORDER BY m.rowid''');
     });
   }
 }
+
+String _frequencyText(String value) =>
+    const {'每周', '单周', '双周'}.contains(value) ? value : '每周';

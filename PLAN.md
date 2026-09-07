@@ -42,7 +42,7 @@ Build an offline-first school life management application for Android, iOS, Linu
 
 ### Domain Layer
 
-- `lib/domain/week_frequency.dart`: typed `every`, `odd`, `even`, and `unknown` frequency values plus visibility rules.
+- `lib/domain/week_frequency.dart`: typed `every`, `odd`, and `even` frequency values plus current-week membership rules; unsupported tokens map to `every`.
 - `lib/domain/semester.dart`: semester start, Beijing calendar date, week number, and parity calculations.
 - `lib/domain/course_meeting.dart`: normalized course name, weekday, period range, room, frequency, note, and exam information.
 - `lib/domain/timetable.dart`: ordered meetings, period bounds, day grouping, and consecutive-cell grouping.
@@ -56,8 +56,9 @@ Domain objects remain independent of Flutter widgets, filesystems, HTTP, and spr
 - `lib/data/schedule_xls_parser.dart`: spreadsheet-adapter boundary that recognizes supported PKU layouts and returns a normalized timetable.
 - `lib/data/schedule_repository.dart`: candidate validation, immutable source storage, parsed-record publication, completion overlays, and transactional replacement.
 - `lib/data/app_database.dart`: SQLite schema, migrations, transactions, integrity checks, and typed row mapping.
-- `lib/data/app_paths.dart`: application-database path supplied through `path_provider`.
-- `lib/data/schedule_picker.dart`: native `.xls` acquisition supplied through `file_picker`.
+- `lib/app/app.dart` resolves application-support storage through `path_provider`.
+- `lib/data/schedule_picker.dart`: unrestricted native acquisition through `file_selector`; workbook content determines compatibility.
+- `lib/data/sqlite_appearance_store.dart`: typed SQLite persistence for theme and timetable color-roll seed.
 
 The application stores exact workbook source bytes and all application-owned durable state in one SQLite database. Parsed records, issues, and user completion fields reference stable source-record identities. No completion operation mutates the source BLOB.
 
@@ -72,6 +73,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - `lib/features/timetable/week_status.dart`: semester week, parity, freshness, and refresh status.
 - `lib/features/schedule_import/schedule_import_action.dart`: import affordance and user-facing validation failures.
 - `lib/features/schedule_import/schedule_import_review.dart`: complete every reported required field or reject the candidate without mutation.
+- `lib/features/settings/appearance_controller.dart` and `settings_page.dart`: persistent light/dark, accent, and repeatable timetable color rolls.
 
 ### Runtime Data Flow
 
@@ -172,7 +174,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Model incomplete import review separately from failure and ready state.
 - Serialize imports so concurrent selections cannot replace each other out of order.
 - Keep parity refresh independent from local timetable availability.
-- Provide current, odd, even, and all preview modes without changing stored data.
+- Show every meeting by default; non-current meetings render at half opacity without a visibility toggle.
 - Test startup combinations of schedule present or absent and parity fresh, cached, or unavailable.
 
 ### 8. Build Responsive Timetable UI
@@ -180,13 +182,13 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Replace `lib/main.dart` with the minimal production entry point.
 - Create `lib/app/app.dart`, `lib/app/home_page.dart`, and timetable feature widgets.
 - Show import guidance when no stored schedule exists.
-- Show week number, odd/even status, data freshness, and manual refresh without blocking local timetable use.
+- Show week number and odd/even status without blocking local timetable use. Refresh automatically at startup and after every foreground resume.
 - Render full weekly grid on wide layouts.
 - On narrow layouts, keep one fixed period-index column and one day column visible; horizontal swipes move between Monday and Sunday while the visible weekday remains explicit.
-- Show unknown-frequency meetings with a visible warning rather than hiding them.
-- Derive stable course colors from course identity and maintain readable foreground contrast.
+- Map unsupported frequency tokens to `每周`.
+- Derive course colors from course identity plus a persistent roll seed, allow repeated color rolls after import, and maintain readable foreground contrast.
 - Use flat visual hierarchy, no gradients, bounded labels, accessible semantics, and keyboard navigation on desktop.
-- Add widget tests for empty, loading, populated, odd, even, unknown-frequency, stale-data, narrow, and wide states.
+- Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation, compact course-and-room full-cell color, repeated color rolls, persistent theme editing, 1000 ms pointer-following details, and foreground refresh.
 
 ### 9. Apply Product Identity
 

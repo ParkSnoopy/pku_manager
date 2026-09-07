@@ -9,8 +9,8 @@ final class CourseMeeting {
     required this.firstPeriod,
     required this.lastPeriod,
     this.room = '',
-    this.frequency = WeekFrequency.unknown,
-    this.frequencyText = '',
+    this.frequency = WeekFrequency.every,
+    this.frequencyText = '每周',
     this.note = '',
     this.exam = '',
   }) {
@@ -33,6 +33,4 @@ final class CourseMeeting {
   final String frequencyText;
   final String note;
   final String exam;
-
-  bool get hasUnknownFrequency => frequency == WeekFrequency.unknown;
 }

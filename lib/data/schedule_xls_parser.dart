@@ -201,7 +201,11 @@ class ScheduleXlsParser implements ScheduleDecoder {
     }
     final tail = outside.toString().trim();
     final examStart = tail.indexOf('考试');
-    final token = (examStart < 0 ? tail : tail.substring(0, examStart)).trim();
+    final sourceToken = (examStart < 0 ? tail : tail.substring(0, examStart))
+        .trim();
+    final token = const {'每周', '单周', '双周'}.contains(sourceToken)
+        ? sourceToken
+        : '每周';
     return ImportRecord(
       meeting: CourseMeeting(
         sourceId: id,
@@ -257,7 +261,10 @@ class ScheduleXlsParser implements ScheduleDecoder {
     var input = heading;
     final formatted = _formattedHeading(heading);
     if (formatted != null) {
-      input = '${formatted.name}(${formatted.room})${formatted.frequency}';
+      final frequency = const {'每周', '单周', '双周'}.contains(formatted.frequency)
+          ? formatted.frequency
+          : '每周';
+      input = '${formatted.name}(${formatted.room})$frequency';
     }
     final parsed = parseRecord(id, input, day, period);
     if (detail.isEmpty && input == heading) return parsed;
@@ -320,7 +327,7 @@ class ScheduleXlsParser implements ScheduleDecoder {
         lastPeriod: validTime ? last : main.lastPeriod,
         room: room,
         frequency: WeekFrequency.parse(match?[1] ?? ''),
-        frequencyText: match?[1] ?? '',
+        frequencyText: match?[1] ?? '每周',
         note: note,
       ),
       raw: note,

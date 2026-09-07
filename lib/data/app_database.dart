@@ -9,7 +9,7 @@ class AppDatabase {
     database.execute('PRAGMA busy_timeout = 5000');
     database.execute('PRAGMA synchronous = FULL');
     final version = database.select('PRAGMA user_version').first.values.first;
-    if (version != 0 && version != 1 && version != 2) {
+    if (version != 0 && version != 1 && version != 2 && version != 3) {
       database.close();
       throw const FormatException('Unsupported database version');
     }
@@ -52,6 +52,18 @@ ALTER TABLE completions ADD COLUMN last_period INTEGER CHECK(last_period >= firs
 ALTER TABLE completions ADD COLUMN note TEXT;
 ALTER TABLE completions ADD COLUMN exam TEXT;
 PRAGMA user_version = 2;
+''');
+      });
+    }
+    if (version == 0 || version == 1 || version == 2) {
+      transaction(() {
+        database.execute('''
+CREATE TABLE appearance(
+ id INTEGER PRIMARY KEY CHECK(id = 1),
+ dark INTEGER NOT NULL CHECK(dark IN (0, 1)),
+ accent INTEGER NOT NULL,
+ palette_seed INTEGER NOT NULL CHECK(palette_seed >= 0));
+PRAGMA user_version = 3;
 ''');
       });
     }

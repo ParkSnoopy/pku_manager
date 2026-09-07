@@ -41,7 +41,7 @@ void main() {
       });
       await tester.pumpWidget(PkuManagerApp(controller: controller));
       expect(find.textContaining('Import your exported'), findsOneWidget);
-      await tester.tap(find.text('Import'));
+      await tester.tap(find.byTooltip('Import'));
       await tester.pumpAndSettle();
       expect(controller.timetable, isNull);
       final candidate = parser.parseCells(Uint8List.fromList([1]), [
@@ -57,7 +57,7 @@ void main() {
       await tester.drag(find.byType(TimetableGrid), const Offset(-600, 0));
       await tester.pumpAndSettle();
       expect(find.text('Tuesday'), findsOneWidget);
-      expect(tester.getTopLeft(find.text('1')), indexPosition);
+      expect(tester.getTopLeft(find.text('1')).dx, indexPosition.dx);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       controller.dispose();

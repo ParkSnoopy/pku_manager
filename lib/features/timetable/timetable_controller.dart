@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../domain/course_meeting.dart';
 import '../../domain/schedule_import.dart';
 import '../../domain/timetable.dart';
-import '../../domain/week_frequency.dart';
+
 import '../../domain/week_source.dart';
 
 class TimetableController extends ChangeNotifier {
@@ -24,7 +24,7 @@ class TimetableController extends ChangeNotifier {
   Timetable? timetable;
   ScheduleCandidate? candidate;
   WeekStatus week = const WeekStatus(null, WeekFreshness.unavailable);
-  PreviewMode mode = PreviewMode.current;
+
   bool importing = false;
   bool refreshing = false;
   String? error;
@@ -42,11 +42,6 @@ class TimetableController extends ChangeNotifier {
     _timer = Timer.periodic(const Duration(minutes: 1), (_) => _notify());
     _notify();
     unawaited(refresh());
-  }
-
-  void selectMode(PreviewMode value) {
-    mode = value;
-    _notify();
   }
 
   Future<void> refresh() async {

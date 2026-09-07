@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/course_meeting.dart';
@@ -19,25 +23,17 @@ class TimetableGrid extends StatelessWidget {
     super.key,
     required this.timetable,
     required this.days,
-    required this.mode,
+    required this.paletteSeed,
     this.parity,
     this.previousDay,
     this.nextDay,
   });
   final Timetable timetable;
   final List<int> days;
-  final PreviewMode mode;
+  final int paletteSeed;
   final WeekParity? parity;
   final VoidCallback? previousDay;
   final VoidCallback? nextDay;
-
-  bool _continues(CourseMeeting meeting, int period) =>
-      meeting.firstPeriod < period ||
-      timetable
-          .consecutiveGroups(mode: mode, currentParity: parity)
-          .any(
-            (group) => group.skip(1).any((m) => m.sourceId == meeting.sourceId),
-          );
 
   @override
   Widget build(BuildContext context) => Column(
@@ -83,7 +79,7 @@ class TimetableGrid extends StatelessWidget {
                 for (final day in days)
                   Expanded(
                     child: Container(
-                      constraints: const BoxConstraints(minHeight: 104),
+                      constraints: const BoxConstraints(minHeight: 60),
                       decoration: BoxDecoration(
                         border: Border(
                           top: BorderSide(
@@ -97,12 +93,12 @@ class TimetableGrid extends StatelessWidget {
                           for (final meeting in timetable.atPeriod(
                             day,
                             index + 1,
-                            mode: mode,
                             currentParity: parity,
                           ))
                             _MeetingTile(
                               meeting,
-                              continuation: _continues(meeting, index + 1),
+                              isCurrent: meeting.frequency.isCurrent(parity),
+                              paletteSeed: paletteSeed,
                             ),
                         ],
                       ),
@@ -117,84 +113,174 @@ class TimetableGrid extends StatelessWidget {
   );
 }
 
-class _MeetingTile extends StatelessWidget {
-  const _MeetingTile(this.meeting, {this.continuation = false});
+class _MeetingTile extends StatefulWidget {
+  const _MeetingTile(
+    this.meeting, {
+    required this.isCurrent,
+    required this.paletteSeed,
+  });
+
   final CourseMeeting meeting;
-  final bool continuation;
+  final bool isCurrent;
+  final int paletteSeed;
+
+  @override
+  State<_MeetingTile> createState() => _MeetingTileState();
+}
+
+class _MeetingTileState extends State<_MeetingTile> {
+  Timer? _hoverTimer;
+  OverlayEntry? _details;
+  Offset _pointer = Offset.zero;
+
+  void _move(PointerEvent event) {
+    _pointer = event.position;
+    _details?.markNeedsBuild();
+  }
+
+  void _enter(PointerEnterEvent event) {
+    _move(event);
+    _hoverTimer = Timer(const Duration(milliseconds: 1000), _showDetails);
+  }
+
+  void _exit(PointerExitEvent event) {
+    _hoverTimer?.cancel();
+    _removeDetails();
+  }
+
+  void _showDetails() {
+    if (!mounted || _details != null) return;
+    _details = OverlayEntry(
+      builder: (context) {
+        final size = MediaQuery.sizeOf(context);
+        final width = math.min(320.0, size.width - 16);
+        final left = (_pointer.dx + 14).clamp(8.0, size.width - width - 8);
+        final top = (_pointer.dy + 14)
+            .clamp(8.0, math.max(8.0, size.height - 220))
+            .toDouble();
+        return Positioned(
+          key: ValueKey('meeting-hover-${widget.meeting.sourceId}'),
+          left: left,
+          top: top,
+          width: width,
+          child: IgnorePointer(
+            child: Material(
+              elevation: 8,
+              color: Theme.of(context).colorScheme.surface,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: _Details(meeting: widget.meeting),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    Overlay.of(context).insert(_details!);
+  }
+
+  void _removeDetails() {
+    _details?.remove();
+    _details = null;
+  }
+
+  @override
+  void dispose() {
+    _hoverTimer?.cancel();
+    _removeDetails();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final meeting = widget.meeting;
     final hash = meeting.name.runes.fold(
       0,
       (value, rune) => (value * 31 + rune) & 0x7fffffff,
     );
     final background = HSLColor.fromAHSL(
       1,
-      (hash % 360).toDouble(),
+      ((hash + widget.paletteSeed * 67) % 360).toDouble(),
       .38,
       .91,
     ).toColor();
     final foreground = background.computeLuminance() > .5
         ? Colors.black
         : Colors.white;
-    return Material(
-      color: background,
-      child: InkWell(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => Scaffold(
-              appBar: AppBar(title: const Text('Course details')),
-              body: ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  for (final text in [
-                    meeting.name,
-                    meeting.room,
-                    meeting.frequencyText,
-                    if (meeting.hasUnknownFrequency)
-                      'Unknown frequency — visible in every preview',
-                    meeting.note,
-                    meeting.exam,
-                  ])
-                    if (text.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: SelectableText(text),
-                      ),
-                ],
+    return MouseRegion(
+      onEnter: _enter,
+      onHover: _move,
+      onExit: _exit,
+      child: Opacity(
+        opacity: widget.isCurrent ? 1 : .5,
+        child: SizedBox(
+          key: ValueKey('meeting-cell-${meeting.sourceId}'),
+          height: 60,
+          width: double.infinity,
+          child: Material(
+            key: ValueKey('meeting-color-${meeting.sourceId}'),
+            color: background,
+            child: InkWell(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => Scaffold(
+                    appBar: AppBar(title: const Text('Course details')),
+                    body: ListView(
+                      padding: const EdgeInsets.all(24),
+                      children: [_Details(meeting: meeting)],
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: DefaultTextStyle(
-            style: TextStyle(color: foreground, fontSize: 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  continuation ? '${meeting.name} · continued' : meeting.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: DefaultTextStyle(
+                  style: TextStyle(color: foreground, fontSize: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        meeting.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        meeting.room,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-                Text(
-                  meeting.room,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  meeting.hasUnknownFrequency
-                      ? 'Unknown frequency'
-                      : meeting.frequencyText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _Details extends StatelessWidget {
+  const _Details({required this.meeting});
+
+  final CourseMeeting meeting;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(meeting.name, style: Theme.of(context).textTheme.titleMedium),
+      for (final text in [
+        meeting.room,
+        meeting.frequencyText,
+        meeting.note,
+        meeting.exam,
+      ])
+        if (text.isNotEmpty)
+          Padding(padding: const EdgeInsets.only(top: 8), child: Text(text)),
+    ],
+  );
 }

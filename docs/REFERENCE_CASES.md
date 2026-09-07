@@ -85,21 +85,11 @@ The native equivalents exposed by the domain are deterministic ordering, period/
 - `cli.py` always generates XLSX first. PNG is Windows-only; requesting it elsewhere prints an error and exits the generation loop before normal cleanup. On Windows it can open the PNG, remove intermediate XLSX for PNG-only output, and rerun generation with new choices. Input stem uses the segment before the first dot. No automated schedule download is implemented.
 - Build scripts bake dependency requirements and package a Windows one-file executable with icon, native converter libraries, and version metadata. Requirements/lockfiles describe dependencies; output directory placeholder is not runtime behavior.
 
-E21 guards fail-closed handling of an invented paired detail-row input: current parser rejects it. **This does not establish paired-row import support** required by the local architecture. E22–E24 protect unmapped populated columns, immutable candidate bytes, and invalid workbook signatures. Exact spreadsheet output geometry, palette algorithms, dialogs, PNG conversion, renderer timing labels, native packaging, and widget behavior are inventoried but are **outside the existing domain/data API and not verified by these tests**. The native product renders Flutter rather than exporting upstream XLSX/PNG. Parent-owned widget/render tests must cover the adopted presentation semantics.
+E21 guards paired detail-row preservation or explicit fail-closed handling. Dedicated parser tests cover recognized paired layouts. E22–E24 protect unmapped populated columns, immutable candidate bytes, and invalid workbook signatures. Exact upstream spreadsheet output geometry, dialogs, PNG conversion, and native packaging remain outside this application's domain/data API. Native widget tests cover adopted Flutter presentation semantics instead.
 
 ## Execution and defects
 
-Executed `dart format test/reference`, `flutter analyze test/reference`, and `flutter test test/reference --reporter json`. Static analysis reports no issues. The test protocol reports **54 tests: 44 passing, 10 failing, no skipped tests**. All nine upstream test scenarios pass in their independent domain/parser equivalents. Failures are deliberately not skipped or converted into expected-bug assertions.
-
-| Failing case | Observed behavior / production location |
-|---|---|
-| E07 | Without a remark group, `parseRecord` treats the entire text as the title and fails to find the room. It does flag the incomplete record; this is a supported-field extraction gap rather than silent acceptance. |
-| E08 | A later parenthesized extra moves `lastIndexOf(')')` beyond the main frequency, so recognized frequency becomes unknown; remark slicing can also absorb unrelated fields. |
-| E09 | Unknown frequency is typed unknown but its original token is discarded from `frequencyText`; only the full raw record retains it. |
-| E10, three variants | Both recognized tutorial forms and malformed tutorial notes produce neither derived meetings nor a review issue. |
-| E25, four variants | Single-room, destination collision, out-of-bounds, and weekend tutorial notes likewise receive no review issue or derived meeting. |
-
-All failures concern `lib/data/schedule_xls_parser.dart`; no production file was modified. The initial measured parser SHA-256 was `96be1544857d1e23214dac652a7701165c4f39dd58f0a2fc6d0c1ebd786c09a9`. Re-run the suite after parent changes; these results describe this execution, not a future tree. The suite does not execute upstream code, test positive BIFF decoding, perform network refresh, or establish real-sample/visual/platform parity.
+Current independently authored reference tests pass. E07/E08 parser gaps were fixed; E09 now follows product policy by mapping unsupported frequency text to `每周`; E10/E25 produce deterministic tutorial meetings or explicit completion issues. The suite does not execute upstream code. Positive BIFF decoding remains covered only by the opt-in local workbook test, while HTTP, SQLite lifecycle, and Flutter presentation have separate application tests.
 
 ## Pinned upstream file inventory
 

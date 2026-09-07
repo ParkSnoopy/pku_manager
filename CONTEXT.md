@@ -16,7 +16,7 @@
 - `每周`: meeting is visible in both odd and even weeks.
 - `单周`: meeting is visible only in odd-numbered semester weeks.
 - `双周`: meeting is visible only in even-numbered semester weeks.
-- `unknown frequency`: nonempty frequency text outside `每周`, `单周`, and `双周`; preserve and display it with a warning rather than hiding the meeting.
+- Frequency text outside `每周`, `单周`, and `双周` maps to `每周`.
 - `current week`: week selected from current Beijing date and latest applicable validated semester start.
 - `offline-first`: stored timetable remains fully usable without network access. Week configuration refresh may improve parity data but cannot gate local timetable access.
 - `reference repo`: source used to understand behavior and file shapes. It is not automatically approved for code copying, dependency inclusion, or runtime access.
@@ -27,7 +27,7 @@
 - Week configuration: small validated public configuration cached only after a complete successful parse.
 - Course meeting: one normalized course occurrence with weekday, period range, room, frequency, note, and exam information.
 - Timetable: ordered collection of course meetings derived from the stored spreadsheet.
-- Preview mode: current, odd, even, or all view over the same timetable; it never mutates source data.
+- Timetable visibility: every meeting is shown by default. Current-week meetings remain opaque; meetings outside the current week render at half opacity.
 - Schedule repository: sole authority for importing immutable workbook bytes and publishing parsed timetable records through one SQLite transaction.
 - Spreadsheet parser: infrastructure adapter that converts supported PKU workbook layouts into domain meetings while reporting every unsupported nonempty record.
 - Source record identity: stable workbook location identity used to associate parsed records and user completion fields without changing source bytes.
@@ -46,10 +46,15 @@
 - Week refresh failure never blocks viewing a stored timetable.
 - Only validated Week Parity configuration can replace the last valid cache.
 - Parity uses Beijing calendar dates, not an arbitrary device-local midnight.
-- Unknown source data remains visible or causes an explicit import issue; it is never silently discarded.
+- Unsupported source records cause an explicit import issue and are never silently discarded; unsupported frequency tokens alone map to `每周`.
 - Weekend classes remain supported.
 - UI is native Flutter, responsive, flat, readable, accessible, and uses no gradients.
 - Mobile timetable view shows one fixed period-index column and one day column; horizontal swipes change the visible day.
+- A left vertical navigation rail owns primary application destinations.
+- Timetable colors fill complete compact cells containing course and room only. Repeated adjacent source cells render identically without continuation labels.
+- Pointer hover for 1000 ms opens a detail box positioned beside and following the pointer until exit.
+- Week configuration refresh runs at startup and whenever the application returns to foreground; no manual refresh control is shown.
+- Settings provides persistent light/dark and accent editing. A persistent color-roll seed lets users generate another deterministic timetable color combination repeatedly after import.
 - Product identity must be consistent across Flutter, Android, iOS, Linux, macOS, Windows, AppImage, and NSIS metadata.
 - Platform support means packaged-runtime verification, not compilation alone.
 - Product behavior stays in Dart. Flutter plugins or narrow Dart wrappers may bridge native platform or SQLite facilities, but native code does not own timetable or parity rules.

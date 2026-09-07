@@ -60,18 +60,25 @@ void main() {
     final table = Timetable(input);
     input.clear();
     expect(
-      table.visible(currentParity: WeekParity.odd).map((m) => m.sourceId),
-      ['every', 'odd', 'unknown'],
+      table
+          .visible(showAll: false, currentParity: WeekParity.odd)
+          .map((m) => m.sourceId),
+      ['every', 'odd'],
     );
-    expect(table.forDay(1, mode: PreviewMode.even).map((m) => m.sourceId), [
-      'every',
-      'even',
-      'unknown',
-    ]);
-    expect(table.atPeriod(1, 1), hasLength(4));
-    expect(table.atPeriod(1, 2), hasLength(4));
+    expect(
+      table.visible(showAll: true, currentParity: WeekParity.odd),
+      hasLength(3),
+    );
+    expect(
+      table
+          .forDay(1, showAll: false, currentParity: WeekParity.even)
+          .map((m) => m.sourceId),
+      ['every', 'even'],
+    );
+    expect(table.atPeriod(1, 1, showAll: true), hasLength(3));
+    expect(table.atPeriod(1, 2, showAll: true), hasLength(3));
     expect(table.atPeriod(1, 3), isEmpty);
-    expect(table.visible(), hasLength(4));
+    expect(table.visible(), hasLength(3));
     for (final list in [
       table.meetings,
       table.visible(),
@@ -111,10 +118,10 @@ void main() {
     expect(Timetable([], periodCount: 12).periodCount, 12);
   });
 
-  test('source identity and unknown human text are preserved exactly', () {
+  test('source identity and human text are preserved exactly', () {
     final value = meeting(
       'sheet:0/row:4/col:2',
-      frequency: WeekFrequency.unknown,
+      frequency: WeekFrequency.every,
       text: ' 第3至8周 ',
       note: '备注\n原文',
       exam: '待定',
@@ -124,7 +131,6 @@ void main() {
     expect(value.frequencyText, ' 第3至8周 ');
     expect(value.note, '备注\n原文');
     expect(value.exam, '待定');
-    expect(value.hasUnknownFrequency, isTrue);
   });
 
   test(
@@ -151,7 +157,7 @@ void main() {
   );
 
   test(
-    'frequency, unknown text, notes and exams prevent incorrect grouping',
+    'frequency text, notes and exams prevent incorrect grouping',
     () {
       for (final next in [
         meeting('b', first: 3, last: 4, frequency: WeekFrequency.odd),

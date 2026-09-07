@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/data/schedule_xls_parser.dart';
+import 'package:pku_manager/domain/course_meeting.dart';
 import 'package:pku_manager/domain/schedule_import.dart';
 import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
@@ -70,7 +71,7 @@ void main() {
     final r = record('尚待补充的课程信息');
     expect(r.raw, '尚待补充的课程信息');
     expect(r.issue, isNotNull);
-    expect(r.meeting.hasUnknownFrequency, isTrue);
+    expect(r.meeting.frequency, WeekFrequency.every);
   });
   test('E07 missing remark does not swallow room and title', () {
     final r = record('示例课程(实验楼A)每周考试：另行通知');
@@ -85,18 +86,12 @@ void main() {
     expect(r.meeting.note, isNot(contains('每周')));
     expect(r.meeting.note, contains('附加说明'));
   });
-  test('E09 unrecognized frequency survives as visible unknown', () {
+  test('E09 unrecognized frequency maps to every week', () {
     final r = record('示例课程(实验楼A)(备注：携带纸笔)隔三周考试：另行通知');
-    expect(r.meeting.frequency, WeekFrequency.unknown);
-    expect(r.meeting.frequencyText, '隔三周');
-    expect(
-      r.meeting.frequency.isVisible(currentParity: WeekParity.odd),
-      isTrue,
-    );
-    expect(
-      r.meeting.frequency.isVisible(currentParity: WeekParity.even),
-      isTrue,
-    );
+    expect(r.meeting.frequency, WeekFrequency.every);
+    expect(r.meeting.frequencyText, '每周');
+    expect(r.meeting.frequency.isCurrent(WeekParity.odd), isTrue);
+    expect(r.meeting.frequency.isCurrent(WeekParity.even), isTrue);
   });
   for (final note in [
     '习题课上课时间：每周四8-9，上课教室：实验楼B、实验楼C',
@@ -209,13 +204,19 @@ void main() {
       _row('1', value: _plain.replaceAll('每周', '双周')),
     ]);
     final t = Timetable(c.records.map((r) => r.meeting));
-    expect(t.atPeriod(1, 1, mode: PreviewMode.all), hasLength(2));
+    expect(t.atPeriod(1, 1, showAll: true), hasLength(2));
     expect(
-      t.atPeriod(1, 1, mode: PreviewMode.odd).single.frequency,
+      t
+          .atPeriod(1, 1, showAll: false, currentParity: WeekParity.odd)
+          .single
+          .frequency,
       WeekFrequency.odd,
     );
     expect(
-      t.atPeriod(1, 1, mode: PreviewMode.even).single.frequency,
+      t
+          .atPeriod(1, 1, showAll: false, currentParity: WeekParity.even)
+          .single
+          .frequency,
       WeekFrequency.even,
     );
     expect(t.meetings, hasLength(2));
@@ -298,24 +299,39 @@ void main() {
       }
     });
   }
-  test('E26 parity previews retain every and unknown occurrences', () {
-    for (final mode in PreviewMode.values) {
-      for (final parity in WeekParity.values) {
-        expect(
-          WeekFrequency.every.isVisible(mode: mode, currentParity: parity),
-          isTrue,
-        );
-        expect(
-          WeekFrequency.unknown.isVisible(mode: mode, currentParity: parity),
-          isTrue,
-        );
-      }
-    }
-    for (final frequency in WeekFrequency.values) {
-      expect(frequency.isVisible(mode: PreviewMode.all), isTrue);
-      expect(frequency.isVisible(), isTrue);
-    }
-  });
+  test(
+    'E26 show-all retains every occurrence while current view filters parity',
+    () {
+      final t = Timetable([
+        CourseMeeting(
+          sourceId: 'a',
+          name: 'A',
+          weekday: 1,
+          firstPeriod: 1,
+          lastPeriod: 1,
+          frequency: WeekFrequency.odd,
+          frequencyText: '单周',
+        ),
+        CourseMeeting(
+          sourceId: 'b',
+          name: 'B',
+          weekday: 1,
+          firstPeriod: 1,
+          lastPeriod: 1,
+          frequency: WeekFrequency.even,
+          frequencyText: '双周',
+        ),
+      ]);
+      expect(
+        t.atPeriod(1, 1, showAll: false, currentParity: WeekParity.odd),
+        hasLength(1),
+      );
+      expect(
+        t.atPeriod(1, 1, currentParity: WeekParity.odd, showAll: true),
+        hasLength(2),
+      );
+    },
+  );
   for (final bytes in [
     Uint8List(0),
     Uint8List.fromList([80, 75, 3, 4]),

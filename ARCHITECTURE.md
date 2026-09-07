@@ -72,10 +72,10 @@ Initial scope has one timetable-focused home destination. Import, errors, and na
 
 ### Meeting Frequency
 
-- `week_frequency.dart` defines `every`, `odd`, `even`, and `unknown`.
+- `week_frequency.dart` defines `every`, `odd`, and `even`.
 - Parsing recognizes source tokens `每周`, `单周`, and `双周` at one boundary.
-- One meeting-visibility policy evaluates frequency against current, odd, even, and all preview modes.
-- Unknown frequency remains representable and visible.
+- One meeting-visibility policy identifies current-week meetings while the timetable includes all meetings by default.
+- Unsupported frequency tokens map to `every` and display as `每周`.
 
 ### Course Meetings
 
@@ -178,14 +178,15 @@ Incomplete-import review is separate from schedule state. It holds a transient c
 ### Timetable Presentation
 
 - `timetable_page.dart` owns page-level actions, state selection, and responsive layout choice.
-- `timetable_page.dart` also presents semester week, parity, freshness, and refresh action.
+- `timetable_page.dart` presents a left navigation rail, semester week, parity, timetable, import/color-roll actions, and Settings destination. It refreshes week configuration on every foreground resume without a manual action.
 - `timetable_grid.dart` renders the complete week on wide layouts.
 - The same `timetable_grid.dart` renders one fixed period-index column and one day on narrow layouts. Page-level horizontal gestures and previous/next buttons select Monday through Sunday.
 - Import feedback stays in `timetable_page.dart`; `schedule_import_review.dart` owns the completion form.
+- `features/settings/appearance_controller.dart` owns persistent theme and timetable-palette state; `settings_page.dart` edits it through toggles and color actions.
 
-Widgets consume domain projections supplied by the controller. They do not filter frequency with local string checks. Unknown-frequency warnings accompany affected meetings in every layout.
+Widgets consume domain projections supplied by the controller. They do not filter frequency with local string checks. Every meeting is shown; meetings outside current parity render at half opacity.
 
-Course colors are deterministic presentation values derived from course identity. Foreground contrast is calculated from the chosen background. Color assignments are not persisted.
+Course colors are deterministic presentation values derived from course identity plus a persisted roll seed and fill compact cells containing only course and room. Foreground contrast is calculated from the chosen background. Repeated adjacent cells show identical content without continuation labels. After 1000 ms hover, a pointer-following overlay shows full course details including frequency. Rolling repeatedly changes the combination without persisting per-course colors.
 
 ## Durable Storage
 
@@ -197,6 +198,7 @@ Production storage uses one SQLite database in application support:
 | Parsed timetable | Normalized typed rows keyed to source identities | Parser plus accepted completion fields | Publish with source and active selection in one transaction. |
 | Import issues and completions | Typed rows keyed to source identities | Parser issues and explicit user input | Require complete resolution before publication. |
 | Week configuration | Validated TOML text and fetched-at timestamp; typed dates derived on load | Last valid public source response | Replace in one transaction after complete validation. |
+| Appearance | One typed SQLite row containing dark mode, accent color, and palette-roll seed | Explicit Settings and roll actions | Update transactionally; derive theme and per-course colors at display time. |
 
 SQLite transactions provide publication and rollback. Database migrations are ordered and transactional. Startup integrity failure is surfaced; the app does not silently rebuild or discard source evidence.
 
@@ -230,8 +232,8 @@ Cancellation or rejection stops without mutation. Any failure before transaction
 
 ### Dynamic Timetable Projection
 
-1. Controller combines timetable, parity outcome, and selected preview mode.
-2. Domain visibility policy evaluates each meeting's typed frequency.
+1. Controller combines timetable and parity outcome.
+2. Timetable exposes every meeting; domain current-week membership controls presentation opacity.
 3. Timetable projection groups visible meetings by weekday and period.
 4. Wide and narrow widgets render the same projection semantics.
 

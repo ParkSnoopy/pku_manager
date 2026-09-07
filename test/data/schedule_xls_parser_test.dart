@@ -25,8 +25,8 @@ void main() {
     expect(r.meeting.name, 'Synthetic Lab(甲)');
     expect(r.meeting.room, 'Room A');
     expect(r.meeting.note, 'bring notes (draft)；extra');
-    expect(r.meeting.frequencyText, '隔三周');
-    expect(r.meeting.frequency, WeekFrequency.unknown);
+    expect(r.meeting.frequencyText, '每周');
+    expect(r.meeting.frequency, WeekFrequency.every);
     expect(r.meeting.exam, '考试: later');
   });
 
@@ -79,27 +79,24 @@ void main() {
     expect(r.meeting.frequency, WeekFrequency.every);
   });
 
-  test(
-    'original formatted subtitle and timed index preserve unknown frequency',
-    () {
-      const upper = ' Synthetic Lab\n（Room A，隔三周）';
-      final c = parser.parseCells(bytes, [
-        ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'],
-        row('第 1 节\n08:00-08:50', upper),
-        row('', 'bring notes\n考试：later'),
-        row('第 2 节\n09:00-09:50'),
-      ]);
-      final r = c.records.single;
-      expect(r.issue, isNull);
-      expect(r.meeting.name, 'Synthetic Lab');
-      expect(r.meeting.room, 'Room A');
-      expect(r.meeting.frequencyText, '隔三周');
-      expect(r.meeting.frequency, WeekFrequency.unknown);
-      expect(r.meeting.note, 'bring notes');
-      expect(r.raw, '$upper\nbring notes\n考试：later');
-      expect(c.periodCount, 2);
-    },
-  );
+  test('original formatted subtitle maps unsupported frequency to every week', () {
+    const upper = ' Synthetic Lab\n（Room A，隔三周）';
+    final c = parser.parseCells(bytes, [
+      ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+      row('第 1 节\n08:00-08:50', upper),
+      row('', 'bring notes\n考试：later'),
+      row('第 2 节\n09:00-09:50'),
+    ]);
+    final r = c.records.single;
+    expect(r.issue, isNull);
+    expect(r.meeting.name, 'Synthetic Lab');
+    expect(r.meeting.room, 'Room A');
+    expect(r.meeting.frequencyText, '每周');
+    expect(r.meeting.frequency, WeekFrequency.every);
+    expect(r.meeting.note, 'bring notes');
+    expect(r.raw, '$upper\nbring notes\n考试：later');
+    expect(c.periodCount, 2);
+  });
 
   test('unrecognized or orphan detail cells fail closed', () {
     for (final detail in [row('', 'unrecognized'), row('', '备注：orphan', 2)]) {

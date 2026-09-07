@@ -28,23 +28,21 @@ final class Timetable {
       meetings.fold(0, (max, m) => m.lastPeriod > max ? m.lastPeriod : max);
 
   List<CourseMeeting> visible({
-    PreviewMode mode = PreviewMode.current,
+    bool showAll = true,
     WeekParity? currentParity,
   }) => List.unmodifiable(
-    meetings.where(
-      (m) => m.frequency.isVisible(mode: mode, currentParity: currentParity),
-    ),
+    meetings.where((m) => showAll || m.frequency.isCurrent(currentParity)),
   );
 
   List<CourseMeeting> forDay(
     int weekday, {
-    PreviewMode mode = PreviewMode.current,
+    bool showAll = true,
     WeekParity? currentParity,
   }) {
     RangeError.checkValueInInterval(weekday, 1, 7, 'weekday');
     return List.unmodifiable(
       visible(
-        mode: mode,
+        showAll: showAll,
         currentParity: currentParity,
       ).where((m) => m.weekday == weekday),
     );
@@ -53,14 +51,14 @@ final class Timetable {
   List<CourseMeeting> atPeriod(
     int weekday,
     int period, {
-    PreviewMode mode = PreviewMode.current,
+    bool showAll = true,
     WeekParity? currentParity,
   }) {
     if (period < 1) throw ArgumentError.value(period, 'period');
     return List.unmodifiable(
       forDay(
         weekday,
-        mode: mode,
+        showAll: showAll,
         currentParity: currentParity,
       ).where((m) => m.firstPeriod <= period && period <= m.lastPeriod),
     );
@@ -69,11 +67,14 @@ final class Timetable {
   /// Presentation-only adjacency grouping; every original identity is retained.
   /// Matching labels never imply that source records are the same record.
   List<List<CourseMeeting>> consecutiveGroups({
-    PreviewMode mode = PreviewMode.current,
+    bool showAll = true,
     WeekParity? currentParity,
   }) {
     final groups = <List<CourseMeeting>>[];
-    for (final meeting in visible(mode: mode, currentParity: currentParity)) {
+    for (final meeting in visible(
+      showAll: showAll,
+      currentParity: currentParity,
+    )) {
       final previous = groups.isEmpty ? null : groups.last.last;
       if (previous != null &&
           previous.weekday == meeting.weekday &&

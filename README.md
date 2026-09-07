@@ -14,10 +14,11 @@ Your original workbook is never edited. Exact source bytes and parsed timetable 
 
 - On a phone, swipe left or right between weekdays beside a fixed period column. Previous/next controls also support keyboard navigation.
 - Wide windows show Monday through Sunday together. Scroll vertically for later periods.
-- Select **Current**, **Odd**, **Even**, or **All** without changing stored classes.
-- Tap a class for its room, original frequency, notes, and exam information. Unknown frequencies stay visible with a warning.
+- Every class is shown. Classes outside the current week appear at half opacity.
+- Tap a class for its room, frequency, notes, and exam information. On pointer devices, hover for one second to show details beside the pointer.
+- Use **Roll colors** repeatedly for another timetable color combination. Settings provides persistent light/dark and accent controls.
 
-Week numbers use Beijing dates and public Week Parity semester starts. A standard edition uses a 16-week semester. Outside an applicable semester, Current shows all classes. Refresh failures retain cached data and never block your timetable.
+Week numbers use Beijing dates and public Week Parity semester starts. A standard edition uses a 16-week semester. Outside an applicable semester, all classes appear. Configuration refreshes at startup and after every foreground resume; failures retain cached data and never block your timetable. Unsupported frequency text maps to `每周`.
 
 ## Privacy and availability
 
