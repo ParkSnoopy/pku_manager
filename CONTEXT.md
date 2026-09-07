@@ -9,6 +9,7 @@
 - `schedule.xls`: the file manually exported and supplied by the user. Its exact bytes are immutable source evidence retained as a SQLite BLOB; neither import nor later completion may rewrite them.
 - `store timetable`: retain immutable source bytes, parsed records, parse issues, and user-supplied completion fields in the application SQLite database. Parsed and completed records remain traceable to stable source-record identities.
 - `import schedule`: acquire one user-selected local file through the platform file picker, validate and parse it completely, then transactionally publish its immutable bytes and parsed structure.
+- File selection is unrestricted by extension. Content detection determines compatibility. Catastrophic parsing failures show a concise message without internal details and preserve the current timetable.
 - `elective site`: `elective.pku.edu.cn`. The app and development process must never fetch, scrape, probe, authenticate to, or embed it.
 - `pretty timetable`: a native Flutter timetable informed by elective-prettifier behavior. Logic and tests are independently reimplemented in Dart; AGPL code and fixtures are not copied without an approved compatible license strategy.
 - `dynamic timetable`: derive visible meetings from current semester parity at display time; never delete odd-week or even-week meetings from stored data.
@@ -59,10 +60,10 @@
 
 ## Known Boundaries
 
-- Repository currently contains only the Flutter starter application.
-- Product name and publisher identity are not finalized.
-- No sanitized PKU schedule fixture is present.
-- Spreadsheet reader choice is provisional until fixture-backed validation.
-- Week Parity repository URL currently appears inconsistent; deployed configuration is the known usable data source.
+- Product identity is PKU Manager, published by ParkSnoopy. Android/Linux use `com.parksnoopy.pku_manager`; Apple uses `com.parksnoopy.pku-manager` because Apple identifiers prohibit underscores.
+- Flutter domain, SQLite adapters, import review, responsive timetable, and native packaging/workflow definitions are implemented. Platform distribution acceptance is separate from application logic verification.
+- User-provided workbooks under ignored `.sample/` may be used locally but are never copied into tracked tests. Tests opt in using `SCHEDULE_FIXTURE`; fixture content is not a license grant or publication permission.
+- The pure-Dart `excel2003` reader parses the local BIFF8 source. Paired-row layout coverage also uses independently authored cases.
+- Reference repositories are `parksnoopy-undergraduate/week-parity` and `ParkSnoopy/pku-elective-prettify`; provenance is recorded in `docs/REFERENCE_CASES.md`.
 - Semester configuration exposes start dates but no explicit semester end dates.
 - Apple runtime verification requires macOS CI or Apple hardware; Windows installer verification requires Windows CI or a Windows machine.

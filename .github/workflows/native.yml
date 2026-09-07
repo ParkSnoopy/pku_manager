@@ -1,0 +1,125 @@
+name: Native builds
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+      - run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libfuse2t64 xvfb
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build linux --release
+      - name: Build AppImage
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/tools
+          curl --fail --location --output build/tools/appimagetool https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          printf '%s  %s\n' ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0 build/tools/appimagetool | sha256sum --check
+          chmod +x build/tools/appimagetool
+          curl --fail --location --output build/tools/runtime-x86_64 https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64
+          printf '%s  %s\n' 1cc49bcf1e2ccd593c379adb17c9f85a36d619088296504de95b1d06215aebbf build/tools/runtime-x86_64 | sha256sum --check
+          cmake -S packaging/linux -B build/appimage -G Ninja -DAPPIMAGETOOL="$PWD/build/tools/appimagetool" -DRUNTIME="$PWD/build/tools/runtime-x86_64"
+          cmake --build build/appimage --target appimage
+          sha256sum build/appimage/pku-manager.AppImage > build/appimage/SHA256SUMS
+      - name: Launch packaged runtime
+        shell: bash
+        run: |
+          set +e
+          GDK_BACKEND=x11 xvfb-run -a timeout 15s build/appimage/pku-manager.AppImage > build/appimage/runtime.log 2>&1
+          status=$?
+          test "$status" = 124
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: linux-appimage
+          path: |
+            build/appimage/pku-manager.AppImage
+            build/appimage/SHA256SUMS
+            build/appimage/runtime.log
+          if-no-files-found: error
+  android:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.2'
+      - run: flutter build apk --release
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+  apple:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.2'
+      - run: flutter build macos --release
+      - run: flutter test
+      - run: flutter build ios --release --no-codesign
+      - run: flutter build ios --simulator
+      - name: Archive Apple bundles
+        run: |
+          ditto -c -k --keepParent build/macos/Build/Products/Release/pku_manager.app build/macos-app.zip
+          ditto -c -k --keepParent build/ios/iphoneos/Runner.app build/ios-unsigned.zip
+          ditto -c -k --keepParent build/ios/iphonesimulator/Runner.app build/ios-simulator.zip
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: apple-bundles
+          path: |
+            build/macos-app.zip
+            build/ios-unsigned.zip
+            build/ios-simulator.zip
+          if-no-files-found: error
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.2'
+      - run: flutter build windows --release
+      - run: flutter test
+      - run: choco install nsis --version=3.11 -y --no-progress
+      - name: Build installer
+        shell: pwsh
+        run: |
+          & 'C:\Program Files (x86)\NSIS\makensis.exe' packaging/windows/installer.nsi
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install, upgrade, launch, uninstall
+        shell: pwsh
+        run: |
+          $installer = Resolve-Path packaging/windows/pku-manager-setup.exe
+          $installed = Join-Path $env:LOCALAPPDATA 'Programs\PKU Manager'
+          $install = Start-Process $installer -ArgumentList '/S' -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw 'Installation failed' }
+          $upgrade = Start-Process $installer -ArgumentList '/S' -Wait -PassThru
+          if ($upgrade.ExitCode -ne 0) { throw 'Upgrade failed' }
+          $app = Start-Process "$installed\pku_manager.exe" -PassThru
+          Start-Sleep -Seconds 10
+          if ($app.HasExited) { throw 'Installed runtime exited early' }
+          Stop-Process -Id $app.Id
+          Start-Process "$installed\Uninstall.exe" -ArgumentList '/S' -Wait
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: windows-installer
+          path: packaging/windows/pku-manager-setup.exe
+          if-no-files-found: error

@@ -1,4 +1,4 @@
-package com.example.pku_manager
+package com.parksnoopy.pku_manager
 
 import io.flutter.embedding.android.FlutterActivity
 

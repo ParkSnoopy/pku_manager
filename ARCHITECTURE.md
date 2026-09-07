@@ -4,7 +4,7 @@ PKU Manager is an offline-first Flutter school life application targeting Androi
 
 ## Document Status
 
-The repository currently contains the Flutter starter application. This document defines the target structure implemented by `PLAN.md`; paths marked as planned do not exist until their corresponding plan task is complete.
+The repository contains the Flutter timetable application, SQLite adapters, independently authored reference tests, and native packaging definitions. `PLAN.md` separates implemented application behavior from platform release evidence still required in CI.
 
 Architecture documentation describes module ownership and runtime flow. Product terminology, safety constraints, and interpretation rules remain authoritative in `CONTEXT.md`.
 
@@ -14,19 +14,19 @@ The application is one Flutter process with four internal layers and thin platfo
 
 | Layer | Path | Status | Responsibility |
 |---|---|---|---|
-| Entry | `lib/main.dart` | Current, to replace | Start Flutter and construct the application root. |
-| Application | `lib/app/` | Planned | Build dependencies, theme, navigation shell, and feature ownership. |
-| Features | `lib/features/` | Planned | Coordinate user actions and render application state. |
-| Domain | `lib/domain/` | Planned | Define timetable, semester, parity, and visibility rules without infrastructure dependencies. |
-| Data | `lib/data/` | Planned | Adapt files, SQLite, spreadsheets, public HTTP configuration, and platform paths to domain values. |
+| Entry | `lib/main.dart` | Current | Start Flutter and construct the application root. |
+| Application | `lib/app/` | Current | Build dependencies, theme, navigation shell, and feature ownership. |
+| Features | `lib/features/` | Current | Coordinate user actions and render application state. |
+| Domain | `lib/domain/` | Current | Define timetable, semester, parity, and visibility rules without infrastructure dependencies. |
+| Data | `lib/data/` | Current | Adapt files, SQLite, spreadsheets, public HTTP configuration, and platform paths to domain values. |
 | Android runner | `android/` | Current | Host Flutter, declare application identity, and permit public Week Parity access. |
 | iOS runner | `ios/` | Current | Host Flutter, select documents, and package the iOS application. |
 | Linux runner | `linux/` | Current | Host the Flutter GTK application and produce the desktop release bundle. |
 | macOS runner | `macos/` | Current | Host Flutter and produce the macOS application bundle. |
 | Windows runner | `windows/` | Current | Host the Flutter Win32 application and produce the desktop release bundle. |
-| Linux packaging | `packaging/linux/` | Planned | Turn the complete Linux release bundle into an AppImage. |
-| Windows packaging | `packaging/windows/` | Planned | Turn the complete Windows release bundle into an NSIS installer. |
-| Tests | `test/` | Current, to expand | Mirror domain, data, feature, and application boundaries with focused fixtures and widget tests. |
+| Linux packaging | `packaging/linux/` | Current | Turn the complete Linux release bundle into an AppImage. |
+| Windows packaging | `packaging/windows/` | Current | Turn the complete Windows release bundle into an NSIS installer. |
+| Tests | `test/` | Current | Exercise domain, adapters, controller, and widget behavior. |
 
 ## Dependency Direction
 
@@ -51,7 +51,7 @@ Only application composition selects concrete implementations. Tests replace sid
 
 - `lib/main.dart` starts `PkuManagerApp` and contains no feature logic.
 - `lib/app/app.dart` owns `MaterialApp`, application-level theme, adapter construction, and controller lifetime.
-- `lib/app/home_page.dart` owns responsive navigation and the initial timetable destination.
+- `lib/features/timetable/timetable_page.dart` is the initial destination and owns the responsive shell; there is no redundant home-page wrapper.
 
 The application layer creates one shared SQLite database, schedule repository, week configuration repository, clock, validated build configuration, and timetable controller. Widgets receive existing instances rather than constructing side-effecting services during `build`.
 
@@ -96,15 +96,15 @@ Initial scope has one timetable-focused home destination. Import, errors, and na
 
 ### Application Database and Platform Paths
 
-- `app_paths.dart` resolves the SQLite database in the platform application-support directory.
+- `lib/app/app.dart` resolves the SQLite database in the platform application-support directory during composition.
 - `app_database.dart` owns schema versions, migrations, foreign keys, transactions, integrity checks, and typed row mapping.
 - Runtime data uses normalized SQLite tables and BLOBs. JSON columns are not schema substitutes.
 - Production uses `path_provider` and the Dart `sqlite3` package; tests use temporary or in-memory databases.
 
 ### Schedule Acquisition
 
-- `schedule_picker.dart` wraps `file_picker` behind one schedule-selection interface.
-- Selection returns bounded file bytes and a display filename. External file bytes are never modified.
+- `schedule_picker.dart` wraps `file_selector` behind one schedule-selection interface.
+- Selection accepts every filename and returns bounded bytes. Content, not extension, determines compatibility. External file bytes are never modified.
 - The repository never assumes an external path remains readable after picker completion.
 - Cancellation is a distinct successful no-selection outcome.
 - Picker failures remain distinct from workbook validation failures.
@@ -154,7 +154,7 @@ The spreadsheet package remains isolated behind the workbook decoder. Replacing 
 
 ### Timetable Controller
 
-`lib/features/timetable/timetable_controller.dart` owns one immutable view-state snapshot containing independent schedule and parity state.
+`lib/features/timetable/timetable_controller.dart` coordinates independent schedule and parity state with Flutter `ChangeNotifier`; published timetable, candidate, and domain collections are immutable.
 
 Schedule state distinguishes:
 
@@ -178,10 +178,10 @@ Incomplete-import review is separate from schedule state. It holds a transient c
 ### Timetable Presentation
 
 - `timetable_page.dart` owns page-level actions, state selection, and responsive layout choice.
-- `week_status.dart` presents semester week, parity, freshness, and refresh action.
+- `timetable_page.dart` also presents semester week, parity, freshness, and refresh action.
 - `timetable_grid.dart` renders the complete week on wide layouts.
-- `day_schedule.dart` renders one fixed period-index column and one visible day column on narrow layouts. Horizontal swipes select Monday through Sunday.
-- `schedule_import_action.dart` owns user-facing file selection and import feedback.
+- The same `timetable_grid.dart` renders one fixed period-index column and one day on narrow layouts. Page-level horizontal gestures and previous/next buttons select Monday through Sunday.
+- Import feedback stays in `timetable_page.dart`; `schedule_import_review.dart` owns the completion form.
 
 Widgets consume domain projections supplied by the controller. They do not filter frequency with local string checks. Unknown-frequency warnings accompany affected meetings in every layout.
 
@@ -196,7 +196,7 @@ Production storage uses one SQLite database in application support:
 | Imported workbook | Immutable source BLOB | Exact user-selected bytes | Insert only after bounded parsing; never update its bytes. |
 | Parsed timetable | Normalized typed rows keyed to source identities | Parser plus accepted completion fields | Publish with source and active selection in one transaction. |
 | Import issues and completions | Typed rows keyed to source identities | Parser issues and explicit user input | Require complete resolution before publication. |
-| Week configuration | Raw TOML BLOB, normalized starts, and freshness metadata | Last valid public source response | Replace in one transaction after complete validation. |
+| Week configuration | Validated TOML text and fetched-at timestamp; typed dates derived on load | Last valid public source response | Replace in one transaction after complete validation. |
 
 SQLite transactions provide publication and rollback. Database migrations are ordered and transactional. Startup integrity failure is surfaced; the app does not silently rebuild or discard source evidence.
 
@@ -206,9 +206,9 @@ No schedule data belongs beside the executable, in the repository, in Downloads 
 
 ### Schedule Import
 
-1. User invokes import from `schedule_import_action.dart`.
+1. User invokes import from `timetable_page.dart`.
 2. `timetable_controller.dart` requests bytes through `schedule_picker.dart`.
-3. `schedule_repository.dart` checks bounds and submits bytes to `schedule_xls_parser.dart` without mutation.
+3. The controller submits bounded bytes to its `ScheduleDecoder` port, implemented by `schedule_xls_parser.dart`, without mutation.
 4. Workbook decoder and selected layout parser create a candidate containing source identities, parsed records, and all issues.
 5. A complete candidate proceeds directly; an incomplete candidate waits for complete user corrections or whole-candidate rejection.
 6. Repository inserts immutable bytes, parsed rows, completion rows, and active selection in one SQLite transaction.
@@ -294,9 +294,10 @@ Tests mirror production ownership:
 |---|---|
 | `test/domain/` | Pure date, parity, frequency, ordering, grouping, and visibility contracts. |
 | `test/data/` | TOML parsing, bounded fetches, SQLite migrations and transactions, workbook decoding, layout parsing, immutable-source equality, and completion storage. |
-| `test/features/` | Controller state combinations, incomplete review, rejection, serialized import, refresh independence, and preview selection. |
-| `test/widgets/` | Empty, ready, failure, incomplete review, stale, unknown-frequency, swipeable narrow, and wide rendered states. |
-| `test/fixtures/` | User-approved sanitized workbook fixtures and small public week-config samples. |
+| `test/data/import_lifecycle_test.dart` | Controller import lifecycle against real SQLite storage. |
+| `test/widget_test.dart` | Rendered application state, responsive navigation, and import cancellation. |
+| `test/reference/` | Independently recreated reference behavior; provenance in `docs/REFERENCE_CASES.md`. |
+| Ignored `.sample/` | User-owned local workbooks used only by explicit opt-in tests; never distributed as fixtures. |
 
 Synthetic cell matrices cover isolated parser branches. Acceptance of the spreadsheet adapter requires at least one sanitized real PKU export fixture. Fixtures containing personal or course-sensitive data do not enter the repository.
 
@@ -311,7 +312,7 @@ Primary verification commands are:
 - `flutter build macos --release` on macOS
 - `flutter build windows --release` on Windows
 
-AppImage and NSIS checks use their source-controlled packaging definitions after those files exist. Packaged-runtime checks remain separate from Flutter compilation.
+AppImage and NSIS checks use their source-controlled packaging definitions. Packaged-runtime checks remain separate from Flutter compilation. The current user-approved validation scope is application logic; native build and distribution checks remain in GitHub Actions for later user-supplied CI results.
 
 ## Extension Points
 
