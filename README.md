@@ -19,7 +19,7 @@ Your workbook stays on your device and is not modified. An unreadable file does 
 - The course editor can choose any class color and set an importance-outline color and thickness. Manual colors carry a lock/palette marker; locked colors survive **Roll colors**, while an unlocked manual color returns to generated colors on the next roll.
 - On pointer devices, hover briefly to show details beside the pointer.
 - **Timetable** shows the weekly grid and an upcoming-schedule pane in landscape. Selecting a timetable block replaces that pane with an editable details pane.
-- **Calendar** is a separate personal calendar and does not add timetable classes automatically.
+- **Calendar** is a separate personal calendar with an upcoming-events pane. It does not add timetable classes automatically.
 - Select **教学网** below Settings to open PKU's Teaching Network in your default browser.
 - Use **Roll colors** repeatedly for another timetable color combination. Settings can hide that navigation action, choose any theme accent from a palette, and provides one language button that advances through Korean, English, and Simplified Chinese with each click.
 - Use **Export** to save the complete Monday–Friday timetable as PNG or XLSX. PNG uses the reference timetable's four-times export scale and complete unscaled table dimensions.
