@@ -3,6 +3,7 @@ import 'dart:ui' show loadFontFromList;
 import 'package:flutter/services.dart';
 
 const notoSansCjkSuperOtcAsset = 'assets/fonts/NotoSansCJK.ttc';
+const notoSerifCjkSuperOtcAsset = 'assets/fonts/NotoSerifCJK.ttc';
 const pkuNotoSansKrFamily = 'PKU Noto Sans CJK KR';
 const pkuNotoSansScFamily = 'PKU Noto Sans CJK SC';
 
@@ -10,6 +11,11 @@ const notoSansCjkKrRegularFace = 26;
 const notoSansCjkScRegularFace = 27;
 const notoSansCjkKrBoldFace = 36;
 const notoSansCjkScBoldFace = 37;
+
+const notoSerifCjkKrRegularFace = 11;
+const notoSerifCjkScRegularFace = 12;
+const notoSerifCjkKrBoldFace = 26;
+const notoSerifCjkScBoldFace = 27;
 
 final class SuperOtcFontLoader {
   SuperOtcFontLoader._();

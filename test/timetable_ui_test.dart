@@ -221,7 +221,7 @@ void main() {
           find.byKey(const ValueKey('meeting-cell-first')),
         ),
       );
-      await tester.pump(const Duration(milliseconds: 999));
+      await tester.pump(const Duration(milliseconds: 99));
       expect(find.byKey(const ValueKey('meeting-hover-first')), findsNothing);
       await tester.pump(const Duration(milliseconds: 1));
       final hover = find.byKey(const ValueKey('meeting-hover-first'));

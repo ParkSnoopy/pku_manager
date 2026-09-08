@@ -443,7 +443,7 @@ class _MeetingTileState extends State<_MeetingTile> {
 
   void _enter(PointerEnterEvent event) {
     _move(event);
-    _hoverTimer = Timer(const Duration(milliseconds: 1000), _showDetails);
+    _hoverTimer = Timer(const Duration(milliseconds: 100), _showDetails);
   }
 
   void _exit(PointerExitEvent event) {

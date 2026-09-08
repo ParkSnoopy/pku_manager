@@ -51,7 +51,7 @@ Only application composition selects concrete implementations. Tests replace sid
 
 - `lib/main.dart` starts `PkuManagerApp` and contains no feature logic.
 - `lib/app/app.dart` owns `MaterialApp`, application-level theme, adapter construction, and controller lifetime.
-- `lib/ui/super_otc_font.dart` selects and registers required Korean and Simplified Chinese faces from the single Static Super OTC asset before application startup.
+- `lib/ui/super_otc_font.dart` selects and registers required Korean and Simplified Chinese faces from the Sans Static Super OTC before application startup. The Serif Static Super OTC is packaged as one raw future-use asset and is not loaded at runtime.
 - `lib/features/timetable/timetable_page.dart` is the initial destination and owns the responsive shell; there is no redundant home-page wrapper.
 
 The application layer creates one shared SQLite database, schedule repository, week configuration repository, clock, validated build configuration, and timetable controller. Widgets receive existing instances rather than constructing side-effecting services during `build`.
@@ -194,7 +194,7 @@ Widgets consume domain projections supplied by the controller. They do not filte
 
 Throughout `0.0.x`, `PRAGMA user_version` remains 0. The development application does not retain backward-compatibility or migration paths.
 
-Course colors default to deterministic presentation values derived from course identity plus a persisted roll seed and are the deliberate exception to reference visual parity. Optional manual colors and configurable importance outlines are persisted by active-source identity; outlines default to yellow at 1.5 logical pixels. Course names use a fixed 22.5-pixel size, classroom text uses 15 pixels, and padded one-line labels truncate within each block. Locked colors survive rolls, while unlocked manual colors return to generated colors on the next roll. Vertically touching identical meetings render as one block. Shape, alignment, row timing labels, meal breaks, and export resolution follow the reference. Foreground contrast is calculated from the chosen background. After 1000 ms hover, a pointer-following overlay shows full course details including frequency.
+Course colors default to deterministic presentation values derived from course identity plus a persisted roll seed and are the deliberate exception to reference visual parity. Optional manual colors and configurable importance outlines are persisted by active-source identity; outlines default to yellow at 1.5 logical pixels. Course names use a fixed 22.5-pixel size, classroom text uses 15 pixels, and padded one-line labels truncate within each block. Locked colors survive rolls, while unlocked manual colors return to generated colors on the next roll. Vertically touching identical meetings render as one block. Shape, alignment, row timing labels, meal breaks, and export resolution follow the reference. Foreground contrast is calculated from the chosen background. After 100 ms hover, a pointer-following overlay shows full course details including frequency.
 
 ## Durable Storage
 

@@ -69,6 +69,7 @@ flutter:
 
   assets:
     - assets/fonts/NotoSansCJK.ttc
+    - assets/fonts/NotoSerifCJK.ttc
 
   fonts:
     - family: Roboto Mono Reference

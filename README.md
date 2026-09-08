@@ -17,7 +17,7 @@ Your workbook stays on your device and is not modified. An unreadable file does 
 - Every class is shown. Classes outside the current week appear at half opacity.
 - Vertically touching cells for the same course on one weekday appear as one block. Select the block to edit every session together, or select an empty cell to add a course.
 - The course editor can choose any class color and set an importance-outline color and thickness. Manual colors carry a lock/palette marker; locked colors survive **Roll colors**, while an unlocked manual color returns to generated colors on the next roll.
-- On pointer devices, hover for one second to show details beside the pointer.
+- On pointer devices, hover briefly to show details beside the pointer.
 - **Timetable** shows the weekly grid and an upcoming-schedule pane in landscape. Selecting a timetable block replaces that pane with an editable details pane.
 - **Calendar** shows recurring classes by month and the next upcoming class in its landscape right pane.
 - Select **教学网** below Settings to open PKU's Teaching Network in your default browser.

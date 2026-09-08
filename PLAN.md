@@ -188,7 +188,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Render Monday through Friday on wide layouts.
 - On narrow layouts, keep one fixed period-index column and one day column visible; horizontal swipes move between Monday and Friday while the visible weekday remains explicit.
 - Map unsupported frequency tokens to `每周`.
-- Match timetable shape, dimensions, font sizes, alignment, class-time labels, meal breaks, aspect fitting, and 4× PNG export resolution to the `pages` reference; retain application-owned course colors as the only intentional visual exception. Package CJK glyphs and weights in one Static Super OTC instead of separate region/weight files.
+- Match timetable shape, dimensions, font sizes, alignment, class-time labels, meal breaks, aspect fitting, and 4× PNG export resolution to the `pages` reference; retain application-owned course colors as the only intentional visual exception. Package each CJK family as one Static Super OTC instead of separate region/weight files; keep both Sans and future-use Serif collections.
 - Derive course colors from course identity plus a persistent roll seed, allow repeated color rolls after import, and maintain readable foreground contrast.
 - Default to Korean, persist English and Simplified Chinese alternatives, localize all application controls, and expose one active-language button that cycles through the three entries per click.
 - Group vertically touching identical weekday meetings into one block and atomically edit all retained source identities without mutating imported source bytes; export the complete timetable as PNG or XLSX.
@@ -197,7 +197,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Add a month Calendar derived from course recurrence and semester parity. In landscape, Timetable uses an upcoming-schedule pane that becomes the inline editor on selection; Calendar uses an upcoming-class pane. Keep dialog editing for portrait timetable layouts.
 - Add a **教学网** rail action that opens the exact PKU Teaching Network URL in the platform default browser.
 - Use flat visual hierarchy, no gradients, bounded labels, accessible semantics, and keyboard navigation on desktop.
-- Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation and exact external URL dispatch, grouped inline editing, upcoming countdowns, reference timetable geometry/typography, course-and-room full-cell color, repeated color rolls, cyclic language selection, persistent theme editing, 1000 ms pointer-following details, foreground refresh, and reference export dimensions.
+- Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation and exact external URL dispatch, grouped inline editing, upcoming countdowns, reference timetable geometry/typography, course-and-room full-cell color, repeated color rolls, cyclic language selection, persistent theme editing, 100 ms pointer-following details, foreground refresh, and reference export dimensions.
 - Keep `PRAGMA user_version = 0` throughout `0.0.x` and retain no migrations until a schema-version bump and backward compatibility are explicitly requested.
 
 ### 9. Apply Product Identity
