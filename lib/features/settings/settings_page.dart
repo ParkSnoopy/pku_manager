@@ -68,25 +68,20 @@ class SettingsPage extends StatelessWidget {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 12),
-          SegmentedButton<AppLanguage>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment(
-                value: AppLanguage.ko,
-                label: Text(AppStrings.of(context).text(AppText.korean)),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: const ValueKey('language-cycle'),
+              onPressed: controller.cycleLanguage,
+              icon: const Icon(Icons.language),
+              label: Text(
+                AppStrings.of(context).text(switch (controller.language) {
+                  AppLanguage.ko => AppText.korean,
+                  AppLanguage.en => AppText.english,
+                  AppLanguage.zhHans => AppText.chinese,
+                }),
               ),
-              ButtonSegment(
-                value: AppLanguage.en,
-                label: Text(AppStrings.of(context).text(AppText.english)),
-              ),
-              ButtonSegment(
-                value: AppLanguage.zhHans,
-                label: Text(AppStrings.of(context).text(AppText.chinese)),
-              ),
-            ],
-            selected: {controller.language},
-            onSelectionChanged: (values) =>
-                controller.setLanguage(values.single),
+            ),
           ),
         ],
       ),

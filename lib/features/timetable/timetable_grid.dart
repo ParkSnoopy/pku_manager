@@ -9,6 +9,7 @@ import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
 import '../../l10n/app_strings.dart';
 import 'timetable_color.dart';
+import 'timetable_style.dart';
 
 class TimetableGrid extends StatelessWidget {
   const TimetableGrid({
@@ -30,85 +31,341 @@ class TimetableGrid extends StatelessWidget {
   final VoidCallback? nextDay;
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      SizedBox(
-        height: 48,
-        child: Row(
-          children: [
-            const SizedBox(width: 56),
-            if (days.length == 1)
-              IconButton(
-                onPressed: previousDay,
-                tooltip: AppStrings.of(context).text(AppText.previousDay),
-                icon: const Icon(Icons.chevron_left),
+  Widget build(BuildContext context) {
+    final geometry = TimetableGeometry(timetable.periodCount);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (days.length == 1) {
+          final width = constraints.maxWidth;
+          return SingleChildScrollView(
+            child: SizedBox(
+              width: width,
+              height: geometry.height,
+              child: _ReferenceTable(
+                timetable: timetable,
+                days: days,
+                paletteSeed: paletteSeed,
+                parity: parity,
+                onEdit: onEdit,
+                previousDay: previousDay,
+                nextDay: nextDay,
+                courseWidth: math.max(0.0, width - timetableIndexWidth),
               ),
-            for (final day in days)
-              Expanded(
-                child: Center(
-                  child: Text(
-                    AppStrings.of(context).weekday(day),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            ),
+          );
+        }
+        return FittedBox(
+          fit: BoxFit.contain,
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: geometry.width,
+            height: geometry.height,
+            child: _ReferenceTable(
+              timetable: timetable,
+              days: days,
+              paletteSeed: paletteSeed,
+              parity: parity,
+              onEdit: onEdit,
+              previousDay: previousDay,
+              nextDay: nextDay,
+              courseWidth: geometry.courseWidth,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ReferenceTable extends StatelessWidget {
+  const _ReferenceTable({
+    required this.timetable,
+    required this.days,
+    required this.paletteSeed,
+    required this.parity,
+    required this.onEdit,
+    required this.previousDay,
+    required this.nextDay,
+    required this.courseWidth,
+  });
+
+  final Timetable timetable;
+  final List<int> days;
+  final int paletteSeed;
+  final WeekParity? parity;
+  final void Function(int weekday, int period, CourseMeeting? meeting) onEdit;
+  final VoidCallback? previousDay;
+  final VoidCallback? nextDay;
+  final double courseWidth;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: timetableCanvas,
+      border: Border.all(color: timetableDivider, width: timetableDividerWidth),
+    ),
+    child: Column(
+      children: [
+        _Header(
+          days: days,
+          courseWidth: courseWidth,
+          previousDay: previousDay,
+          nextDay: nextDay,
+        ),
+        for (var period = 1; period <= timetable.periodCount; period++) ...[
+          _PeriodRow(
+            timetable: timetable,
+            days: days,
+            period: period,
+            courseWidth: courseWidth,
+            paletteSeed: paletteSeed,
+            parity: parity,
+            onEdit: onEdit,
+            drawTopBorder:
+                period > 1 && !timetableMealBreaks.contains(period - 1),
+          ),
+          if (timetableMealBreaks.contains(period) &&
+              period < timetable.periodCount)
+            const _MealBreak(),
+        ],
+      ],
+    ),
+  );
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.days,
+    required this.courseWidth,
+    required this.previousDay,
+    required this.nextDay,
+  });
+
+  final List<int> days;
+  final double courseWidth;
+  final VoidCallback? previousDay;
+  final VoidCallback? nextDay;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: timetableHeaderHeight,
+    decoration: const BoxDecoration(
+      color: timetableIndexSurface,
+      border: Border(bottom: BorderSide(color: timetableDivider)),
+    ),
+    child: Row(
+      children: [
+        const SizedBox(width: timetableIndexWidth),
+        for (final day in days)
+          SizedBox(
+            width: courseWidth,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Text(
+                  AppStrings.of(context).weekday(day),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: timetableMonoFont,
+                    fontFamilyFallback: timetableFontFallback,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: timetableInk,
+                    height: 1,
                   ),
                 ),
-              ),
-            if (days.length == 1)
-              IconButton(
-                onPressed: nextDay,
-                tooltip: AppStrings.of(context).text(AppText.nextDay),
-                icon: const Icon(Icons.chevron_right),
+                if (days.length == 1) ...[
+                  Positioned(
+                    left: 0,
+                    child: IconButton(
+                      onPressed: previousDay,
+                      tooltip: AppStrings.of(context).text(AppText.previousDay),
+                      icon: const Icon(Icons.chevron_left),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    child: IconButton(
+                      onPressed: nextDay,
+                      tooltip: AppStrings.of(context).text(AppText.nextDay),
+                      icon: const Icon(Icons.chevron_right),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+class _PeriodRow extends StatelessWidget {
+  const _PeriodRow({
+    required this.timetable,
+    required this.days,
+    required this.period,
+    required this.courseWidth,
+    required this.paletteSeed,
+    required this.parity,
+    required this.onEdit,
+    required this.drawTopBorder,
+  });
+
+  final Timetable timetable;
+  final List<int> days;
+  final int period;
+  final double courseWidth;
+  final int paletteSeed;
+  final WeekParity? parity;
+  final void Function(int weekday, int period, CourseMeeting? meeting) onEdit;
+  final bool drawTopBorder;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: timetablePeriodHeight,
+    decoration: BoxDecoration(
+      border: drawTopBorder
+          ? const Border(top: BorderSide(color: timetableDivider))
+          : null,
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: timetableIndexWidth,
+          child: ColoredBox(
+            color: timetableIndexSurface,
+            child: _TimeLabel(period: period),
+          ),
+        ),
+        for (final day in days)
+          SizedBox(
+            width: courseWidth,
+            child: _CourseCell(
+              timetable: timetable,
+              day: day,
+              period: period,
+              paletteSeed: paletteSeed,
+              parity: parity,
+              onEdit: onEdit,
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+class _TimeLabel extends StatelessWidget {
+  const _TimeLabel({required this.period});
+
+  final int period;
+
+  @override
+  Widget build(BuildContext context) {
+    final start = timetableClassStarts[period] ?? '';
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (start.isNotEmpty)
+          Positioned(top: 10, child: _TimeText(start))
+        else
+          const SizedBox(),
+        Text(
+          '$period',
+          style: const TextStyle(
+            fontFamily: timetableSerifFont,
+            fontSize: 30,
+            fontWeight: FontWeight.w700,
+            color: timetableInk,
+            height: 1,
+          ),
+        ),
+        if (start.isNotEmpty)
+          Positioned(bottom: 10, child: _TimeText(timetableClassEnd(start)))
+        else
+          const SizedBox(),
+      ],
+    );
+  }
+}
+
+class _TimeText extends StatelessWidget {
+  const _TimeText(this.value);
+
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    value,
+    style: const TextStyle(
+      fontFamily: timetableMonoFont,
+      fontSize: 16,
+      fontWeight: FontWeight.w500,
+      color: timetableMuted,
+      height: 1,
+    ),
+  );
+}
+
+class _CourseCell extends StatelessWidget {
+  const _CourseCell({
+    required this.timetable,
+    required this.day,
+    required this.period,
+    required this.paletteSeed,
+    required this.parity,
+    required this.onEdit,
+  });
+
+  final Timetable timetable;
+  final int day;
+  final int period;
+  final int paletteSeed;
+  final WeekParity? parity;
+  final void Function(int weekday, int period, CourseMeeting? meeting) onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final meetings = timetable.atPeriod(day, period, currentParity: parity);
+    return Material(
+      color: timetableCanvas,
+      child: InkWell(
+        key: ValueKey('timetable-cell-$day-$period'),
+        onTap: () => onEdit(day, period, null),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final meeting in meetings)
+              Expanded(
+                child: _MeetingTile(
+                  meeting,
+                  isCurrent: meeting.frequency.isCurrent(parity),
+                  paletteSeed: paletteSeed,
+                  onEdit: () => onEdit(day, period, meeting),
+                ),
               ),
           ],
         ),
       ),
-      Expanded(
-        child: ListView.builder(
-          itemCount: timetable.periodCount,
-          itemBuilder: (context, index) => IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(width: 56, child: Center(child: Text('${index + 1}'))),
-                for (final day in days)
-                  Expanded(
-                    child: InkWell(
-                      key: ValueKey('timetable-cell-$day-${index + 1}'),
-                      onTap: () => onEdit(day, index + 1, null),
-                      child: Container(
-                        constraints: const BoxConstraints(minHeight: 60),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            top: BorderSide(
-                              color: Theme.of(context).dividerColor,
-                            ),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (final meeting in timetable.atPeriod(
-                              day,
-                              index + 1,
-                              currentParity: parity,
-                            ))
-                              _MeetingTile(
-                                meeting,
-                                isCurrent: meeting.frequency.isCurrent(parity),
-                                paletteSeed: paletteSeed,
-                                onEdit: () => onEdit(day, index + 1, meeting),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
+    );
+  }
+}
+
+class _MealBreak extends StatelessWidget {
+  const _MealBreak();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: timetableMealBreakHeight,
+    decoration: const BoxDecoration(
+      color: timetableCanvas,
+      border: Border(
+        top: BorderSide(color: timetableDivider),
+        bottom: BorderSide(color: timetableDivider),
       ),
-    ],
+    ),
   );
 }
 
@@ -207,7 +464,6 @@ class _MeetingTileState extends State<_MeetingTile> {
         opacity: widget.isCurrent ? 1 : .5,
         child: SizedBox(
           key: ValueKey('meeting-cell-${meeting.sourceId}'),
-          height: 60,
           width: double.infinity,
           child: Material(
             key: ValueKey('meeting-color-${meeting.sourceId}'),
@@ -215,9 +471,13 @@ class _MeetingTileState extends State<_MeetingTile> {
             child: InkWell(
               onTap: widget.onEdit,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(4, 2, 4, 2),
                 child: DefaultTextStyle(
-                  style: TextStyle(color: foreground, fontSize: 14),
+                  style: TextStyle(
+                    color: foreground,
+                    fontFamily: timetableMonoFont,
+                    fontFamilyFallback: timetableFontFallback,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -225,13 +485,22 @@ class _MeetingTileState extends State<_MeetingTile> {
                         meeting.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          height: 1.3,
+                          letterSpacing: -.2,
+                        ),
                       ),
                       Text(
                         '  ${meeting.room}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          height: 1.3,
+                        ),
                       ),
                     ],
                   ),

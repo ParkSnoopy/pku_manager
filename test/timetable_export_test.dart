@@ -71,7 +71,7 @@ void main() {
       final workbook = Excel.decodeBytes(file.bytes);
       final sheet = workbook['Timetable'];
       expect(sheet.maxColumns, 6);
-      expect(sheet.maxRows, 4);
+      expect(sheet.maxRows, 13);
       expect(
         sheet.cell(CellIndex.indexByString('B1')).value.toString(),
         'Monday',
@@ -82,11 +82,15 @@ void main() {
       );
       expect(
         sheet.cell(CellIndex.indexByString('B2')).value.toString(),
-        'Algorithms\n  Room 101',
+        'Algorithms',
       );
       expect(
         sheet.cell(CellIndex.indexByString('B3')).value.toString(),
-        'Algorithms\n  Room 101',
+        '  Room 101',
+      );
+      expect(
+        sheet.cell(CellIndex.indexByString('B6')).value.toString(),
+        'Algorithms',
       );
     },
   );

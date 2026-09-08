@@ -188,11 +188,12 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Render Monday through Friday on wide layouts.
 - On narrow layouts, keep one fixed period-index column and one day column visible; horizontal swipes move between Monday and Friday while the visible weekday remains explicit.
 - Map unsupported frequency tokens to `每周`.
+- Match timetable shape, dimensions, bundled reference fonts, font sizes, alignment, class-time labels, meal breaks, aspect fitting, and 4× PNG export resolution to the `pages` reference; retain application-owned course colors as the only intentional visual exception.
 - Derive course colors from course identity plus a persistent roll seed, allow repeated color rolls after import, and maintain readable foreground contrast.
-- Default to Korean, persist English and Simplified Chinese alternatives, and localize all application controls.
+- Default to Korean, persist English and Simplified Chinese alternatives, localize all application controls, and expose one active-language button that cycles through the three entries per click.
 - Add and edit weekday meetings without mutating imported source bytes; export the complete timetable as PNG or XLSX.
 - Use flat visual hierarchy, no gradients, bounded labels, accessible semantics, and keyboard navigation on desktop.
-- Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation, compact course-and-room full-cell color, repeated color rolls, persistent theme editing, 1000 ms pointer-following details, and foreground refresh.
+- Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation, reference timetable geometry/typography, course-and-room full-cell color, repeated color rolls, cyclic language selection, persistent theme editing, 1000 ms pointer-following details, foreground refresh, and reference export dimensions.
 
 ### 9. Apply Product Identity
 

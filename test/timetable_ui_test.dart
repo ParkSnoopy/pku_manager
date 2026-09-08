@@ -144,7 +144,7 @@ void main() {
       expect(find.text('Physics'), findsOneWidget);
       expect(
         tester.getSize(find.byKey(const ValueKey('meeting-cell-first'))).height,
-        60,
+        100,
       );
 
       final opacity = tester.widget<Opacity>(

@@ -50,6 +50,11 @@ final class AppearanceController extends ChangeNotifier {
   void setAccent(Color value) => _set(_settings.copyWith(accent: value));
   void setLanguage(AppLanguage value) =>
       _set(_settings.copyWith(language: value));
+  void cycleLanguage() => setLanguage(switch (language) {
+    AppLanguage.ko => AppLanguage.en,
+    AppLanguage.en => AppLanguage.zhHans,
+    AppLanguage.zhHans => AppLanguage.ko,
+  });
   void rollPalette() => _set(
     _settings.copyWith(paletteSeed: (_settings.paletteSeed + 1) & 0x7fffffff),
   );

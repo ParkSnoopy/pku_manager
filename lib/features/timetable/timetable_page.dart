@@ -249,22 +249,13 @@ class _TimetablePageState extends State<TimetablePage>
                               : LayoutBuilder(
                                   builder: (context, constraints) =>
                                       constraints.maxWidth >= 1000
-                                      ? Align(
-                                          alignment: Alignment.topLeft,
-                                          child: FractionallySizedBox(
-                                            widthFactor: 6 / 7,
-                                            child: TimetableGrid(
-                                              timetable: c.timetable!,
-                                              days: List.generate(
-                                                5,
-                                                (i) => i + 1,
-                                              ),
-                                              paletteSeed:
-                                                  widget.appearance.paletteSeed,
-                                              parity: semesterWeek?.parity,
-                                              onEdit: _editCell,
-                                            ),
-                                          ),
+                                      ? TimetableGrid(
+                                          timetable: c.timetable!,
+                                          days: List.generate(5, (i) => i + 1),
+                                          paletteSeed:
+                                              widget.appearance.paletteSeed,
+                                          parity: semesterWeek?.parity,
+                                          onEdit: _editCell,
                                         )
                                       : GestureDetector(
                                           onHorizontalDragStart: (_) =>

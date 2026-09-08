@@ -50,10 +50,10 @@
 - UI is native Flutter, responsive, flat, readable, accessible, and uses no gradients.
 - Mobile timetable view shows one fixed period-index column and one day column; horizontal swipes change the visible day.
 - A left vertical navigation rail owns primary application destinations.
-- Timetable colors fill complete compact cells containing course and room only. Repeated adjacent source cells render identically without continuation labels.
+- Timetable geometry, typefaces, font sizes, alignment, class times, meal breaks, aspect fitting, and export dimensions follow the `pages` branch of `ParkSnoopy/pku-elective-prettify`. Course colors remain application-owned, fill complete cells containing course and room only, and repeated adjacent source cells render identically without continuation labels.
 - Pointer hover for 1000 ms opens a detail box positioned beside and following the pointer until exit.
 - Week configuration refresh runs at startup and whenever the application returns to foreground; no manual refresh control is shown.
-- Korean is the default interface language. Settings persists Korean, English, or Simplified Chinese plus the accent color.
+- Korean is the default interface language. One Settings button displays only the active language and cycles Korean → English → Simplified Chinese on successive clicks; the selection and accent color persist.
 - Imported meetings can be edited and empty weekday cells can create user meetings. These overlays are stored separately from immutable workbook bytes.
 - A persistent color-roll seed lets users generate another deterministic timetable color combination repeatedly after import.
 - The complete Monday–Friday timetable exports locally as PNG or XLSX.

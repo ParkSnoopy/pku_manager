@@ -9,6 +9,7 @@ import '../../domain/course_meeting.dart';
 import '../../domain/timetable.dart';
 import '../../l10n/app_strings.dart';
 import 'timetable_color.dart';
+import 'timetable_style.dart';
 
 enum TimetableExportFormat { png, xlsx }
 
@@ -119,41 +120,93 @@ final class TimetableExporter {
       for (var day = 1; day <= 5; day++) TextCellValue(strings.weekday(day)),
     ]);
     for (var period = 1; period <= timetable.periodCount; period++) {
-      sheet.appendRow([
-        IntCellValue(period),
-        for (var day = 1; day <= 5; day++)
-          TextCellValue(_cellText(timetable.atPeriod(day, period))),
-      ]);
+      final start = timetableClassStarts[period] ?? '';
+      for (var role = 0; role < 4; role++) {
+        sheet.appendRow([
+          switch (role) {
+            0 => TextCellValue(start),
+            1 => IntCellValue(period),
+            2 => TextCellValue(start.isEmpty ? '' : timetableClassEnd(start)),
+            _ => TextCellValue(''),
+          },
+          for (var day = 1; day <= 5; day++)
+            TextCellValue(
+              _xlsxCourseValue(timetable.atPeriod(day, period), role),
+            ),
+        ]);
+      }
     }
-    sheet.setColumnWidth(0, 8);
+    sheet.setColumnWidth(0, 16.43);
     for (var column = 1; column <= 5; column++) {
-      sheet.setColumnWidth(column, 24);
+      sheet.setColumnWidth(
+        column,
+        (TimetableGeometry(timetable.periodCount).courseWidth - 5) / 7,
+      );
     }
-    for (var row = 0; row <= timetable.periodCount; row++) {
-      sheet.setRowHeight(row, row == 0 ? 24 : 42);
+    sheet.setRowHeight(0, 33);
+    const roleHeights = [23.55, 16.75, 17.35, 17.35];
+    for (var row = 0; row <= timetable.periodCount * 4; row++) {
+      if (row > 0) sheet.setRowHeight(row, roleHeights[(row - 1) % 4]);
       for (var column = 0; column <= 5; column++) {
         final cell = sheet.cell(
           CellIndex.indexByColumnRow(columnIndex: column, rowIndex: row),
         );
+        final period = row == 0 ? 0 : ((row - 1) ~/ 4) + 1;
+        final role = row == 0 ? 0 : (row - 1) % 4;
         final meetings = row == 0 || column == 0
             ? const <CourseMeeting>[]
-            : timetable.atPeriod(column, row);
+            : timetable.atPeriod(column, period);
+        final index = row == 0 || column == 0;
+        final outer = ExcelColor.fromHexString('#FF92918D');
+        final thin = ExcelColor.fromHexString('#FFE6DFD8');
         cell.cellStyle = CellStyle(
-          bold: row == 0 || column == 0,
+          bold:
+              row == 0 ||
+              (column == 0 && role == 1) ||
+              (column > 0 && role == 0),
+          fontFamily: column == 0 && row > 0 && role == 1
+              ? 'Noto Serif CJK SC'
+              : 'Roboto Mono',
+          fontSize: row == 0
+              ? 15
+              : column == 0
+              ? (role == 1 ? 23 : 12)
+              : (role == 0 ? 14 : 11),
+          fontColorHex: ExcelColor.fromHexString(
+            column == 0 && row > 0 && role != 1 ? '#FF6C6A64' : '#FF141413',
+          ),
           textWrapping: TextWrapping.WrapText,
           verticalAlign: VerticalAlign.Center,
-          horizontalAlign: column == 0
+          horizontalAlign: index
               ? HorizontalAlign.Center
               : HorizontalAlign.Left,
           backgroundColorHex: meetings.isEmpty
-              ? (row == 0 || column == 0
-                    ? ExcelColor.fromHexString('#FFF2F2F2')
-                    : ExcelColor.none)
+              ? (index
+                    ? ExcelColor.fromHexString('#FFE8E0D2')
+                    : ExcelColor.fromHexString('#FFFAF9F5'))
               : ExcelColor.fromHexString(
                   _hex(timetableCourseColor(meetings.first, paletteSeed)),
                 ),
-          bottomBorder: Border(borderStyle: BorderStyle.Thin),
-          rightBorder: Border(borderStyle: BorderStyle.Thin),
+          leftBorder: Border(
+            borderStyle: column == 0 ? BorderStyle.Medium : BorderStyle.Thin,
+            borderColorHex: column == 0 ? outer : thin,
+          ),
+          rightBorder: Border(
+            borderStyle: column == 5 ? BorderStyle.Medium : BorderStyle.Thin,
+            borderColorHex: column == 5 ? outer : thin,
+          ),
+          topBorder: Border(
+            borderStyle: row == 0 ? BorderStyle.Medium : BorderStyle.None,
+            borderColorHex: outer,
+          ),
+          bottomBorder: Border(
+            borderStyle: row == 0
+                ? BorderStyle.Thin
+                : role == 3
+                ? BorderStyle.Medium
+                : BorderStyle.None,
+            borderColorHex: row == 0 ? thin : outer,
+          ),
         );
       }
     }
@@ -170,55 +223,101 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
     AppStrings strings,
     int paletteSeed,
   ) async {
-    const width = 1200.0;
-    const headerHeight = 60.0;
-    const rowHeight = 60.0;
-    const periodWidth = 100.0;
-    const dayWidth = (width - periodWidth) / 5;
-    final height = headerHeight + rowHeight * timetable.periodCount;
+    final geometry = TimetableGeometry(timetable.periodCount);
+    final logicalWidth = geometry.width + timetableExportPadding * 2;
+    final logicalHeight = geometry.height + timetableExportPadding * 2;
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
+    canvas.scale(timetableExportScale);
     canvas.drawRect(
-      ui.Rect.fromLTWH(0, 0, width, height),
-      ui.Paint()..color = const ui.Color(0xffffffff),
+      ui.Rect.fromLTWH(0, 0, logicalWidth, logicalHeight),
+      ui.Paint()..color = timetableCanvas,
     );
+    canvas.translate(timetableExportPadding, timetableExportPadding);
     final border = ui.Paint()
-      ..color = const ui.Color(0xffd6d6d6)
+      ..color = timetableDivider
       ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = 1;
+      ..strokeWidth = timetableDividerWidth;
+    canvas.drawRect(
+      ui.Rect.fromLTWH(0, 0, geometry.width, timetableHeaderHeight),
+      ui.Paint()..color = timetableIndexSurface,
+    );
     for (var day = 1; day <= 5; day++) {
-      _drawText(
+      _drawReferenceText(
         canvas,
         strings.weekday(day),
         ui.Rect.fromLTWH(
-          periodWidth + (day - 1) * dayWidth,
+          timetableIndexWidth + (day - 1) * geometry.courseWidth,
           0,
-          dayWidth,
-          headerHeight,
+          geometry.courseWidth,
+          timetableHeaderHeight,
         ),
         center: true,
+        fontFamily: timetableMonoFont,
+        fontFallback: timetableFontFallback,
+        fontSize: 20,
         bold: true,
+        color: timetableInk,
       );
     }
+    var top = timetableHeaderHeight;
+    canvas.drawLine(ui.Offset(0, top), ui.Offset(geometry.width, top), border);
     for (var period = 1; period <= timetable.periodCount; period++) {
-      final top = headerHeight + (period - 1) * rowHeight;
-      _drawText(
+      canvas.drawRect(
+        ui.Rect.fromLTWH(0, top, timetableIndexWidth, timetablePeriodHeight),
+        ui.Paint()..color = timetableIndexSurface,
+      );
+      final start = timetableClassStarts[period] ?? '';
+      if (start.isNotEmpty) {
+        _drawReferenceText(
+          canvas,
+          start,
+          ui.Rect.fromLTWH(0, top + 10, timetableIndexWidth, 16),
+          center: true,
+          fontFamily: timetableMonoFont,
+          fontSize: 16,
+          weight: ui.FontWeight.w500,
+          color: timetableMuted,
+          lineHeight: 1,
+        );
+        _drawReferenceText(
+          canvas,
+          timetableClassEnd(start),
+          ui.Rect.fromLTWH(
+            0,
+            top + timetablePeriodHeight - 26,
+            timetableIndexWidth,
+            16,
+          ),
+          center: true,
+          fontFamily: timetableMonoFont,
+          fontSize: 16,
+          weight: ui.FontWeight.w500,
+          color: timetableMuted,
+          lineHeight: 1,
+        );
+      }
+      _drawReferenceText(
         canvas,
         '$period',
-        ui.Rect.fromLTWH(0, top, periodWidth, rowHeight),
+        ui.Rect.fromLTWH(0, top, timetableIndexWidth, timetablePeriodHeight),
         center: true,
+        fontFamily: timetableSerifFont,
+        fontSize: 30,
         bold: true,
+        color: timetableInk,
+        lineHeight: 1,
       );
       for (var day = 1; day <= 5; day++) {
         final rect = ui.Rect.fromLTWH(
-          periodWidth + (day - 1) * dayWidth,
+          timetableIndexWidth + (day - 1) * geometry.courseWidth,
           top,
-          dayWidth,
-          rowHeight,
+          geometry.courseWidth,
+          timetablePeriodHeight,
         );
         final meetings = timetable.atPeriod(day, period);
         if (meetings.isEmpty) continue;
-        final itemHeight = rowHeight / meetings.length;
+        final itemHeight = timetablePeriodHeight / meetings.length;
         for (var index = 0; index < meetings.length; index++) {
           final meeting = meetings[index];
           final item = ui.Rect.fromLTWH(
@@ -231,27 +330,61 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
             item,
             ui.Paint()..color = timetableCourseColor(meeting, paletteSeed),
           );
-          _drawText(
+          final foreground =
+              timetableCourseColor(meeting, paletteSeed).computeLuminance() > .5
+              ? const ui.Color(0xff000000)
+              : const ui.Color(0xffffffff);
+          _drawReferenceText(
             canvas,
-            '${meeting.name}\n  ${meeting.room}',
-            item,
+            meeting.name,
+            ui.Rect.fromLTWH(item.left + 4, item.top + 2, item.width - 8, 24),
+            fontFamily: timetableMonoFont,
+            fontFallback: timetableFontFallback,
+            fontSize: 18,
             bold: true,
+            color: foreground,
+            letterSpacing: -.2,
+          );
+          _drawReferenceText(
+            canvas,
+            '  ${meeting.room}',
+            ui.Rect.fromLTWH(
+              item.left + 4,
+              item.top + 25.4,
+              item.width - 8,
+              20,
+            ),
+            fontFamily: timetableMonoFont,
+            fontFallback: timetableFontFallback,
+            fontSize: 15,
+            weight: ui.FontWeight.w500,
+            color: foreground,
           );
         }
       }
+      top += timetablePeriodHeight;
+      canvas.drawLine(
+        ui.Offset(0, top),
+        ui.Offset(geometry.width, top),
+        border,
+      );
+      if (timetableMealBreaks.contains(period) &&
+          period < timetable.periodCount) {
+        top += timetableMealBreakHeight;
+        canvas.drawLine(
+          ui.Offset(0, top),
+          ui.Offset(geometry.width, top),
+          border,
+        );
+      }
     }
-    for (var column = 0; column <= 5; column++) {
-      final x = column == 0 ? 0.0 : periodWidth + (column - 1) * dayWidth;
-      canvas.drawLine(ui.Offset(x, 0), ui.Offset(x, height), border);
-    }
-    canvas.drawLine(ui.Offset(width, 0), ui.Offset(width, height), border);
-    for (var row = 0; row <= timetable.periodCount + 1; row++) {
-      final y = row == 0 ? 0.0 : headerHeight + (row - 1) * rowHeight;
-      canvas.drawLine(ui.Offset(0, y), ui.Offset(width, y), border);
-    }
+    canvas.drawRect(
+      ui.Rect.fromLTWH(0, 0, geometry.width, geometry.height),
+      border,
+    );
     final image = recorder.endRecording().toImageSync(
-      width.toInt(),
-      height.toInt(),
+      geometry.exportWidth,
+      geometry.exportHeight,
     );
     try {
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -263,43 +396,58 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
   }
 }
 
-String _cellText(List<CourseMeeting> meetings) =>
-    meetings.map((meeting) => '${meeting.name}\n  ${meeting.room}').join('\n');
+String _xlsxCourseValue(List<CourseMeeting> meetings, int role) =>
+    switch (role) {
+      0 => meetings.map((meeting) => meeting.name).join('\n'),
+      1 => meetings.map((meeting) => '  ${meeting.room}').join('\n'),
+      _ => '',
+    };
 
 String _hex(ui.Color color) =>
     '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
 
-void _drawText(
+void _drawReferenceText(
   ui.Canvas canvas,
   String text,
   ui.Rect rect, {
   bool center = false,
   bool bold = false,
+  required String fontFamily,
+  List<String>? fontFallback,
+  required double fontSize,
+  ui.FontWeight? weight,
+  required ui.Color color,
+  double? letterSpacing,
+  double lineHeight = 1.3,
 }) {
   final builder =
       ui.ParagraphBuilder(
         ui.ParagraphStyle(
-          maxLines: 2,
+          maxLines: 1,
           textAlign: center ? ui.TextAlign.center : ui.TextAlign.left,
           ellipsis: '…',
         ),
       )..pushStyle(
         ui.TextStyle(
-          color: const ui.Color(0xff171717),
-          fontSize: 16,
-          fontWeight: bold ? ui.FontWeight.w600 : ui.FontWeight.w400,
+          color: color,
+          fontFamily: fontFamily,
+          fontFamilyFallback: fontFallback,
+          fontSize: fontSize,
+          fontWeight: bold ? ui.FontWeight.w700 : weight ?? ui.FontWeight.w400,
+          height: lineHeight,
+          letterSpacing: letterSpacing,
         ),
       );
   builder.addText(text);
   final paragraph = builder.build()
-    ..layout(ui.ParagraphConstraints(width: rect.width - 16));
+    ..layout(ui.ParagraphConstraints(width: rect.width));
   canvas.save();
   canvas.clipRect(rect);
   canvas.drawParagraph(
     paragraph,
     ui.Offset(
-      rect.left + 8,
-      center ? rect.top + (rect.height - paragraph.height) / 2 : rect.top + 8,
+      rect.left,
+      center ? rect.top + (rect.height - paragraph.height) / 2 : rect.top,
     ),
   );
   canvas.restore();

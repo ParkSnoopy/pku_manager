@@ -179,16 +179,16 @@ Incomplete-import review is separate from schedule state. It holds a transient c
 
 - `timetable_page.dart` owns page-level actions, state selection, and responsive layout choice.
 - `timetable_page.dart` presents a left navigation rail, semester week, parity, timetable, import/export/color-roll actions, and Settings destination. It refreshes week configuration on every foreground resume without a manual action.
-- `timetable_grid.dart` renders Monday through Friday on wide layouts.
+- `timetable_grid.dart` renders Monday through Friday on wide layouts using the reference 120-unit index column, 44-unit header, 100-unit period rows, 30-unit meal breaks after periods 4 and 9, reference class times, and reference timetable fonts/alignment.
 - The same `timetable_grid.dart` renders one fixed period-index column and one day on narrow layouts. Page-level horizontal gestures and previous/next buttons select Monday through Friday.
 - Import feedback stays in `timetable_page.dart`; `schedule_import_review.dart` owns the completion form.
 - `course_editor_dialog.dart` creates user meetings and writes imported-record corrections without changing source bytes.
-- `timetable_export.dart` generates complete five-weekday PNG and XLSX files and passes bytes to the native save adapter.
-- `features/settings/appearance_controller.dart` owns persistent accent, language, and timetable-palette state; `settings_page.dart` edits accent and language.
+- `timetable_export.dart` generates complete five-weekday PNG and XLSX files from the same reference geometry. PNG adds 12 logical units of canvas padding and renders the complete table at 4× resolution; XLSX represents each period with four role rows and matching dimensions, fonts, and alignment.
+- `features/settings/appearance_controller.dart` owns persistent accent, language, and timetable-palette state; `settings_page.dart` edits accent and advances language through one cyclic button rather than exposing all language entries simultaneously.
 
 Widgets consume domain projections supplied by the controller. They do not filter frequency with local string checks. Every meeting is shown; meetings outside current parity render at half opacity.
 
-Course colors are deterministic presentation values derived from course identity plus a persisted roll seed and fill compact cells containing only course and room. Foreground contrast is calculated from the chosen background. Repeated adjacent cells show identical content without continuation labels. After 1000 ms hover, a pointer-following overlay shows full course details including frequency. Rolling repeatedly changes the combination without persisting per-course colors.
+Course colors are deterministic presentation values derived from course identity plus a persisted roll seed and are the deliberate exception to reference visual parity. They fill cells containing only course and room. Shape, size, fonts, alignment, row timing labels, meal breaks, fitting, and export resolution follow the reference. Foreground contrast is calculated from the chosen background. Repeated adjacent cells show identical content without continuation labels. After 1000 ms hover, a pointer-following overlay shows full course details including frequency. Rolling repeatedly changes the combination without persisting per-course colors.
 
 ## Durable Storage
 

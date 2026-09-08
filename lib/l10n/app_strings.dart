@@ -190,8 +190,7 @@ class AppStrings {
       AppText.next: 'Next',
       AppText.back: 'Back',
       AppText.finish: 'Import',
-      AppText.noTimetable:
-          'Import your exported schedule.xls.\nYour timetable stays on this device.',
+      AppText.noTimetable: 'Import your exported schedule.xls.\nYour timetable stays on this device.',
       AppText.exportFailed: 'Export failed',
     },
     'zh': {
