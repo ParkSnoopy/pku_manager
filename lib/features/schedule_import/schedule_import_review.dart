@@ -71,8 +71,6 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   Text('${_index + 1} / ${widget.candidate.issues.length}'),
-                  const SizedBox(height: 8),
-                  Text(strings.text(AppText.sourceUnchanged)),
                   const Divider(height: 32),
                   SelectableText(_record.raw),
                   const SizedBox(height: 8),

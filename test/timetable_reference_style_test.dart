@@ -21,10 +21,11 @@ void main() {
     expect(timetableClassEnd(timetableClassStarts[12]!), '21:30');
   });
 
-  test('course names fit eight CJK characters and scale longer names down', () {
-    expect(timetableCourseNameFontSize('八个汉字课程名称', 232), 28);
-    expect(timetableCourseNameFontSize('十六个汉字课程名称需要缩小字号啊', 232), 14);
-    expect(timetableCourseNameFontSize('A', 232), 28);
+  test('course typography is fixed and the name is 1.5x the room', () {
+    expect(timetableCourseNameFontSize, 22.5);
+    expect(timetableClassroomFontSize, 15);
+    expect(timetableCourseNameFontSize / timetableClassroomFontSize, 1.5);
+    expect(timetableCourseContentPadding, 10);
   });
 
   test('screen and PNG share grouped span and collision-lane geometry', () {

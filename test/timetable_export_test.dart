@@ -65,7 +65,12 @@ void main() {
         strings: strings,
         paletteSeed: 4,
         courseAppearances: const {
-          'a': CourseAppearance(color: Color(0xff123456), outlined: true),
+          'a': CourseAppearance(
+            color: Color(0xff123456),
+            outlined: true,
+            outlineColor: Color(0xffabcdef),
+            outlineWidth: 3.5,
+          ),
         },
       );
 
@@ -96,7 +101,8 @@ void main() {
       expect(sheet.cell(CellIndex.indexByString('B6')).value, isNull);
       final styled = sheet.cell(CellIndex.indexByString('B2')).cellStyle!;
       expect(styled.backgroundColor.colorHex, 'FF123456');
-      expect(styled.leftBorder.borderStyle, BorderStyle.Medium);
+      expect(styled.leftBorder.borderStyle, BorderStyle.Thick);
+      expect(styled.leftBorder.borderColorHex, 'FFABCDEF');
     },
   );
 

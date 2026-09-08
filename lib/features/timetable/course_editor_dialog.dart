@@ -81,6 +81,8 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
   late bool _customColor = widget.courseAppearance.color != null;
   late bool _lockColor = widget.courseAppearance.lockColor;
   late bool _outlined = widget.courseAppearance.outlined;
+  late Color _outlineColor = widget.courseAppearance.outlineColor;
+  late double _outlineWidth = widget.courseAppearance.outlineWidth;
 
   @override
   void dispose() {
@@ -168,6 +170,35 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
                     value: _outlined,
                     onChanged: (value) => setState(() => _outlined = value),
                   ),
+                  if (_outlined) ...[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        key: const ValueKey('course-outline-color'),
+                        onPressed: _chooseOutlineColor,
+                        icon: Icon(Icons.circle, color: _outlineColor),
+                        label: Text(strings.text(AppText.outlineColor)),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(strings.text(AppText.outlineThickness)),
+                        ),
+                        Text('${_outlineWidth.toStringAsFixed(1)} px'),
+                      ],
+                    ),
+                    Slider(
+                      key: const ValueKey('course-outline-thickness'),
+                      min: .5,
+                      max: 6,
+                      divisions: 11,
+                      value: _outlineWidth,
+                      label: '${_outlineWidth.toStringAsFixed(1)} px',
+                      onChanged: (value) =>
+                          setState(() => _outlineWidth = value),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   Text(strings.text(AppText.weekday)),
                   SegmentedButton<int>(
@@ -335,6 +366,8 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
           color: _customColor ? _color : null,
           lockColor: _lockColor,
           outlined: _outlined,
+          outlineColor: _outlineColor,
+          outlineWidth: _outlineWidth,
         ),
       ),
     );
@@ -353,6 +386,16 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
       _customColor = true;
       _lockColor = true;
     });
+  }
+
+  Future<void> _chooseOutlineColor() async {
+    final color = await widget.colorPicker(
+      context,
+      color: _outlineColor,
+      title: AppStrings.of(context).text(AppText.outlineColor),
+    );
+    if (!mounted) return;
+    setState(() => _outlineColor = color);
   }
 
   void _cancel() {

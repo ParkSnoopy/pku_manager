@@ -74,7 +74,7 @@ DO UPDATE SET content=excluded.content, fetched_at=excluded.fetched_at''',
         previous.calendar == null
             ? WeekFreshness.unavailable
             : WeekFreshness.stale,
-        message: 'Week refresh failed. Local timetable is unchanged.',
+        message: 'Week refresh failed.',
       );
     }
   }

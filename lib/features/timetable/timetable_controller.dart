@@ -36,7 +36,7 @@ class TimetableController extends ChangeNotifier {
     try {
       timetable = schedules.load();
     } catch (_) {
-      error = 'Stored timetable could not be loaded. Original data has been retained.';
+      error = 'Timetable could not be loaded.';
     }
     week = weeks.cached();
     _timer = Timer.periodic(const Duration(minutes: 1), (_) => _notify());
@@ -54,7 +54,7 @@ class TimetableController extends ChangeNotifier {
       week = WeekStatus(
         week.calendar,
         week.calendar == null ? WeekFreshness.unavailable : WeekFreshness.stale,
-        message: 'Week refresh failed. Local timetable is unchanged.',
+        message: 'Week refresh failed.',
       );
     } finally {
       refreshing = false;
@@ -77,8 +77,8 @@ class TimetableController extends ChangeNotifier {
     } catch (_) {
       candidate = null;
       error = selecting
-          ? 'The selected file could not be read. Your current timetable is unchanged.'
-          : 'This file could not be read as a supported timetable. Your current timetable is unchanged.';
+          ? 'The selected file could not be read.'
+          : 'This file is not a supported timetable.';
     } finally {
       importing = false;
       _notify();
@@ -93,7 +93,7 @@ class TimetableController extends ChangeNotifier {
       candidate = null;
       error = null;
     } catch (_) {
-      error = 'Import could not be saved. Complete required fields and try again. Your current timetable is unchanged.';
+      error = 'Import could not be saved. Check required fields and try again.';
     }
     _notify();
   }

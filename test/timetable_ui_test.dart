@@ -154,12 +154,25 @@ void main() {
       );
       await tester.pump();
       expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.text('Calendar'), findsOneWidget);
       expect(find.text('Show all'), findsNothing);
       expect(find.text('Refresh'), findsNothing);
       expect(find.text('Current'), findsNothing);
       expect(find.text('Algebra'), findsOneWidget);
       expect(find.textContaining('continued'), findsNothing);
       expect(find.text('Physics'), findsOneWidget);
+      final courseName = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const ValueKey('meeting-cell-first')),
+          matching: find.text('Algebra'),
+        ),
+      );
+      expect(courseName.style?.fontSize, 22.5);
+      expect(courseName.overflow, TextOverflow.ellipsis);
+      final content = tester.widget<Padding>(
+        find.byKey(const ValueKey('meeting-content-first')),
+      );
+      expect(content.padding, const EdgeInsets.fromLTRB(10, 8, 10, 8));
       expect(
         tester.getSize(find.byKey(const ValueKey('meeting-cell-first'))).height,
         200,
@@ -290,6 +303,8 @@ void main() {
           color: Color(0xff123456),
           lockColor: true,
           outlined: true,
+          outlineColor: Color(0xfffedcba),
+          outlineWidth: 3.5,
         ),
       );
       Uri? launched;
@@ -309,10 +324,10 @@ void main() {
       );
       await tester.pump();
       expect(
-        find.byKey(const ValueKey('upcoming-classes-pane')),
+        find.byKey(const ValueKey('upcoming-schedule-pane')),
         findsOneWidget,
       );
-      expect(find.text('Upcoming classes'), findsOneWidget);
+      expect(find.text('Upcoming schedule'), findsOneWidget);
       expect(find.text('Algebra'), findsNWidgets(2));
       expect(find.textContaining('in '), findsWidgets);
       expect(
@@ -325,7 +340,19 @@ void main() {
       final decoration = tester.widget<DecoratedBox>(
         find.byKey(const ValueKey('meeting-outline-first')),
       );
-      expect((decoration.decoration as BoxDecoration).border, isNotNull);
+      final border = (decoration.decoration as BoxDecoration).border! as Border;
+      expect(border.top.color, const Color(0xfffedcba));
+      expect(border.top.width, 3.5);
+
+      await tester.tap(find.text('Calendar'));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('calendar-page')), findsOneWidget);
+      expect(find.text('September 2026'), findsOneWidget);
+      expect(find.byKey(const ValueKey('upcoming-class-pane')), findsOneWidget);
+      expect(find.text('Upcoming class'), findsOneWidget);
+      expect(find.text('Upcoming schedule'), findsNothing);
+      await tester.tap(find.text('Timetable'));
+      await tester.pump();
 
       await tester.tap(find.byKey(const ValueKey('meeting-cell-first')));
       await tester.pump();
@@ -349,7 +376,7 @@ void main() {
         everyElement('Grouped course'),
       );
       expect(
-        find.byKey(const ValueKey('upcoming-classes-pane')),
+        find.byKey(const ValueKey('upcoming-schedule-pane')),
         findsOneWidget,
       );
 

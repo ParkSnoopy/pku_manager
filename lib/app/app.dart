@@ -14,6 +14,7 @@ import '../features/timetable/timetable_export.dart';
 import '../features/timetable/timetable_page.dart';
 import '../features/settings/appearance_controller.dart';
 import '../l10n/app_strings.dart';
+import '../ui/super_otc_font.dart';
 
 class PkuManagerApp extends StatefulWidget {
   const PkuManagerApp({
@@ -70,9 +71,7 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       controller.start();
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _failure = 'Application data could not be opened. Existing data has not been removed.',
-        );
+        setState(() => _failure = 'Application data could not be opened.');
       }
     }
   }
@@ -119,6 +118,9 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      fontFamily: _appearance.language == AppLanguage.ko
+          ? pkuNotoSansKrFamily
+          : pkuNotoSansScFamily,
       scaffoldBackgroundColor: scheme.surface,
       appBarTheme: AppBarTheme(backgroundColor: scheme.surface, elevation: 0),
     );

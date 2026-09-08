@@ -7,6 +7,7 @@ import '../../domain/course_meeting.dart';
 import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
 import '../../l10n/app_strings.dart';
+import '../calendar/calendar_page.dart';
 import '../schedule_import/schedule_import_review.dart';
 import '../settings/appearance_controller.dart';
 import '../settings/settings_page.dart';
@@ -203,7 +204,7 @@ class _TimetablePageState extends State<TimetablePage>
             NavigationRail(
               selectedIndex: _destination,
               onDestinationSelected: (value) {
-                if (value == 2) {
+                if (value == 3) {
                   unawaited(_openTeachingPortal());
                 } else {
                   setState(() {
@@ -218,6 +219,11 @@ class _TimetablePageState extends State<TimetablePage>
                   icon: const Icon(Icons.calendar_view_week_outlined),
                   selectedIcon: const Icon(Icons.calendar_view_week),
                   label: Text(strings.text(AppText.timetable)),
+                ),
+                NavigationRailDestination(
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  selectedIcon: const Icon(Icons.calendar_month),
+                  label: Text(strings.text(AppText.calendar)),
                 ),
                 NavigationRailDestination(
                   icon: const Icon(Icons.settings_outlined),
@@ -291,8 +297,10 @@ class _TimetablePageState extends State<TimetablePage>
             ),
             const VerticalDivider(width: 1),
             Expanded(
-              child: _destination == 1
+              child: _destination == 2
                   ? SettingsPage(controller: widget.appearance)
+                  : _destination == 1
+                  ? _calendarBody(c)
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -379,6 +387,7 @@ class _TimetablePageState extends State<TimetablePage>
                       timetable: timetable,
                       now: controller.clock(),
                       calendar: controller.week.calendar,
+                      mode: UpcomingPaneMode.schedule,
                     )
                   : CourseEditorDialog(
                       key: ValueKey(
@@ -409,6 +418,39 @@ class _TimetablePageState extends State<TimetablePage>
                       onResult: (result) =>
                           _applyEdit(result, _editor!.meetings),
                     ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _calendarBody(TimetableController controller) {
+    final timetable =
+        controller.timetable ?? Timetable(const [], periodCount: 12);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final calendar = CalendarPage(
+          timetable: timetable,
+          now: controller.clock(),
+          calendar: controller.week.calendar,
+          paletteSeed: widget.appearance.paletteSeed,
+          courseAppearances: widget.appearance.courseAppearances,
+        );
+        if (constraints.maxWidth <= constraints.maxHeight) return calendar;
+        final paneWidth = (constraints.maxWidth * .28).clamp(280.0, 360.0);
+        return Row(
+          children: [
+            Expanded(child: calendar),
+            const VerticalDivider(width: 1),
+            SizedBox(
+              width: paneWidth,
+              child: UpcomingClassesPane(
+                timetable: timetable,
+                now: controller.clock(),
+                calendar: controller.week.calendar,
+                mode: UpcomingPaneMode.nextClass,
+              ),
             ),
           ],
         );

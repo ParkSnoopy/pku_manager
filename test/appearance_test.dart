@@ -12,7 +12,7 @@ import 'package:pku_manager/l10n/app_strings.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 void main() {
-  test('0.1.0 schema rejects pre-release database versions', () {
+  test('0.0.x keeps its development database schema at version zero', () {
     final directory = Directory.systemTemp.createTempSync('pku-schema-test-');
     addTearDown(() => directory.deleteSync(recursive: true));
     final path = '${directory.path}/legacy.sqlite3';
@@ -25,7 +25,7 @@ void main() {
     addTearDown(current.close);
     expect(
       current.database.select('PRAGMA user_version').single.values.single,
-      100,
+      0,
     );
   });
 
@@ -60,6 +60,8 @@ void main() {
         color: Color(0xff123456),
         lockColor: true,
         outlined: true,
+        outlineColor: Color(0xfffedcba),
+        outlineWidth: 3.5,
       ),
     );
     controller.setCourseAppearance(
@@ -84,6 +86,8 @@ void main() {
         color: Color(0xff123456),
         lockColor: true,
         outlined: true,
+        outlineColor: Color(0xfffedcba),
+        outlineWidth: 3.5,
       ),
     );
     expect(

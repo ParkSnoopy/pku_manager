@@ -288,7 +288,7 @@ class _TimeLabel extends StatelessWidget {
         Text(
           '$period',
           style: const TextStyle(
-            fontFamily: timetableSerifFont,
+            fontFamily: timetablePeriodFont,
             fontSize: 30,
             fontWeight: FontWeight.w700,
             color: timetableInk,
@@ -521,7 +521,10 @@ class _MeetingTileState extends State<_MeetingTile> {
               key: ValueKey('meeting-outline-${meeting.sourceId}'),
               decoration: BoxDecoration(
                 border: widget.appearance?.outlined ?? false
-                    ? Border.all(color: foreground, width: 8)
+                    ? Border.all(
+                        color: widget.appearance!.outlineColor,
+                        width: widget.appearance!.outlineWidth,
+                      )
                     : null,
               ),
               child: Stack(
@@ -534,15 +537,14 @@ class _MeetingTileState extends State<_MeetingTile> {
                       widget.onEdit();
                     },
                     child: Padding(
+                      key: ValueKey('meeting-content-${meeting.sourceId}'),
                       padding: EdgeInsets.fromLTRB(
-                        widget.appearance?.outlined ?? false ? 12 : 4,
-                        widget.appearance?.outlined ?? false ? 10 : 2,
+                        timetableCourseContentPadding,
+                        8,
                         widget.appearance?.color != null
-                            ? 28
-                            : widget.appearance?.outlined ?? false
-                            ? 12
-                            : 4,
-                        widget.appearance?.outlined ?? false ? 10 : 2,
+                            ? 30
+                            : timetableCourseContentPadding,
+                        8,
                       ),
                       child: DefaultTextStyle(
                         style: TextStyle(
@@ -553,28 +555,23 @@ class _MeetingTileState extends State<_MeetingTile> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            LayoutBuilder(
-                              builder: (context, constraints) => Text(
-                                meeting.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: timetableCourseNameFontSize(
-                                    meeting.name,
-                                    constraints.maxWidth,
-                                  ),
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.15,
-                                  letterSpacing: -.2,
-                                ),
-                              ),
-                            ),
                             Text(
-                              '  ${meeting.room}',
+                              meeting.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 15,
+                                fontSize: timetableCourseNameFontSize,
+                                fontWeight: FontWeight.w700,
+                                height: 1.15,
+                                letterSpacing: -.2,
+                              ),
+                            ),
+                            Text(
+                              meeting.room,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: timetableClassroomFontSize,
                                 fontWeight: FontWeight.w500,
                                 height: 1.3,
                               ),

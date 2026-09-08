@@ -19,6 +19,7 @@ enum AppLanguage {
 enum AppText {
   appTitle,
   timetable,
+  calendar,
   settings,
   import,
   export,
@@ -41,7 +42,6 @@ enum AppText {
   notes,
   exam,
   completeInformation,
-  sourceUnchanged,
   rejectIgnore,
   required,
   enterRange,
@@ -64,8 +64,12 @@ enum AppText {
   noTimetable,
   exportFailed,
   periodRangeTooShort,
-  upcomingClasses,
-  noUpcomingClasses,
+  upcomingSchedule,
+  noUpcomingSchedule,
+  upcomingClass,
+  noUpcomingClass,
+  previousMonth,
+  nextMonth,
   teachingPortal,
   openBrowserFailed,
   showRollInNavbar,
@@ -75,6 +79,8 @@ enum AppText {
   manualColor,
   keepColorWhenRolling,
   importantOutline,
+  outlineColor,
+  outlineThickness,
 }
 
 class AppStrings {
@@ -101,6 +107,12 @@ class AppStrings {
 
   String weekday(int value) =>
       (_weekdays[locale.languageCode] ?? _weekdays['ko']!)[value - 1];
+
+  String monthLabel(DateTime month) => switch (locale.languageCode) {
+    'en' => '${_months[month.month - 1]} ${month.year}',
+    'zh' => '${month.year}年${month.month}月',
+    _ => '${month.year}년 ${month.month}월',
+  };
 
   String startsIn(Duration duration) {
     final minutes = duration.inMinutes < 1 ? 1 : duration.inMinutes;
@@ -130,15 +142,39 @@ class AppStrings {
   }
 
   static const _weekdays = <String, List<String>>{
-    'ko': ['월요일', '화요일', '수요일', '목요일', '금요일'],
-    'en': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    'zh': ['星期一', '星期二', '星期三', '星期四', '星期五'],
+    'ko': ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'],
+    'en': [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ],
+    'zh': ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'],
   };
+
+  static const _months = <String>[
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
 
   static const _values = <String, Map<AppText, String>>{
     'ko': {
       AppText.appTitle: 'PKU Manager',
       AppText.timetable: '시간표',
+      AppText.calendar: '달력',
       AppText.settings: '설정',
       AppText.import: '가져오기',
       AppText.export: '내보내기',
@@ -161,7 +197,6 @@ class AppStrings {
       AppText.notes: '메모',
       AppText.exam: '시험',
       AppText.completeInformation: '정보 완성',
-      AppText.sourceUnchanged: '원본 파일은 변경되지 않습니다. 모든 필수 정보를 입력하거나 가져오기를 취소하세요.',
       AppText.rejectIgnore: '거부하고 무시',
       AppText.required: '필수',
       AppText.enterRange: '범위 안의 값을 입력하세요',
@@ -181,11 +216,15 @@ class AppStrings {
       AppText.next: '다음',
       AppText.back: '이전',
       AppText.finish: '가져오기',
-      AppText.noTimetable: '내보낸 schedule.xls 파일을 가져오세요.\n시간표는 이 기기에만 저장됩니다.',
+      AppText.noTimetable: '내보낸 schedule.xls 파일을 가져오세요.',
       AppText.exportFailed: '내보내기에 실패했습니다',
       AppText.periodRangeTooShort: '그룹의 모든 강의에 사용할 교시가 부족합니다',
-      AppText.upcomingClasses: '다가오는 강의',
-      AppText.noUpcomingClasses: '예정된 강의가 없습니다',
+      AppText.upcomingSchedule: '다가오는 일정',
+      AppText.noUpcomingSchedule: '예정된 일정이 없습니다',
+      AppText.upcomingClass: '다음 강의',
+      AppText.noUpcomingClass: '예정된 강의가 없습니다',
+      AppText.previousMonth: '이전 달',
+      AppText.nextMonth: '다음 달',
       AppText.teachingPortal: '教学网',
       AppText.openBrowserFailed: '기본 브라우저를 열지 못했습니다',
       AppText.showRollInNavbar: '탐색 모음에 색상 조합 변경 표시',
@@ -195,10 +234,13 @@ class AppStrings {
       AppText.manualColor: '사용자 지정 색상',
       AppText.keepColorWhenRolling: '색상 조합을 변경해도 이 색상 유지',
       AppText.importantOutline: '중요 강의 테두리',
+      AppText.outlineColor: '테두리 색상',
+      AppText.outlineThickness: '테두리 두께',
     },
     'en': {
       AppText.appTitle: 'PKU Manager',
       AppText.timetable: 'Timetable',
+      AppText.calendar: 'Calendar',
       AppText.settings: 'Settings',
       AppText.import: 'Import',
       AppText.export: 'Export',
@@ -221,7 +263,6 @@ class AppStrings {
       AppText.notes: 'Notes',
       AppText.exam: 'Exam',
       AppText.completeInformation: 'Complete information',
-      AppText.sourceUnchanged: 'The original workbook stays unchanged. Complete every required field or reject this import.',
       AppText.rejectIgnore: 'Reject and ignore',
       AppText.required: 'Required',
       AppText.enterRange: 'Enter a value in range',
@@ -241,12 +282,16 @@ class AppStrings {
       AppText.next: 'Next',
       AppText.back: 'Back',
       AppText.finish: 'Import',
-      AppText.noTimetable: 'Import your exported schedule.xls.\nYour timetable stays on this device.',
+      AppText.noTimetable: 'Import your exported schedule.xls.',
       AppText.exportFailed: 'Export failed',
       AppText.periodRangeTooShort:
           'The range is too short for this course group',
-      AppText.upcomingClasses: 'Upcoming classes',
-      AppText.noUpcomingClasses: 'No upcoming classes',
+      AppText.upcomingSchedule: 'Upcoming schedule',
+      AppText.noUpcomingSchedule: 'No upcoming schedule',
+      AppText.upcomingClass: 'Upcoming class',
+      AppText.noUpcomingClass: 'No upcoming class',
+      AppText.previousMonth: 'Previous month',
+      AppText.nextMonth: 'Next month',
       AppText.teachingPortal: '教学网',
       AppText.openBrowserFailed: 'Could not open the default browser',
       AppText.showRollInNavbar: 'Show Roll colors in navigation',
@@ -256,10 +301,13 @@ class AppStrings {
       AppText.manualColor: 'Custom color',
       AppText.keepColorWhenRolling: 'Keep this color when rolling',
       AppText.importantOutline: 'Important class outline',
+      AppText.outlineColor: 'Outline color',
+      AppText.outlineThickness: 'Outline thickness',
     },
     'zh': {
       AppText.appTitle: 'PKU Manager',
       AppText.timetable: '课程表',
+      AppText.calendar: '日历',
       AppText.settings: '设置',
       AppText.import: '导入',
       AppText.export: '导出',
@@ -282,7 +330,6 @@ class AppStrings {
       AppText.notes: '备注',
       AppText.exam: '考试',
       AppText.completeInformation: '补全信息',
-      AppText.sourceUnchanged: '原始工作簿不会改变。请补全全部必填信息，或拒绝本次导入。',
       AppText.rejectIgnore: '拒绝并忽略',
       AppText.required: '必填',
       AppText.enterRange: '请输入范围内的值',
@@ -302,11 +349,15 @@ class AppStrings {
       AppText.next: '下一项',
       AppText.back: '上一项',
       AppText.finish: '导入',
-      AppText.noTimetable: '请导入已导出的 schedule.xls。\n课程表仅保存在此设备上。',
+      AppText.noTimetable: '请导入已导出的 schedule.xls。',
       AppText.exportFailed: '导出失败',
       AppText.periodRangeTooShort: '节次范围不足以容纳该课程组',
-      AppText.upcomingClasses: '即将开始的课程',
-      AppText.noUpcomingClasses: '暂无后续课程',
+      AppText.upcomingSchedule: '后续安排',
+      AppText.noUpcomingSchedule: '暂无后续安排',
+      AppText.upcomingClass: '下一门课',
+      AppText.noUpcomingClass: '暂无后续课程',
+      AppText.previousMonth: '上个月',
+      AppText.nextMonth: '下个月',
       AppText.teachingPortal: '教学网',
       AppText.openBrowserFailed: '无法打开默认浏览器',
       AppText.showRollInNavbar: '在导航栏显示更换配色',
@@ -316,6 +367,8 @@ class AppStrings {
       AppText.manualColor: '自定义颜色',
       AppText.keepColorWhenRolling: '更换配色时保留此颜色',
       AppText.importantOutline: '重要课程边框',
+      AppText.outlineColor: '边框颜色',
+      AppText.outlineThickness: '边框粗细',
     },
   };
 }

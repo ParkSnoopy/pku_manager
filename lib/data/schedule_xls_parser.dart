@@ -227,7 +227,7 @@ class ScheduleXlsParser implements ScheduleDecoder {
               room.isEmpty ||
               room.contains('暂无') ||
               name.isEmpty
-          ? 'Complete course name and room; original text is retained.'
+          ? 'Enter course name and room.'
           : null,
     );
   }
@@ -337,7 +337,7 @@ class ScheduleXlsParser implements ScheduleDecoder {
         note: note,
       ),
       raw: note,
-      issue: complete ? null : 'Confirm tutorial weekday, periods and room; original note is retained.',
+      issue: complete ? null : 'Confirm tutorial weekday, periods, and room.',
     );
   }
 

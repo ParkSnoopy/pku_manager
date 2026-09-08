@@ -51,6 +51,7 @@ Only application composition selects concrete implementations. Tests replace sid
 
 - `lib/main.dart` starts `PkuManagerApp` and contains no feature logic.
 - `lib/app/app.dart` owns `MaterialApp`, application-level theme, adapter construction, and controller lifetime.
+- `lib/ui/super_otc_font.dart` selects and registers required Korean and Simplified Chinese faces from the single Static Super OTC asset before application startup.
 - `lib/features/timetable/timetable_page.dart` is the initial destination and owns the responsive shell; there is no redundant home-page wrapper.
 
 The application layer creates one shared SQLite database, schedule repository, week configuration repository, clock, validated build configuration, and timetable controller. Widgets receive existing instances rather than constructing side-effecting services during `build`.
@@ -59,7 +60,7 @@ Default builds configure a 16-week semester limit. A typed build-time setting ma
 
 ### Navigation
 
-Initial scope has one timetable-focused home destination. Import, errors, and narrow-screen day selection stay inside that destination. New school-life features may add sibling destinations without moving timetable rules into the navigation shell.
+The navigation shell owns Timetable, Calendar, and Settings destinations. Import, errors, and narrow-screen day selection stay inside Timetable. Calendar consumes timetable and semester projections without moving recurrence rules into widgets.
 
 ## Domain Layer (`lib/domain/`)
 
@@ -178,22 +179,22 @@ Incomplete-import review is separate from schedule state. It holds a transient c
 ### Timetable Presentation
 
 - `timetable_page.dart` owns page-level actions, state selection, and responsive layout choice.
-- `timetable_page.dart` presents a left navigation rail, semester week, parity, timetable, import/export/color-roll actions, and Settings destination. It refreshes week configuration on every foreground resume without a manual action.
+- `timetable_page.dart` presents Timetable, Calendar, and Settings destinations plus import/export/color-roll actions. It refreshes week configuration on every foreground resume without a manual action.
 - `timetable_grid.dart` renders Monday through Friday on wide layouts using the reference 120-unit index column, 44-unit header, 100-unit period rows, 30-unit meal breaks after periods 4 and 9, reference class times, and reference timetable fonts/alignment.
 - The same `timetable_grid.dart` renders one fixed period-index column and one day on narrow layouts. Page-level horizontal gestures and previous/next buttons select Monday through Friday.
 - Import feedback stays in `timetable_page.dart`; `schedule_import_review.dart` owns the completion form.
 - `course_editor_dialog.dart` creates user meetings and writes imported-record corrections without changing source bytes.
 - `timetable_export.dart` generates complete five-weekday PNG and XLSX files from the same grouped-span geometry as the screen. PNG adds 12 logical units of canvas padding and renders the complete table at 4× resolution; XLSX retains four role rows per period underneath merged course blocks with matching dimensions, fonts, and alignment.
 - `features/settings/appearance_controller.dart` owns persistent accent, language, and timetable-palette state; `settings_page.dart` edits accent and advances language through one cyclic button rather than exposing all language entries simultaneously.
-- `course_appearance` stores optional manual color, roll lock, and importance-outline values by active-source meeting identity. Locked manual colors are invariant under palette rolls; rolling clears only unlocked manual colors. The same typed appearance map feeds screen, PNG, and XLSX output. Settings can persistently hide the rail's Roll colors action, and both theme and course colors use the shared arbitrary-color palette picker.
-- Landscape timetable layouts reserve a right-side pane for each course's next start and live remaining time. Selecting a course replaces the list with the shared editor inline; portrait layouts use the same editor inside a dialog.
-- The third navigation-rail action launches the fixed PKU Teaching Network HTTPS URL through the platform default browser. The launcher is injectable at the widget boundary so tests verify the exact URI without opening a real browser.
+- `course_appearance` stores optional manual color, roll lock, and importance-outline color/thickness by active-source meeting identity. Locked manual colors are invariant under palette rolls; rolling clears only unlocked manual colors. The same typed appearance map feeds screen, PNG, and XLSX output. Settings can persistently hide the rail's Roll colors action, and theme, course, and outline colors use the shared arbitrary-color picker.
+- `features/calendar/calendar_page.dart` renders a navigable month from timetable groups and semester parity. Landscape Timetable shows the upcoming schedule and swaps it for the shared inline editor on selection; landscape Calendar shows only the nearest upcoming class. Portrait timetable layouts use the editor inside a dialog.
+- The fourth navigation-rail action launches the fixed PKU Teaching Network HTTPS URL through the platform default browser. The launcher is injectable at the widget boundary so tests verify the exact URI without opening a real browser.
 
 Widgets consume domain projections supplied by the controller. They do not filter frequency with local string checks. Every meeting is shown; meetings outside current parity render at half opacity.
 
-Version `0.1.0` is the first persistence compatibility boundary. Its canonical database uses `PRAGMA user_version = 100`; databases from pre-`0.1.0` development builds are deliberately rejected rather than migrated.
+Throughout `0.0.x`, `PRAGMA user_version` remains 0. The development application does not retain backward-compatibility or migration paths.
 
-Course colors default to deterministic presentation values derived from course identity plus a persisted roll seed and are the deliberate exception to reference visual parity. Optional manual colors and importance outlines are persisted by active-source identity; locked colors survive rolls, while unlocked manual colors return to generated colors on the next roll. Vertically touching identical meetings render as one block. Shape, size, fonts, alignment, row timing labels, meal breaks, fitting, and export resolution follow the reference. Foreground contrast is calculated from the chosen background. After 1000 ms hover, a pointer-following overlay shows full course details including frequency.
+Course colors default to deterministic presentation values derived from course identity plus a persisted roll seed and are the deliberate exception to reference visual parity. Optional manual colors and configurable importance outlines are persisted by active-source identity; outlines default to yellow at 1.5 logical pixels. Course names use a fixed 22.5-pixel size, classroom text uses 15 pixels, and padded one-line labels truncate within each block. Locked colors survive rolls, while unlocked manual colors return to generated colors on the next roll. Vertically touching identical meetings render as one block. Shape, alignment, row timing labels, meal breaks, and export resolution follow the reference. Foreground contrast is calculated from the chosen background. After 1000 ms hover, a pointer-following overlay shows full course details including frequency.
 
 ## Durable Storage
 
@@ -205,10 +206,10 @@ Production storage uses one SQLite database in application support:
 | Parsed timetable | Normalized typed rows keyed to source identities | Parser plus accepted completion fields | Publish with source and active selection in one transaction. |
 | Import issues and completions | Typed rows keyed to source identities | Parser issues and explicit user input | Require complete resolution before publication. |
 | Week configuration | Validated TOML text and fetched-at timestamp; typed dates derived on load | Last valid public source response | Replace in one transaction after complete validation. |
-| Appearance | Typed global settings plus source-bound course color/lock/outline rows | Explicit Settings, editor, and roll actions | Update transactionally; reject styles outside the active schedule. |
+| Appearance | Typed global settings plus source-bound course color/lock/outline color/width rows | Explicit Settings, editor, and roll actions | Update transactionally; reject styles outside the active schedule. |
 | User meetings | Typed weekday rows linked to the active immutable source | Empty-cell additions | Insert, edit, or delete independently from source and parsed rows. |
 
-SQLite transactions provide publication and rollback. Version `0.1.0` establishes schema version 100; earlier development schemas are unsupported and are not migrated. Startup integrity failure is surfaced; the app does not silently rebuild or discard source evidence.
+SQLite transactions provide publication and rollback. All `0.0.x` versions keep schema version 0 without compatibility migrations. Startup integrity failure is surfaced; the app does not silently rebuild or discard source evidence.
 
 No schedule data belongs beside the executable, in the repository, in Downloads after import, or inside installer-owned directories. The user-selected external workbook remains untouched.
 

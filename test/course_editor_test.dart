@@ -40,7 +40,9 @@ void main() {
             embedded: true,
             suggestedColor: const Color(0xffabcdef),
             colorPicker: (context, {required color, required title}) async =>
-                const Color(0xff135724),
+                title == 'Outline color'
+                ? const Color(0xff246813)
+                : const Color(0xff135724),
             onCancel: () {},
             onResult: (value) => result = value,
           ),
@@ -57,6 +59,15 @@ void main() {
     await tester.drag(find.byType(ListView), const Offset(0, -300));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('course-important-outline')));
+    await tester.pump();
+    final initialSlider = tester.widget<Slider>(
+      find.byKey(const ValueKey('course-outline-thickness')),
+    );
+    expect(initialSlider.value, 1.5);
+    await tester.tap(find.byKey(const ValueKey('course-outline-color')));
+    await tester.pump();
+    initialSlider.onChanged!(3.5);
+    await tester.pump();
     await tester.ensureVisible(find.text('Save'));
     await tester.tap(find.text('Save'));
     await tester.pump();
@@ -68,5 +79,7 @@ void main() {
     expect(result!.appearance.color, const Color(0xff135724));
     expect(result!.appearance.lockColor, isFalse);
     expect(result!.appearance.outlined, isTrue);
+    expect(result!.appearance.outlineColor, const Color(0xff246813));
+    expect(result!.appearance.outlineWidth, 3.5);
   });
 }

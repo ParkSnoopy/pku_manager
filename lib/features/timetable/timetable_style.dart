@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
+import '../../ui/super_otc_font.dart';
 
 const timetableCanvas = Color(0xfffaf9f5);
 const timetableIndexSurface = Color(0xffe8e0d2);
@@ -13,8 +14,8 @@ const timetableMuted = Color(0xff6c6a64);
 const timetableDivider = Color(0xff92918d);
 
 const timetableMonoFont = 'Roboto Mono Reference';
-const timetableSansFont = 'Noto Sans CJK SC';
-const timetableSerifFont = 'Noto Serif CJK SC';
+const timetableSansFont = pkuNotoSansScFamily;
+const timetablePeriodFont = pkuNotoSansScFamily;
 const timetableFontFallback = <String>[timetableSansFont];
 
 const timetableHeaderHeight = 44.0;
@@ -26,6 +27,9 @@ const timetableExportScale = 4.0;
 const timetableAspectRatio = 1.15;
 const timetableDividerWidth = 1.0;
 const timetableMealBreaks = <int>{4, 9};
+const timetableCourseNameFontSize = 22.5;
+const timetableClassroomFontSize = 15.0;
+const timetableCourseContentPadding = 10.0;
 
 const timetableClassStarts = <int, String>{
   1: '08:00',
@@ -81,15 +85,6 @@ String timetableClassEnd(String start) {
   final end = parts[0] * 60 + parts[1] + 50;
   return '${(end ~/ 60).toString().padLeft(2, '0')}:'
       '${(end % 60).toString().padLeft(2, '0')}';
-}
-
-double timetableCourseNameFontSize(String text, double availableWidth) {
-  final units = text.runes.fold<double>(
-    0,
-    (value, rune) => value + (rune <= 0x7f ? .62 : 1),
-  );
-  final fitted = (availableWidth - 8) / math.max(8, units);
-  return fitted.clamp(14, 28).toDouble();
 }
 
 final class TimetableVisualSpan {

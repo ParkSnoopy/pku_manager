@@ -6,7 +6,7 @@ Build an offline-first school life management application for Android, iOS, Linu
 
 ## Current Context
 
-- The Flutter application is at version `0.1.0`; this is its first supported persistence contract.
+- The Flutter application is at version `0.0.2`; all `0.0.x` builds keep schema version 0 without compatibility code.
 - Android, iOS, Linux, macOS, and Windows Flutter runners exist. Web is unsupported.
 - Domain, SQLite, workbook parsing, responsive timetable, editing, appearance, export, and native packaging layers are implemented.
 - The deployed Week Parity application currently reads `https://parksnoopy-undergraduate.github.io/week/config.toml`.
@@ -66,7 +66,8 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 ### Feature Layer
 
 - `lib/features/timetable/timetable_controller.dart`: startup loading, import coordination, parity refresh, preview mode, and error states.
-- `lib/features/timetable/timetable_page.dart`: responsive timetable page.
+- `lib/features/timetable/timetable_page.dart`: responsive navigation shell and timetable page.
+- `lib/features/calendar/calendar_page.dart`: month calendar derived from timetable and semester parity.
 - `lib/features/timetable/timetable_grid.dart`: desktop and wide-screen weekly grid.
 - `lib/features/timetable/day_schedule.dart`: compact selected-day presentation for narrow screens.
 - `lib/features/timetable/week_status.dart`: semester week, parity, freshness, and refresh status.
@@ -187,17 +188,17 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Render Monday through Friday on wide layouts.
 - On narrow layouts, keep one fixed period-index column and one day column visible; horizontal swipes move between Monday and Friday while the visible weekday remains explicit.
 - Map unsupported frequency tokens to `每周`.
-- Match timetable shape, dimensions, bundled reference fonts, font sizes, alignment, class-time labels, meal breaks, aspect fitting, and 4× PNG export resolution to the `pages` reference; retain application-owned course colors as the only intentional visual exception.
+- Match timetable shape, dimensions, font sizes, alignment, class-time labels, meal breaks, aspect fitting, and 4× PNG export resolution to the `pages` reference; retain application-owned course colors as the only intentional visual exception. Package CJK glyphs and weights in one Static Super OTC instead of separate region/weight files.
 - Derive course colors from course identity plus a persistent roll seed, allow repeated color rolls after import, and maintain readable foreground contrast.
 - Default to Korean, persist English and Simplified Chinese alternatives, localize all application controls, and expose one active-language button that cycles through the three entries per click.
 - Group vertically touching identical weekday meetings into one block and atomically edit all retained source identities without mutating imported source bytes; export the complete timetable as PNG or XLSX.
-- Persist arbitrary manual colors, explicit manual-color markers, roll locks, and importance outlines by source identity. Apply them consistently to the timetable and exports; clear only unlocked manual colors during a palette roll.
-- Let Settings choose an arbitrary theme accent and hide the Roll colors rail action. Scale grouped course names up for an eight-Chinese-character line and down to the minimum readable size for longer names.
-- In landscape, use a right-side upcoming-class/countdown pane and replace it with the inline editor on selection. Keep dialog editing for portrait layouts.
+- Persist arbitrary manual colors, explicit manual-color markers, roll locks, and configurable importance-outline colors and thicknesses by source identity. Apply them consistently to the timetable and exports; clear only unlocked manual colors during a palette roll.
+- Let Settings choose an arbitrary theme accent and hide the Roll colors rail action. Use fixed padded one-line course typography with truncation.
+- Add a month Calendar derived from course recurrence and semester parity. In landscape, Timetable uses an upcoming-schedule pane that becomes the inline editor on selection; Calendar uses an upcoming-class pane. Keep dialog editing for portrait timetable layouts.
 - Add a **教学网** rail action that opens the exact PKU Teaching Network URL in the platform default browser.
 - Use flat visual hierarchy, no gradients, bounded labels, accessible semantics, and keyboard navigation on desktop.
 - Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation and exact external URL dispatch, grouped inline editing, upcoming countdowns, reference timetable geometry/typography, course-and-room full-cell color, repeated color rolls, cyclic language selection, persistent theme editing, 1000 ms pointer-following details, foreground refresh, and reference export dimensions.
-- Treat `0.1.0` as the first persistence contract and reject databases written by earlier development versions instead of maintaining migration code for them.
+- Keep `PRAGMA user_version = 0` throughout `0.0.x` and retain no migrations until a schema-version bump and backward compatibility are explicitly requested.
 
 ### 9. Apply Product Identity
 

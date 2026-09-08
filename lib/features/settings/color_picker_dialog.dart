@@ -26,6 +26,9 @@ Future<Color> showAppColorPicker(
   showColorCode: true,
   showColorName: false,
   showMaterialName: false,
-  dialogTitle: Text(title),
-  constraints: const BoxConstraints(maxWidth: 520, maxHeight: 680),
+  dialogTitle: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+  titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+  clipBehavior: Clip.hardEdge,
+  constraints: const BoxConstraints(maxWidth: 520, maxHeight: 720),
 );

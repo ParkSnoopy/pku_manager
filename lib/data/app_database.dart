@@ -10,11 +10,15 @@ class AppDatabase {
     database.execute('PRAGMA synchronous = FULL');
     final version =
         database.select('PRAGMA user_version').first.values.first as int;
-    if (version != 0 && version != 100) {
+    if (version != 0) {
       database.close();
       throw const FormatException('Unsupported database version');
     }
-    if (version == 0) {
+    final initialized = database.select('''
+SELECT 1 FROM sqlite_master
+WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+LIMIT 1''').isNotEmpty;
+    if (!initialized) {
       transaction(() {
         database.execute('''
 CREATE TABLE sources(id INTEGER PRIMARY KEY, bytes BLOB NOT NULL, period_count INTEGER NOT NULL CHECK(period_count > 0));
@@ -65,8 +69,9 @@ CREATE TABLE course_appearance(
  color INTEGER,
  lock_color INTEGER NOT NULL CHECK(lock_color IN (0, 1)),
  outlined INTEGER NOT NULL CHECK(outlined IN (0, 1)),
+ outline_color INTEGER NOT NULL,
+ outline_width REAL NOT NULL CHECK(outline_width BETWEEN 0.5 AND 6),
  PRIMARY KEY(source, identity));
-PRAGMA user_version = 100;
 ''');
       });
     }

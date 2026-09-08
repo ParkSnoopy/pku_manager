@@ -2,19 +2,30 @@ import 'package:flutter/material.dart';
 
 import '../../domain/course_meeting.dart';
 
+const defaultCourseOutlineColor = Color(0xffffff00);
+const defaultCourseOutlineWidth = 1.5;
+
 final class CourseAppearance {
   const CourseAppearance({
     this.color,
     this.lockColor = true,
     this.outlined = false,
-  });
+    this.outlineColor = defaultCourseOutlineColor,
+    this.outlineWidth = defaultCourseOutlineWidth,
+  }) : assert(outlineWidth >= .5 && outlineWidth <= 6);
 
   final Color? color;
   final bool lockColor;
   final bool outlined;
+  final Color outlineColor;
+  final double outlineWidth;
 
-  CourseAppearance withoutUnlockedColor() =>
-      CourseAppearance(lockColor: lockColor, outlined: outlined);
+  CourseAppearance withoutUnlockedColor() => CourseAppearance(
+    lockColor: lockColor,
+    outlined: outlined,
+    outlineColor: outlineColor,
+    outlineWidth: outlineWidth,
+  );
 
   bool get isEmpty => color == null && !outlined;
 
@@ -23,10 +34,13 @@ final class CourseAppearance {
       other is CourseAppearance &&
       color == other.color &&
       lockColor == other.lockColor &&
-      outlined == other.outlined;
+      outlined == other.outlined &&
+      outlineColor == other.outlineColor &&
+      outlineWidth == other.outlineWidth;
 
   @override
-  int get hashCode => Object.hash(color, lockColor, outlined);
+  int get hashCode =>
+      Object.hash(color, lockColor, outlined, outlineColor, outlineWidth);
 }
 
 const courseColorChoices = <Color>[

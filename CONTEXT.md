@@ -49,15 +49,17 @@
 - Unsupported weekday source records cause an explicit import issue and are never silently discarded; unsupported frequency tokens alone map to `每周`. Saturday and Sunday source columns are intentionally outside the product timetable.
 - UI is native Flutter, responsive, flat, readable, accessible, and uses no gradients.
 - Mobile timetable view shows one fixed period-index column and one day column; horizontal swipes change the visible day.
-- A left vertical navigation rail owns primary application destinations and a **教学网** action that opens the fixed PKU Teaching Network page in the default browser.
+- A left vertical navigation rail owns Timetable, Calendar, and Settings destinations plus a **教学网** action that opens the fixed PKU Teaching Network page in the default browser.
 - Timetable geometry, typefaces, font sizes, alignment, class times, meal breaks, aspect fitting, and export dimensions follow the `pages` branch of `ParkSnoopy/pku-elective-prettify`. Course colors remain application-owned and fill complete course blocks. Vertically touching identical meetings on one weekday render as one group without losing their source identities or writing to the workbook.
-- Landscape timetable layouts use the available right side as a persistent upcoming-class pane with next-start countdowns. Selecting a course changes that pane into the editor; portrait selection uses a dialog.
+- Landscape Timetable layouts show the upcoming schedule in the right pane; selecting a course changes that pane into the editor. Landscape Calendar layouts show the nearest upcoming class in the right pane. Portrait timetable selection uses a dialog.
 - Pointer hover for 1000 ms opens a detail box positioned beside and following the pointer until exit.
 - Week configuration refresh runs at startup and whenever the application returns to foreground; no manual refresh control is shown.
 - Korean is the default interface language. One Settings button displays only the active language and cycles Korean → English → Simplified Chinese on successive clicks; the selection and accent color persist.
-- Theme accents and manual course colors accept arbitrary palette choices. A manual course color is visibly marked and may be locked against palette rolls; importance is an independently persisted strong outline. Settings may hide the Roll colors rail action.
-- Grouped course names grow up to the shared maximum size so eight Chinese characters fit on one line, then scale down with a 14-pixel floor for longer names.
-- `0.1.0` establishes the first supported database schema. No pre-`0.1.0` development database compatibility is provided.
+- Theme accents and manual course colors accept arbitrary palette choices. A manual course color is visibly marked and may be locked against palette rolls. Important-class outlines persist their independently selected color and thickness, defaulting to yellow and 1.5 logical pixels. Settings may hide the Roll colors rail action.
+- Course names use one fixed 22.5-pixel size, classroom text uses 15 pixels, and both remain padded and truncate within the course block.
+- Calendar presents month navigation and semester-parity-aware class occurrences. Timetable and Calendar retain distinct right-pane summaries.
+- The application version is `0.0.2`. Throughout `0.0.x`, the development database keeps `PRAGMA user_version = 0`; no backward-compatibility or migration code is retained until an explicit schema-version bump is requested.
+- Flutter packages one Static Super OTC CJK collection containing Korean, Japanese, Chinese, and every static weight. Separate regional and weight-specific CJK font assets are forbidden.
 - Imported meetings can be edited and empty weekday cells can create user meetings. These overlays are stored separately from immutable workbook bytes.
 - A persistent color-roll seed lets users generate another deterministic timetable color combination repeatedly after import.
 - The complete Monday–Friday timetable exports locally as PNG or XLSX.

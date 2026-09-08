@@ -28,7 +28,8 @@ final class SqliteAppearanceStore implements AppearanceStore {
   @override
   Map<String, CourseAppearance> loadCourseAppearances() {
     final rows = database.database.select('''
-SELECT identity, color, lock_color, outlined FROM course_appearance
+SELECT identity, color, lock_color, outlined, outline_color, outline_width
+FROM course_appearance
 JOIN active_schedule ON course_appearance.source = active_schedule.source''');
     return Map.unmodifiable({
       for (final row in rows)
@@ -36,6 +37,8 @@ JOIN active_schedule ON course_appearance.source = active_schedule.source''');
           color: row['color'] == null ? null : Color(row['color'] as int),
           lockColor: (row['lock_color'] as int) != 0,
           outlined: (row['outlined'] as int) != 0,
+          outlineColor: Color(row['outline_color'] as int),
+          outlineWidth: (row['outline_width'] as num).toDouble(),
         ),
     });
   }
@@ -82,13 +85,15 @@ UNION SELECT identity FROM user_meetings WHERE source = ? AND identity = ?''',
       for (final entry in courseAppearances.entries) {
         final appearance = entry.value;
         database.database.execute(
-          'INSERT INTO course_appearance VALUES (?, ?, ?, ?, ?)',
+          'INSERT INTO course_appearance VALUES (?, ?, ?, ?, ?, ?, ?)',
           [
             source,
             entry.key,
             appearance.color?.toARGB32(),
             appearance.lockColor ? 1 : 0,
             appearance.outlined ? 1 : 0,
+            appearance.outlineColor.toARGB32(),
+            appearance.outlineWidth,
           ],
         );
       }
