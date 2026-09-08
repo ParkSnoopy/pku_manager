@@ -8,6 +8,8 @@ import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
 import '../../l10n/app_strings.dart';
 import '../calendar/calendar_page.dart';
+import '../calendar/calendar_schedule_controller.dart';
+import '../calendar/upcoming_schedules_pane.dart';
 import '../schedule_import/schedule_import_review.dart';
 import '../settings/appearance_controller.dart';
 import '../settings/settings_page.dart';
@@ -38,11 +40,13 @@ class TimetablePage extends StatefulWidget {
   const TimetablePage({
     super.key,
     required this.controller,
+    required this.calendar,
     required this.appearance,
     required this.exporter,
     this.browserLauncher = launchInDefaultBrowser,
   });
   final TimetableController controller;
+  final CalendarScheduleController calendar;
   final AppearanceController appearance;
   final TimetableExporter exporter;
   final BrowserLauncher browserLauncher;
@@ -383,10 +387,9 @@ class _TimetablePageState extends State<TimetablePage>
             SizedBox(
               width: paneWidth,
               child: _editor == null
-                  ? UpcomingClassesPane(
-                      timetable: timetable,
+                  ? UpcomingSchedulesPane(
+                      controller: widget.calendar,
                       now: controller.clock(),
-                      calendar: controller.week.calendar,
                     )
                   : CourseEditorDialog(
                       key: ValueKey(
@@ -425,7 +428,32 @@ class _TimetablePageState extends State<TimetablePage>
   }
 
   Widget _calendarBody(TimetableController controller) {
-    return CalendarPage(now: controller.clock());
+    final calendarPage = CalendarPage(
+      now: controller.clock(),
+      controller: widget.calendar,
+    );
+    final timetable = controller.timetable;
+    if (timetable == null) return calendarPage;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth <= constraints.maxHeight) return calendarPage;
+        final paneWidth = (constraints.maxWidth * .28).clamp(280.0, 360.0);
+        return Row(
+          children: [
+            Expanded(child: calendarPage),
+            const VerticalDivider(width: 1),
+            SizedBox(
+              width: paneWidth,
+              child: UpcomingClassPane(
+                timetable: timetable,
+                now: controller.clock(),
+                calendar: controller.week.calendar,
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _grid(Timetable timetable, WeekParity? parity, bool allDays) {

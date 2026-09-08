@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/data/app_database.dart';
+import 'package:pku_manager/data/calendar_schedule_repository.dart';
 import 'package:pku_manager/data/schedule_repository.dart';
 import 'package:pku_manager/data/schedule_xls_parser.dart';
 import 'package:pku_manager/data/week_config_parser.dart';
@@ -12,6 +13,43 @@ import 'package:pku_manager/domain/course_meeting.dart';
 import 'package:pku_manager/domain/week_source.dart';
 
 void main() {
+  test('calendar schedules persist independently in start order', () {
+    final directory = Directory.systemTemp.createTempSync('pku-calendar-');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final path = '${directory.path}/calendar.sqlite3';
+    var db = AppDatabase(path);
+    var repository = CalendarScheduleRepository(db);
+    final later = repository.create(
+      title: '  Homework deadline  ',
+      startsAt: DateTime.utc(2026, 9, 8, 2),
+    );
+    final earlier = repository.create(
+      title: 'Meeting info',
+      startsAt: DateTime.utc(2026, 9, 7, 1),
+    );
+
+    expect(repository.load().map((schedule) => schedule.id), [
+      earlier.id,
+      later.id,
+    ]);
+    expect(repository.load().last.title, 'Homework deadline');
+
+    repository.update(
+      later.copyWith(
+        title: 'Revised deadline',
+        startsAt: DateTime.utc(2026, 9, 9, 3),
+      ),
+    );
+    repository.remove(earlier.id);
+    db.close();
+
+    db = AppDatabase(path);
+    repository = CalendarScheduleRepository(db);
+    expect(repository.load().single.title, 'Revised deadline');
+    expect(repository.load().single.id, later.id);
+    db.close();
+  });
+
   test(
     'SQLite publication is transactional and source bytes are immutable',
     () {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../data/app_database.dart';
+import '../data/calendar_schedule_repository.dart';
 import '../data/schedule_picker.dart';
 import '../data/schedule_repository.dart';
 import '../data/schedule_xls_parser.dart';
@@ -9,6 +10,7 @@ import '../data/sqlite_appearance_store.dart';
 import '../data/week_config_parser.dart';
 import '../data/week_config_repository.dart';
 import '../domain/semester.dart';
+import '../features/calendar/calendar_schedule_controller.dart';
 import '../features/timetable/timetable_controller.dart';
 import '../features/timetable/timetable_export.dart';
 import '../features/timetable/timetable_page.dart';
@@ -23,11 +25,13 @@ class PkuManagerApp extends StatefulWidget {
     this.appearance,
     this.exporter,
     this.browserLauncher,
+    this.calendar,
   });
   final TimetableController? controller;
   final AppearanceController? appearance;
   final TimetableExporter? exporter;
   final BrowserLauncher? browserLauncher;
+  final CalendarScheduleController? calendar;
   @override
   State<PkuManagerApp> createState() => _PkuManagerAppState();
 }
@@ -35,6 +39,7 @@ class PkuManagerApp extends StatefulWidget {
 class _PkuManagerAppState extends State<PkuManagerApp> {
   AppDatabase? _database;
   TimetableController? _controller;
+  CalendarScheduleController? _calendar;
   late AppearanceController _appearance;
   late final TimetableExporter _exporter;
   String? _failure;
@@ -46,6 +51,9 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
     _exporter = widget.exporter ?? TimetableExporter(NativeExportFileWriter());
     if (widget.controller != null) {
       _controller = widget.controller;
+      _calendar =
+          widget.calendar ??
+          CalendarScheduleController(MemoryCalendarScheduleStore());
     } else {
       _open();
     }
@@ -61,6 +69,9 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       final database = AppDatabase('${directory.path}/pku_manager.sqlite3');
       _database = database;
       _appearance = AppearanceController(SqliteAppearanceStore(database));
+      _calendar = CalendarScheduleController(
+        CalendarScheduleRepository(database),
+      );
       final controller = TimetableController(
         schedules: ScheduleRepository(database),
         decoder: ScheduleXlsParser(),
@@ -79,6 +90,7 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
   @override
   void dispose() {
     if (widget.controller == null) _controller?.dispose();
+    if (widget.calendar == null) _calendar?.dispose();
     _database?.close();
     super.dispose();
   }
@@ -93,9 +105,10 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       supportedLocales: AppStrings.supportedLocales,
       localizationsDelegates: AppStrings.localizationsDelegates,
       theme: _theme(),
-      home: _controller != null
+      home: _controller != null && _calendar != null
           ? TimetablePage(
               controller: _controller!,
+              calendar: _calendar!,
               appearance: _appearance,
               exporter: _exporter,
               browserLauncher: widget.browserLauncher ?? launchInDefaultBrowser,

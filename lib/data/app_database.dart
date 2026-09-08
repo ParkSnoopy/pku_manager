@@ -72,8 +72,32 @@ CREATE TABLE course_appearance(
  outline_color INTEGER NOT NULL,
  outline_width REAL NOT NULL CHECK(outline_width BETWEEN 0.5 AND 6),
  PRIMARY KEY(source, identity));
+CREATE TABLE calendar_schedules(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+ starts_at INTEGER NOT NULL);
 ''');
       });
+    }
+    final requiredTables = {
+      'sources',
+      'meetings',
+      'completions',
+      'issues',
+      'active_schedule',
+      'week_cache',
+      'appearance',
+      'user_meetings',
+      'course_appearance',
+      'calendar_schedules',
+    };
+    final tables = database
+        .select("SELECT name FROM sqlite_master WHERE type = 'table'")
+        .map((row) => row['name'] as String)
+        .toSet();
+    if (!tables.containsAll(requiredTables)) {
+      database.close();
+      throw const FormatException('Unsupported database schema');
     }
     final integrity = database.select('PRAGMA quick_check').first.values.first;
     if (integrity != 'ok' ||

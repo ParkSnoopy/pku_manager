@@ -10,6 +10,7 @@ import 'package:pku_manager/domain/semester.dart';
 import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
 import 'package:pku_manager/domain/week_source.dart';
+import 'package:pku_manager/features/calendar/calendar_schedule_controller.dart';
 import 'package:pku_manager/features/timetable/timetable_controller.dart';
 import 'package:pku_manager/features/timetable/timetable_color.dart';
 import 'package:pku_manager/features/timetable/timetable_export.dart';
@@ -297,6 +298,12 @@ void main() {
       )..start();
       final appearance = AppearanceController(MemoryAppearanceStore())
         ..setLanguage(AppLanguage.en);
+      final calendar = CalendarScheduleController(MemoryCalendarScheduleStore())
+        ..create(
+          title: 'Homework deadline',
+          startsAt: DateTime.utc(2026, 9, 7, 1),
+        );
+      addTearDown(calendar.dispose);
       appearance.setCourseAppearance(
         const ['first', 'second'],
         const CourseAppearance(
@@ -311,6 +318,7 @@ void main() {
       await tester.pumpWidget(
         PkuManagerApp(
           controller: controller,
+          calendar: calendar,
           appearance: appearance,
           exporter: TimetableExporter(
             _ExportWriter(),
@@ -328,7 +336,15 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Upcoming schedule'), findsOneWidget);
-      expect(find.text('Algebra'), findsNWidgets(2));
+      expect(find.text('Homework deadline'), findsOneWidget);
+      expect(find.text('Algebra'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('upcoming-schedule-pane')),
+          matching: find.text('Algebra'),
+        ),
+        findsNothing,
+      );
       expect(find.textContaining('in '), findsWidgets);
       expect(
         tester
@@ -348,9 +364,15 @@ void main() {
       await tester.pump();
       expect(find.byKey(const ValueKey('calendar-page')), findsOneWidget);
       expect(find.text('September 2026'), findsOneWidget);
-      expect(find.text('Algebra'), findsNothing);
+      expect(find.textContaining('Homework deadline'), findsOneWidget);
+      expect(find.byKey(const ValueKey('upcoming-class-pane')), findsOneWidget);
+      expect(find.text('Upcoming class'), findsOneWidget);
+      expect(find.text('Algebra'), findsOneWidget);
       expect(
-        find.byKey(const ValueKey('upcoming-schedule-pane')),
+        find.descendant(
+          of: find.byKey(const ValueKey('upcoming-class-pane')),
+          matching: find.textContaining('Homework deadline'),
+        ),
         findsNothing,
       );
       expect(find.text('Upcoming schedule'), findsNothing);
