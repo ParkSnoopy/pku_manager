@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/calendar_schedule.dart';
+import '../../domain/timetable.dart';
 import '../../l10n/app_strings.dart';
 import 'calendar_schedule_controller.dart';
 
 class CalendarPage extends StatefulWidget {
-  const CalendarPage({super.key, required this.now, required this.controller});
+  const CalendarPage({
+    super.key,
+    required this.now,
+    required this.controller,
+    this.timetable,
+    this.focusedScheduleId,
+    this.onFocusedScheduleOpened,
+  });
 
   final DateTime now;
   final CalendarScheduleController controller;
+  final Timetable? timetable;
+  final int? focusedScheduleId;
+  final VoidCallback? onFocusedScheduleOpened;
 
   @override
   State<CalendarPage> createState() => _CalendarPageState();
@@ -21,14 +32,19 @@ class _CalendarPageState extends State<CalendarPage> {
   void initState() {
     super.initState();
     widget.controller.addListener(_scheduleChanged);
+    _openFocusedSchedule();
   }
 
   @override
   void didUpdateWidget(CalendarPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller == widget.controller) return;
-    oldWidget.controller.removeListener(_scheduleChanged);
-    widget.controller.addListener(_scheduleChanged);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_scheduleChanged);
+      widget.controller.addListener(_scheduleChanged);
+    }
+    if (oldWidget.focusedScheduleId != widget.focusedScheduleId) {
+      _openFocusedSchedule();
+    }
   }
 
   @override
@@ -41,6 +57,21 @@ class _CalendarPageState extends State<CalendarPage> {
     if (mounted) setState(() {});
   }
 
+  void _openFocusedSchedule() {
+    final id = widget.focusedScheduleId;
+    if (id == null) return;
+    final schedule = widget.controller.schedules
+        .where((item) => item.id == id)
+        .firstOrNull;
+    if (schedule == null) return;
+    _month = _beijingDate(schedule.startsAt);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.onFocusedScheduleOpened?.call();
+      _editSchedule(_beijingDate(schedule.startsAt), schedule);
+    });
+  }
+
   void _changeMonth(int delta) =>
       setState(() => _month = DateTime.utc(_month.year, _month.month + delta));
 
@@ -48,35 +79,68 @@ class _CalendarPageState extends State<CalendarPage> {
     DateTime date, [
     CalendarSchedule? schedule,
   ]) async {
-    final result = await showDialog<_ScheduleEditResult>(
-      context: context,
-      builder: (_) => _ScheduleEditor(date: date, schedule: schedule),
-    );
-    if (result == null) return;
     try {
-      if (result.remove) {
-        widget.controller.remove(schedule!.id);
-      } else if (schedule == null) {
-        widget.controller.create(
-          title: result.title,
-          startsAt: result.startsAt,
-        );
-      } else {
-        widget.controller.update(
-          schedule.copyWith(title: result.title, startsAt: result.startsAt),
-        );
-      }
+      final target =
+          schedule ??
+          widget.controller.create(
+            title: AppStrings.of(context).text(AppText.newSchedule),
+            startsAt: DateTime.utc(
+              date.year,
+              date.month,
+              date.day,
+            ).subtract(const Duration(hours: 8)),
+          );
+      await showDialog<void>(
+        context: context,
+        builder: (_) => _ScheduleEditor(
+          schedule: target,
+          timetable: widget.timetable,
+          onChanged: _updateSchedule,
+          onRemove: () {
+            if (_removeSchedule(target.id)) Navigator.pop(context);
+          },
+        ),
+      );
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppStrings.of(context).text(AppText.scheduleSaveFailed),
+              AppStrings.of(context).text(AppText.scheduleUpdateFailed),
             ),
           ),
         );
       }
     }
+  }
+
+  void _updateSchedule(CalendarSchedule schedule) {
+    try {
+      widget.controller.update(schedule);
+    } catch (_) {
+      _showUpdateFailure();
+    }
+  }
+
+  bool _removeSchedule(int id) {
+    try {
+      widget.controller.remove(id);
+      return true;
+    } catch (_) {
+      _showUpdateFailure();
+      return false;
+    }
+  }
+
+  void _showUpdateFailure() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppStrings.of(context).text(AppText.scheduleUpdateFailed),
+        ),
+      ),
+    );
   }
 
   @override
@@ -253,7 +317,7 @@ class _CalendarDay extends StatelessWidget {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Text(
-                            '${_two(starts.hour)}:${_two(starts.minute)} '
+                            '${schedule.allDay ? '' : '${_two(starts.hour)}:${_two(starts.minute)} '}'
                             '${schedule.title}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -273,23 +337,18 @@ class _CalendarDay extends StatelessWidget {
   }
 }
 
-final class _ScheduleEditResult {
-  const _ScheduleEditResult({
-    required this.title,
-    required this.startsAt,
-    this.remove = false,
+class _ScheduleEditor extends StatefulWidget {
+  const _ScheduleEditor({
+    required this.schedule,
+    required this.onChanged,
+    required this.onRemove,
+    this.timetable,
   });
 
-  final String title;
-  final DateTime startsAt;
-  final bool remove;
-}
-
-class _ScheduleEditor extends StatefulWidget {
-  const _ScheduleEditor({required this.date, this.schedule});
-
-  final DateTime date;
-  final CalendarSchedule? schedule;
+  final CalendarSchedule schedule;
+  final Timetable? timetable;
+  final ValueChanged<CalendarSchedule> onChanged;
+  final VoidCallback onRemove;
 
   @override
   State<_ScheduleEditor> createState() => _ScheduleEditorState();
@@ -297,14 +356,13 @@ class _ScheduleEditor extends StatefulWidget {
 
 class _ScheduleEditorState extends State<_ScheduleEditor> {
   late final TextEditingController _title = TextEditingController(
-    text: widget.schedule?.title ?? '',
+    text: widget.schedule.title,
   );
-  late DateTime _date = widget.schedule == null
-      ? widget.date
-      : _beijingDate(widget.schedule!.startsAt);
-  late TimeOfDay _time = widget.schedule == null
-      ? const TimeOfDay(hour: 9, minute: 0)
-      : TimeOfDay.fromDateTime(_beijingDateTime(widget.schedule!.startsAt));
+  late CalendarSchedule _schedule = widget.schedule;
+  late DateTime _date = _beijingDate(widget.schedule.startsAt);
+  late TimeOfDay _time = TimeOfDay.fromDateTime(
+    _beijingDateTime(widget.schedule.startsAt),
+  );
   bool _showRequired = false;
 
   @override
@@ -321,32 +379,45 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
       initialDate: DateTime(_date.year, _date.month, _date.day),
     );
     if (value != null) {
-      setState(() => _date = DateTime.utc(value.year, value.month, value.day));
+      _date = DateTime.utc(value.year, value.month, value.day);
+      _publishDateTime();
     }
   }
 
   Future<void> _chooseTime() async {
     final value = await showTimePicker(context: context, initialTime: _time);
-    if (value != null) setState(() => _time = value);
+    if (value != null) {
+      _time = value;
+      _publishDateTime();
+    }
   }
 
-  void _save() {
-    final title = _title.text.trim();
-    if (title.isEmpty) {
-      setState(() => _showRequired = true);
-      return;
-    }
+  void _publishDateTime() {
     final startsAt = DateTime.utc(
       _date.year,
       _date.month,
       _date.day,
-      _time.hour,
-      _time.minute,
+      _schedule.allDay ? 0 : _time.hour,
+      _schedule.allDay ? 0 : _time.minute,
     ).subtract(const Duration(hours: 8));
-    Navigator.pop(
-      context,
-      _ScheduleEditResult(title: title, startsAt: startsAt),
-    );
+    _publish(_schedule.copyWith(startsAt: startsAt));
+  }
+
+  void _publish(CalendarSchedule value) {
+    setState(() => _schedule = value);
+    widget.onChanged(value);
+  }
+
+  List<({String sourceId, String name})> get _classes {
+    final values = <String, ({String sourceId, String name})>{};
+    for (final course in widget.timetable?.meetings ?? const []) {
+      values.putIfAbsent(
+        course.sourceName,
+        () => (sourceId: course.sourceId, name: course.sourceName),
+      );
+    }
+    return values.values.toList(growable: false)
+      ..sort((a, b) => a.name.compareTo(b.name));
   }
 
   @override
@@ -354,11 +425,7 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
     final strings = AppStrings.of(context);
     return AlertDialog(
       key: const ValueKey('schedule-editor'),
-      title: Text(
-        strings.text(
-          widget.schedule == null ? AppText.addSchedule : AppText.editSchedule,
-        ),
-      ),
+      title: Text(strings.text(AppText.editSchedule)),
       content: SizedBox(
         width: 360,
         child: Column(
@@ -374,9 +441,25 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
                     ? strings.text(AppText.scheduleTitleRequired)
                     : null,
               ),
-              onSubmitted: (_) => _save(),
+              onChanged: (value) {
+                final title = value.trim();
+                setState(() => _showRequired = title.isEmpty);
+                if (title.isNotEmpty) {
+                  _publish(_schedule.copyWith(title: title));
+                }
+              },
             ),
             const SizedBox(height: 12),
+            SwitchListTile(
+              key: const ValueKey('schedule-all-day'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(strings.text(AppText.allDay)),
+              value: _schedule.allDay,
+              onChanged: (value) {
+                _schedule = _schedule.copyWith(allDay: value);
+                _publishDateTime();
+              },
+            ),
             Row(
               children: [
                 Expanded(
@@ -389,42 +472,53 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    key: const ValueKey('schedule-time'),
-                    onPressed: _chooseTime,
-                    icon: const Icon(Icons.schedule),
-                    label: Text(_time.format(context)),
+                if (!_schedule.allDay) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('schedule-time'),
+                      onPressed: _chooseTime,
+                      icon: const Icon(Icons.schedule),
+                      label: Text(_time.format(context)),
+                    ),
                   ),
-                ),
+                ],
               ],
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              key: const ValueKey('schedule-related-class'),
+              initialValue: _schedule.relatedClassSourceId,
+              decoration: InputDecoration(
+                labelText: strings.text(AppText.relatedClass),
+              ),
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(strings.text(AppText.noRelatedClass)),
+                ),
+                for (final course in _classes)
+                  DropdownMenuItem<String?>(
+                    value: course.sourceId,
+                    child: Text(course.name),
+                  ),
+              ],
+              onChanged: (value) =>
+                  _publish(_schedule.copyWith(relatedClassSourceId: value)),
             ),
           ],
         ),
       ),
       actions: [
-        if (widget.schedule != null)
-          TextButton(
-            key: const ValueKey('remove-schedule'),
-            onPressed: () => Navigator.pop(
-              context,
-              _ScheduleEditResult(
-                title: widget.schedule!.title,
-                startsAt: widget.schedule!.startsAt,
-                remove: true,
-              ),
-            ),
-            child: Text(strings.text(AppText.remove)),
-          ),
         TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(strings.text(AppText.cancel)),
+          key: const ValueKey('remove-schedule'),
+          onPressed: widget.onRemove,
+          child: Text(strings.text(AppText.remove)),
         ),
-        FilledButton(
-          key: const ValueKey('save-schedule'),
-          onPressed: _save,
-          child: Text(strings.text(AppText.save)),
+        TextButton(
+          key: const ValueKey('close-schedule-editor'),
+          onPressed: () => Navigator.pop(context),
+          child: Text(strings.text(AppText.close)),
         ),
       ],
     );

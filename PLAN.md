@@ -6,7 +6,7 @@ Build an offline-first school life management application for Android, iOS, Linu
 
 ## Current Context
 
-- The Flutter application is at version `0.0.5`; all `0.0.x` builds keep schema version 0 without compatibility code.
+- The Flutter application is at version `0.0.6`; all `0.0.x` builds keep schema version 0 without compatibility code.
 - Android, iOS, Linux, macOS, and Windows Flutter runners exist. Web is unsupported.
 - Domain, SQLite, workbook parsing, responsive timetable, editing, appearance, export, and native packaging layers are implemented.
 - The deployed Week Parity application currently reads `https://parksnoopy-undergraduate.github.io/week/config.toml`.
@@ -188,8 +188,10 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Render Monday through Friday on wide layouts.
 - On narrow layouts, keep one fixed period-index column and one day column visible; horizontal swipes move between Monday and Friday while the visible weekday remains explicit.
 - Map unsupported frequency tokens to `每周`.
-- Match timetable shape, dimensions, font sizes, alignment, class-time labels, meal breaks, aspect fitting, and 4× PNG export resolution to the `pages` reference; retain application-owned course colors as the only intentional visual exception. Package each CJK family as one Static Super OTC instead of separate region/weight files; keep both Sans and future-use Serif collections.
-- Derive course colors from course identity plus a persistent roll seed, allow repeated color rolls after import, and maintain readable foreground contrast.
+- Match timetable shape, dimensions, alignment, meal breaks, aspect fitting, and 4× PNG export resolution to the `pages` reference. Keep start/end time out of index cells and in hover details. Package each CJK family as one Static Super OTC instead of separate region/weight files; keep both Sans and future-use Serif collections.
+- Derive course colors from the immutable workbook class name plus a persistent Roll palette and seed. Initialize the palette from the pinned upstream `palette.json`, allow repeated color rolls after import, and maintain readable foreground contrast.
+- Apply valid course and personal-schedule edits immediately without Save actions. Default personal schedules to all-day, allow an optional related-class source ID, and show related schedules in class hover details.
+- Default application text to 1.2× and expose immediate 1.0×–2.0× scale plus every Thin–Black weight. Render classroom and class names at the same base size with two leading room spaces.
 - Default to Korean, persist English and Simplified Chinese alternatives, localize all application controls, and expose one active-language button that cycles through the three entries per click.
 - Group vertically touching identical weekday meetings into one block and atomically edit all retained source identities without mutating imported source bytes; export the complete timetable as PNG or XLSX.
 - Persist arbitrary manual colors, explicit manual-color markers, roll locks, and configurable importance-outline colors and thicknesses by source identity. Apply them consistently to the timetable and exports; clear only unlocked manual colors during a palette roll.

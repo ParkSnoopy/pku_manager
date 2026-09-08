@@ -8,7 +8,7 @@ import 'package:pku_manager/data/schedule_repository.dart';
 import 'package:pku_manager/data/schedule_xls_parser.dart';
 import 'package:pku_manager/data/week_config_parser.dart';
 import 'package:pku_manager/data/week_config_repository.dart';
-import 'package:pku_manager/domain/course_meeting.dart';
+import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/schedule_import.dart';
 import 'package:pku_manager/domain/semester.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
@@ -163,7 +163,7 @@ void main() {
     final id = candidate.issues.single.meeting.sourceId;
     input.fillRange(0, input.length, 99);
     expect(candidate.bytes, selected);
-    final completed = CourseMeeting(
+    final completed = Course(
       sourceId: id,
       name: 'Completed course',
       weekday: 5,

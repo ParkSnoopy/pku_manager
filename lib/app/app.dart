@@ -105,6 +105,18 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       supportedLocales: AppStrings.supportedLocales,
       localizationsDelegates: AppStrings.localizationsDelegates,
       theme: _theme(),
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        final platformScale = media.textScaler.scale(14) / 14;
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: TextScaler.linear(
+              platformScale * _appearance.fontScale,
+            ),
+          ),
+          child: child!,
+        );
+      },
       home: _controller != null && _calendar != null
           ? TimetablePage(
               controller: _controller!,
@@ -128,7 +140,7 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       seedColor: _appearance.accent,
       brightness: Brightness.light,
     );
-    return ThemeData(
+    final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       fontFamily: _appearance.language == AppLanguage.ko
@@ -137,5 +149,31 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       scaffoldBackgroundColor: scheme.surface,
       appBarTheme: AppBarTheme(backgroundColor: scheme.surface, elevation: 0),
     );
+    return base.copyWith(
+      textTheme: _weightedTextTheme(base.textTheme, _appearance.fontWeight),
+      primaryTextTheme: _weightedTextTheme(
+        base.primaryTextTheme,
+        _appearance.fontWeight,
+      ),
+    );
   }
 }
+
+TextTheme _weightedTextTheme(TextTheme theme, FontWeight weight) =>
+    theme.copyWith(
+      displayLarge: theme.displayLarge?.copyWith(fontWeight: weight),
+      displayMedium: theme.displayMedium?.copyWith(fontWeight: weight),
+      displaySmall: theme.displaySmall?.copyWith(fontWeight: weight),
+      headlineLarge: theme.headlineLarge?.copyWith(fontWeight: weight),
+      headlineMedium: theme.headlineMedium?.copyWith(fontWeight: weight),
+      headlineSmall: theme.headlineSmall?.copyWith(fontWeight: weight),
+      titleLarge: theme.titleLarge?.copyWith(fontWeight: weight),
+      titleMedium: theme.titleMedium?.copyWith(fontWeight: weight),
+      titleSmall: theme.titleSmall?.copyWith(fontWeight: weight),
+      bodyLarge: theme.bodyLarge?.copyWith(fontWeight: weight),
+      bodyMedium: theme.bodyMedium?.copyWith(fontWeight: weight),
+      bodySmall: theme.bodySmall?.copyWith(fontWeight: weight),
+      labelLarge: theme.labelLarge?.copyWith(fontWeight: weight),
+      labelMedium: theme.labelMedium?.copyWith(fontWeight: weight),
+      labelSmall: theme.labelSmall?.copyWith(fontWeight: weight),
+    );

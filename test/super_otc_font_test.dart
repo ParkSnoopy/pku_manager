@@ -12,12 +12,7 @@ void main() {
       data.lengthInBytes,
     );
     final lengths = <int>[];
-    for (final index in const [
-      notoSansCjkKrRegularFace,
-      notoSansCjkScRegularFace,
-      notoSansCjkKrBoldFace,
-      notoSansCjkScBoldFace,
-    ]) {
+    for (final index in [...notoSansCjkKrFaces, ...notoSansCjkScFaces]) {
       final face = extractSuperOtcFace(collection, index);
       expect(ByteData.sublistView(face).getUint32(0), 0x4f54544f);
       lengths.add(face.length);

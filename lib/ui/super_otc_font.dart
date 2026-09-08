@@ -7,6 +7,8 @@ const notoSerifCjkSuperOtcAsset = 'assets/fonts/NotoSerifCJK.ttc';
 const pkuNotoSansKrFamily = 'PKU Noto Sans CJK KR';
 const pkuNotoSansScFamily = 'PKU Noto Sans CJK SC';
 
+const notoSansCjkKrFaces = <int>[1, 6, 11, 16, 21, 26, 36];
+const notoSansCjkScFaces = <int>[2, 7, 12, 17, 22, 27, 37];
 const notoSansCjkKrRegularFace = 26;
 const notoSansCjkScRegularFace = 27;
 const notoSansCjkKrBoldFace = 36;
@@ -30,11 +32,11 @@ final class SuperOtcFontLoader {
       data.offsetInBytes,
       data.lengthInBytes,
     );
-    for (final face in const [
-      (index: notoSansCjkKrRegularFace, family: pkuNotoSansKrFamily),
-      (index: notoSansCjkKrBoldFace, family: pkuNotoSansKrFamily),
-      (index: notoSansCjkScRegularFace, family: pkuNotoSansScFamily),
-      (index: notoSansCjkScBoldFace, family: pkuNotoSansScFamily),
+    for (final face in [
+      for (final index in notoSansCjkKrFaces)
+        (index: index, family: pkuNotoSansKrFamily),
+      for (final index in notoSansCjkScFaces)
+        (index: index, family: pkuNotoSansScFamily),
     ]) {
       await loadFontFromList(
         extractSuperOtcFace(collection, face.index),

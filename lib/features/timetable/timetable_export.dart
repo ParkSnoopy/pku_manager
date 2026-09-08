@@ -5,7 +5,7 @@ import 'package:file_saver/file_saver.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../domain/course_meeting.dart';
+import '../../domain/course.dart';
 import '../../domain/timetable.dart';
 import '../../l10n/app_strings.dart';
 import 'timetable_color.dart';
@@ -37,6 +37,7 @@ abstract interface class TimetablePngEncoder {
     AppStrings strings,
     int paletteSeed, {
     Map<String, CourseAppearance> courseAppearances = const {},
+    int paletteIndex = 0,
   });
 }
 
@@ -90,6 +91,7 @@ final class TimetableExporter {
     required AppStrings strings,
     required int paletteSeed,
     Map<String, CourseAppearance> courseAppearances = const {},
+    int paletteIndex = 0,
   }) async {
     final bytes = switch (format) {
       TimetableExportFormat.xlsx => _xlsx(
@@ -97,12 +99,14 @@ final class TimetableExporter {
         strings,
         paletteSeed,
         courseAppearances,
+        paletteIndex,
       ),
       TimetableExportFormat.png => await pngEncoder.encode(
         timetable,
         strings,
         paletteSeed,
         courseAppearances: courseAppearances,
+        paletteIndex: paletteIndex,
       ),
     };
     await writer.save(
@@ -124,6 +128,7 @@ final class TimetableExporter {
     AppStrings strings,
     int paletteSeed,
     Map<String, CourseAppearance> courseAppearances,
+    int paletteIndex,
   ) {
     final excel = Excel.createExcel();
     excel.rename(excel.getDefaultSheet()!, 'Timetable');
@@ -133,13 +138,10 @@ final class TimetableExporter {
       for (var day = 1; day <= 5; day++) TextCellValue(strings.weekday(day)),
     ]);
     for (var period = 1; period <= timetable.periodCount; period++) {
-      final start = timetableClassStarts[period] ?? '';
       for (var role = 0; role < 4; role++) {
         sheet.appendRow([
           switch (role) {
-            0 => TextCellValue(start),
             1 => IntCellValue(period),
-            2 => TextCellValue(start.isEmpty ? '' : timetableClassEnd(start)),
             _ => TextCellValue(''),
           },
           for (var day = 1; day <= 5; day++)
@@ -167,7 +169,7 @@ final class TimetableExporter {
         final period = row == 0 ? 0 : ((row - 1) ~/ 4) + 1;
         final role = row == 0 ? 0 : (row - 1) % 4;
         final meetings = row == 0 || column == 0
-            ? const <CourseMeeting>[]
+            ? const <Course>[]
             : timetable.atPeriod(column, period);
         final courseAppearance = meetings.isEmpty
             ? null
@@ -194,7 +196,7 @@ final class TimetableExporter {
               ? 15
               : column == 0
               ? (role == 1 ? 23 : 12)
-              : (role == 0 ? 14 : 11),
+              : (role <= 1 ? 14 : 11),
           fontColorHex: ExcelColor.fromHexString(
             column == 0 && row > 0 && role != 1 ? '#FF6C6A64' : '#FF141413',
           ),
@@ -213,6 +215,7 @@ final class TimetableExporter {
                       meetings.first,
                       paletteSeed,
                       appearance: courseAppearance,
+                      paletteIndex: paletteIndex,
                     ),
                   ),
                 ),
@@ -292,6 +295,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
     AppStrings strings,
     int paletteSeed, {
     Map<String, CourseAppearance> courseAppearances = const {},
+    int paletteIndex = 0,
   }) async {
     final geometry = TimetableGeometry(timetable.periodCount);
     final logicalWidth = geometry.width + timetableExportPadding * 2;
@@ -337,36 +341,6 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
         ui.Rect.fromLTWH(0, top, timetableIndexWidth, timetablePeriodHeight),
         ui.Paint()..color = timetableIndexSurface,
       );
-      final start = timetableClassStarts[period] ?? '';
-      if (start.isNotEmpty) {
-        _drawReferenceText(
-          canvas,
-          start,
-          ui.Rect.fromLTWH(0, top + 10, timetableIndexWidth, 16),
-          center: true,
-          fontFamily: timetableMonoFont,
-          fontSize: 16,
-          weight: ui.FontWeight.w500,
-          color: timetableMuted,
-          lineHeight: 1,
-        );
-        _drawReferenceText(
-          canvas,
-          timetableClassEnd(start),
-          ui.Rect.fromLTWH(
-            0,
-            top + timetablePeriodHeight - 26,
-            timetableIndexWidth,
-            16,
-          ),
-          center: true,
-          fontFamily: timetableMonoFont,
-          fontSize: 16,
-          weight: ui.FontWeight.w500,
-          color: timetableMuted,
-          lineHeight: 1,
-        );
-      }
       _drawReferenceText(
         canvas,
         '$period',
@@ -412,6 +386,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           meeting,
           paletteSeed,
           appearance: appearance,
+          paletteIndex: paletteIndex,
         );
         canvas.drawRect(item, ui.Paint()..color = background);
         final foreground = background.computeLuminance() > .5
@@ -445,12 +420,12 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
         );
         _drawReferenceText(
           canvas,
-          meeting.room,
+          meeting.room.isEmpty ? '' : '  ${meeting.room}',
           ui.Rect.fromLTWH(
             item.left + inset,
-            item.top + 38,
+            item.top + 42,
             item.width - inset * 2,
-            22,
+            34,
           ),
           fontFamily: timetableMonoFont,
           fontFallback: timetableFontFallback,
@@ -478,12 +453,11 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
   }
 }
 
-String _xlsxCourseValue(List<CourseMeeting> meetings, int role) =>
-    switch (role) {
-      0 => meetings.map((meeting) => meeting.name).join('\n'),
-      1 => meetings.map((meeting) => '  ${meeting.room}').join('\n'),
-      _ => '',
-    };
+String _xlsxCourseValue(List<Course> meetings, int role) => switch (role) {
+  0 => meetings.map((meeting) => meeting.name).join('\n'),
+  1 => meetings.map((meeting) => '  ${meeting.room}').join('\n'),
+  _ => '',
+};
 
 String _hex(ui.Color color) =>
     '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';

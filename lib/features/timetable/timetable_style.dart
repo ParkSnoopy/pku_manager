@@ -28,7 +28,7 @@ const timetableAspectRatio = 1.15;
 const timetableDividerWidth = 1.0;
 const timetableMealBreaks = <int>{4, 9};
 const timetableCourseNameFontSize = 22.5;
-const timetableClassroomFontSize = 15.0;
+const timetableClassroomFontSize = 22.5;
 const timetableCourseContentPadding = 10.0;
 
 const timetableClassStarts = <int, String>{
@@ -95,7 +95,7 @@ final class TimetableVisualSpan {
     required this.lane,
   });
 
-  final CourseMeetingGroup group;
+  final CourseGroup group;
   final int firstPeriod;
   final int lastPeriod;
   final int lane;
@@ -112,7 +112,7 @@ final class TimetableDayLayout {
     int day, {
     WeekParity? parity,
   }) {
-    final pending = <({CourseMeetingGroup group, int first, int last})>[];
+    final pending = <({CourseGroup group, int first, int last})>[];
     for (final group in timetable.groupsForDay(
       day,
       breakAfter: timetableMealBreaks,

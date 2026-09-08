@@ -9,10 +9,12 @@ class UpcomingSchedulesPane extends StatelessWidget {
     super.key,
     required this.controller,
     required this.now,
+    required this.onSelected,
   });
 
   final CalendarScheduleController controller;
   final DateTime now;
+  final ValueChanged<CalendarSchedule> onSelected;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -20,7 +22,7 @@ class UpcomingSchedulesPane extends StatelessWidget {
     builder: (context, _) {
       final strings = AppStrings.of(context);
       final schedules = controller.schedules
-          .where((schedule) => schedule.startsAt.isAfter(now))
+          .where((schedule) => _isUpcoming(schedule, now))
           .toList(growable: false);
       return Material(
         key: const ValueKey('upcoming-schedule-pane'),
@@ -50,14 +52,12 @@ class UpcomingSchedulesPane extends StatelessWidget {
                         final schedule = schedules[index];
                         return ListTile(
                           key: ValueKey('upcoming-schedule-${schedule.id}'),
+                          onTap: () => onSelected(schedule),
                           title: Text(
                             schedule.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: const TextStyle(fontSize: 15),
                           ),
                           subtitle: Text(
                             _dateTimeLabel(schedule),
@@ -66,12 +66,13 @@ class UpcomingSchedulesPane extends StatelessWidget {
                             style: const TextStyle(fontSize: 14),
                           ),
                           trailing: Text(
-                            strings.startsIn(schedule.startsAt.difference(now)),
-                            textAlign: TextAlign.end,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                            strings.startsIn(
+                              schedule.allDay
+                                  ? Duration.zero
+                                  : schedule.startsAt.difference(now),
                             ),
+                            textAlign: TextAlign.end,
+                            style: const TextStyle(fontSize: 14),
                           ),
                         );
                       },
@@ -86,8 +87,22 @@ class UpcomingSchedulesPane extends StatelessWidget {
 
 String _dateTimeLabel(CalendarSchedule schedule) {
   final value = schedule.startsAt.toUtc().add(const Duration(hours: 8));
-  return '${value.year}-${_two(value.month)}-${_two(value.day)} '
-      '${_two(value.hour)}:${_two(value.minute)}';
+  final date = '${value.year}-${_two(value.month)}-${_two(value.day)}';
+  return schedule.allDay
+      ? date
+      : '$date ${_two(value.hour)}:${_two(value.minute)}';
+}
+
+bool _isUpcoming(CalendarSchedule schedule, DateTime now) {
+  if (!schedule.allDay) return schedule.startsAt.isAfter(now);
+  final scheduleDate = schedule.startsAt.toUtc().add(const Duration(hours: 8));
+  final nowDate = now.toUtc().add(const Duration(hours: 8));
+  return DateTime.utc(
+        scheduleDate.year,
+        scheduleDate.month,
+        scheduleDate.day,
+      ).compareTo(DateTime.utc(nowDate.year, nowDate.month, nowDate.day)) >=
+      0;
 }
 
 String _two(int value) => value.toString().padLeft(2, '0');

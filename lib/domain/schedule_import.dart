@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 
-import 'course_meeting.dart';
+import 'course.dart';
 import 'timetable.dart';
 
 final class ImportRecord {
   const ImportRecord({required this.meeting, required this.raw, this.issue});
-  final CourseMeeting meeting;
+  final Course meeting;
   final String raw;
   final String? issue;
 }
@@ -28,10 +28,10 @@ abstract interface class ScheduleStore {
   Timetable? load();
   Timetable publish(
     ScheduleCandidate candidate,
-    Map<String, CourseMeeting> completions,
+    Map<String, Course> completions,
   );
-  Timetable saveMeeting(CourseMeeting meeting);
-  Timetable saveMeetings(Iterable<CourseMeeting> meetings);
+  Timetable saveMeeting(Course meeting);
+  Timetable saveMeetings(Iterable<Course> meetings);
   Timetable removeUserMeeting(String sourceId);
   Timetable removeUserMeetings(Iterable<String> sourceIds);
 }

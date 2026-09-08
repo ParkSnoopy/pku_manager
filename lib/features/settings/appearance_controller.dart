@@ -8,25 +8,37 @@ final class AppearanceSettings {
   const AppearanceSettings({
     this.accent = const Color(0xff171717),
     this.paletteSeed = 0,
+    this.rollPalette = 0,
     this.language = AppLanguage.defaultLanguage,
     this.showRollInNavbar = true,
+    this.fontScale = 1.2,
+    this.fontWeightValue = 400,
   });
 
   final Color accent;
   final int paletteSeed;
+  final int rollPalette;
   final AppLanguage language;
   final bool showRollInNavbar;
+  final double fontScale;
+  final int fontWeightValue;
 
   AppearanceSettings copyWith({
     Color? accent,
     int? paletteSeed,
+    int? rollPalette,
     AppLanguage? language,
     bool? showRollInNavbar,
+    double? fontScale,
+    int? fontWeightValue,
   }) => AppearanceSettings(
     accent: accent ?? this.accent,
     paletteSeed: paletteSeed ?? this.paletteSeed,
+    rollPalette: rollPalette ?? this.rollPalette,
     language: language ?? this.language,
     showRollInNavbar: showRollInNavbar ?? this.showRollInNavbar,
+    fontScale: fontScale ?? this.fontScale,
+    fontWeightValue: fontWeightValue ?? this.fontWeightValue,
   );
 }
 
@@ -68,8 +80,12 @@ final class AppearanceController extends ChangeNotifier {
 
   Color get accent => _settings.accent;
   int get paletteSeed => _settings.paletteSeed;
+  int get rollPaletteIndex => _settings.rollPalette;
   AppLanguage get language => _settings.language;
   bool get showRollInNavbar => _settings.showRollInNavbar;
+  double get fontScale => _settings.fontScale;
+  int get fontWeightValue => _settings.fontWeightValue;
+  FontWeight get fontWeight => FontWeight.values[fontWeightValue ~/ 100 - 1];
   Map<String, CourseAppearance> get courseAppearances =>
       Map.unmodifiable(_courseAppearances);
 
@@ -86,6 +102,23 @@ final class AppearanceController extends ChangeNotifier {
   });
   void setShowRollInNavbar(bool value) =>
       _set(_settings.copyWith(showRollInNavbar: value));
+  void setFontScale(double value) {
+    if (value < 1 || value > 2) throw RangeError.range(value, 1, 2);
+    _set(_settings.copyWith(fontScale: value));
+  }
+
+  void setFontWeight(int value) {
+    if (value < 100 || value > 900 || value % 100 != 0) {
+      throw RangeError.range(value, 100, 900);
+    }
+    _set(_settings.copyWith(fontWeightValue: value));
+  }
+
+  void setRollPalette(int value) {
+    RangeError.checkValueInInterval(value, 0, rollPalettes.length - 1);
+    _set(_settings.copyWith(rollPalette: value));
+  }
+
   void setCourseAppearance(
     Iterable<String> sourceIds,
     CourseAppearance appearance,

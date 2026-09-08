@@ -13,15 +13,15 @@ Your workbook stays on your device and is not modified. An unreadable file does 
 ## View classes
 
 - On a phone, swipe left or right between Monday and Friday beside a fixed period column. Previous/next controls also support keyboard navigation.
-- Wide windows show Monday through Friday together using the same timetable proportions, typefaces, time labels, row spacing, and alignment as the referenced prettifier.
+- Wide windows show Monday through Friday together using the same timetable proportions, typefaces, row spacing, and alignment as the referenced prettifier.
 - Every class is shown. Classes outside the current week appear at half opacity.
 - Vertically touching cells for the same course on one weekday appear as one block. Select the block to edit every session together, or select an empty cell to add a course.
-- The course editor can choose any class color and set an importance-outline color and thickness. Manual colors carry a lock/palette marker; locked colors survive **Roll colors**, while an unlocked manual color returns to generated colors on the next roll.
-- On pointer devices, hover briefly to show details beside the pointer.
+- The course editor applies valid changes immediately, can choose any class color, and can set an importance-outline color and thickness. The default outline is red. Manual colors carry a lock/palette marker; locked colors survive **Roll colors**, while an unlocked manual color returns to generated colors on the next roll.
+- On pointer devices, hover briefly to show class times, details, and related personal schedules beside the pointer.
 - **Timetable** shows upcoming personal schedules in its landscape right pane. Selecting a timetable block replaces that pane with an editable details pane.
-- **Calendar** lets you add personal schedules to the month. Its landscape right pane shows the nearest upcoming class, while classes are never added to the month.
+- **Calendar** lets you add personal schedules to the month. New schedules are all-day by default, update as you edit, and can be related to a class. Its landscape right pane shows the nearest upcoming class, while classes are never added to the month. Select either side-pane entry to open its corresponding item.
 - Select **教学网** below Settings to open PKU's Teaching Network in your default browser.
-- Use **Roll colors** repeatedly for another timetable color combination. Settings can hide that navigation action, choose any theme accent from a palette, and provides one language button that advances through Korean, English, and Simplified Chinese with each click.
+- Use **Roll colors** repeatedly for another timetable color combination. Settings can select its palette, hide that navigation action, choose any theme accent, adjust text from 1.0× to 2.0× and Thin through Black, and provides one language button that advances through Korean, English, and Simplified Chinese with each click.
 - Use **Export** to save the complete Monday–Friday timetable as PNG or XLSX. PNG uses the reference timetable's four-times export scale and complete unscaled table dimensions.
 
 Week numbers use Beijing dates and public Week Parity semester starts. A standard edition uses a 16-week semester. Outside an applicable semester, all classes appear. Configuration refreshes at startup and after every foreground resume; failures retain cached data and never block your timetable. Unsupported frequency text maps to `每周`.

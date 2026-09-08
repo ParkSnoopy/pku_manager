@@ -17,9 +17,20 @@ final class CalendarScheduleController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void create({required String title, required DateTime startsAt}) {
-    store.create(title: title, startsAt: startsAt);
+  CalendarSchedule create({
+    required String title,
+    required DateTime startsAt,
+    bool allDay = true,
+    String? relatedClassSourceId,
+  }) {
+    final schedule = store.create(
+      title: title,
+      startsAt: startsAt,
+      allDay: allDay,
+      relatedClassSourceId: relatedClassSourceId,
+    );
     reload();
+    return schedule;
   }
 
   void update(CalendarSchedule schedule) {
@@ -46,7 +57,12 @@ final class MemoryCalendarScheduleStore implements CalendarScheduleStore {
   );
 
   @override
-  CalendarSchedule create({required String title, required DateTime startsAt}) {
+  CalendarSchedule create({
+    required String title,
+    required DateTime startsAt,
+    bool allDay = true,
+    String? relatedClassSourceId,
+  }) {
     final normalized = title.trim();
     if (normalized.isEmpty) {
       throw const FormatException('Schedule title is required');
@@ -55,6 +71,8 @@ final class MemoryCalendarScheduleStore implements CalendarScheduleStore {
       id: _nextId++,
       title: normalized,
       startsAt: startsAt.toUtc(),
+      allDay: allDay,
+      relatedClassSourceId: relatedClassSourceId,
     );
     _schedules.add(schedule);
     return schedule;

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/data/app_database.dart';
 import 'package:pku_manager/data/schedule_repository.dart';
 import 'package:pku_manager/data/schedule_xls_parser.dart';
-import 'package:pku_manager/domain/course_meeting.dart';
+import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
 
 void main() {
@@ -23,7 +23,7 @@ void main() {
     repository.publish(candidate, {});
     final sourceId = repository.load()!.meetings.single.sourceId;
     repository.saveMeeting(
-      CourseMeeting(
+      Course(
         sourceId: sourceId,
         name: 'Edited',
         weekday: 1,
@@ -37,7 +37,7 @@ void main() {
       ),
     );
     repository.saveMeeting(
-      CourseMeeting(
+      Course(
         sourceId: 'user:fixed',
         name: 'Added',
         weekday: 2,
@@ -52,6 +52,7 @@ void main() {
       'Edited',
       'Added',
     ]);
+    expect(restored.meetings.first.sourceName, 'Course');
     expect(database.activeSource, [1, 2, 3]);
     repository.removeUserMeeting('user:fixed');
     expect(repository.load()!.meetings.map((meeting) => meeting.name), [
@@ -76,7 +77,7 @@ void main() {
     final group = published.groupsForDay(1).single;
     repository.saveMeetings([
       for (final meeting in group.meetings)
-        CourseMeeting(
+        Course(
           sourceId: meeting.sourceId,
           name: 'Edited together',
           weekday: 1,
@@ -93,14 +94,14 @@ void main() {
 
     expect(
       () => repository.saveMeetings([
-        CourseMeeting(
+        Course(
           sourceId: group.meetings.first.sourceId,
           name: 'Must roll back',
           weekday: 1,
           firstPeriod: 1,
           lastPeriod: 1,
         ),
-        CourseMeeting(
+        Course(
           sourceId: 'not-active',
           name: 'Invalid',
           weekday: 1,

@@ -1,10 +1,11 @@
 import 'week_frequency.dart';
 
 /// One source occurrence. Human-readable values are retained without trimming.
-final class CourseMeeting {
-  CourseMeeting({
+final class Course {
+  Course({
     required this.sourceId,
     required this.name,
+    String? sourceName,
     required this.weekday,
     required this.firstPeriod,
     required this.lastPeriod,
@@ -13,7 +14,7 @@ final class CourseMeeting {
     this.frequencyText = '每周',
     this.note = '',
     this.exam = '',
-  }) {
+  }) : sourceName = sourceName ?? name {
     if (sourceId.trim().isEmpty || name.trim().isEmpty) {
       throw ArgumentError('Source identity and course name must be nonempty');
     }
@@ -24,6 +25,10 @@ final class CourseMeeting {
   }
 
   final String sourceId;
+
+  /// Immutable class name parsed from the source workbook.
+  /// User-created classes use their initial name as their source name.
+  final String sourceName;
   final String name;
   final int weekday;
   final int firstPeriod;

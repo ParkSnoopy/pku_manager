@@ -52,8 +52,11 @@ CREATE TABLE appearance(
  id INTEGER PRIMARY KEY CHECK(id = 1),
  accent INTEGER NOT NULL,
  palette_seed INTEGER NOT NULL CHECK(palette_seed >= 0),
+ roll_palette INTEGER NOT NULL CHECK(roll_palette BETWEEN 0 AND 9),
  language TEXT NOT NULL CHECK(language IN ('ko', 'en', 'zh')),
- show_roll_nav INTEGER NOT NULL CHECK(show_roll_nav IN (0, 1)));
+ show_roll_nav INTEGER NOT NULL CHECK(show_roll_nav IN (0, 1)),
+ font_scale REAL NOT NULL CHECK(font_scale BETWEEN 1 AND 2),
+ font_weight INTEGER NOT NULL CHECK(font_weight IN (100, 200, 300, 400, 500, 600, 700, 800, 900)));
 CREATE TABLE user_meetings(
  source INTEGER NOT NULL REFERENCES sources(id),
  identity TEXT NOT NULL, name TEXT NOT NULL,
@@ -75,7 +78,9 @@ CREATE TABLE course_appearance(
 CREATE TABLE calendar_schedules(
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  title TEXT NOT NULL CHECK(length(trim(title)) > 0),
- starts_at INTEGER NOT NULL);
+ starts_at INTEGER NOT NULL,
+ all_day INTEGER NOT NULL CHECK(all_day IN (0, 1)),
+ related_class_source_id TEXT);
 ''');
       });
     }

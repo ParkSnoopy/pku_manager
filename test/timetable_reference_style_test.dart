@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pku_manager/domain/course_meeting.dart';
+import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/features/timetable/timetable_style.dart';
 
@@ -21,30 +21,30 @@ void main() {
     expect(timetableClassEnd(timetableClassStarts[12]!), '21:30');
   });
 
-  test('course typography is fixed and the name is 1.5x the room', () {
+  test('course and classroom typography use the same fixed base size', () {
     expect(timetableCourseNameFontSize, 22.5);
-    expect(timetableClassroomFontSize, 15);
-    expect(timetableCourseNameFontSize / timetableClassroomFontSize, 1.5);
+    expect(timetableClassroomFontSize, 22.5);
     expect(timetableCourseContentPadding, 10);
   });
 
   test('screen and PNG share grouped span and collision-lane geometry', () {
     final timetable = Timetable([
-      CourseMeeting(
+      Course(
         sourceId: 'first',
         name: 'Grouped',
         weekday: 1,
         firstPeriod: 1,
         lastPeriod: 1,
       ),
-      CourseMeeting(
+      Course(
         sourceId: 'second',
-        name: 'Grouped',
+        name: 'User-renamed display',
+        sourceName: 'Grouped',
         weekday: 1,
         firstPeriod: 2,
         lastPeriod: 2,
       ),
-      CourseMeeting(
+      Course(
         sourceId: 'collision',
         name: 'Collision',
         weekday: 1,

@@ -9,24 +9,36 @@ final class CalendarScheduleRepository implements CalendarScheduleStore {
   @override
   List<CalendarSchedule> load() => List.unmodifiable(
     store.database
-        .select(
-          'SELECT id, title, starts_at FROM calendar_schedules ORDER BY starts_at, id',
-        )
+        .select('''SELECT id, title, starts_at, all_day, related_class_source_id
+FROM calendar_schedules ORDER BY starts_at, id''')
         .map(_fromRow),
   );
 
   @override
-  CalendarSchedule create({required String title, required DateTime startsAt}) {
+  CalendarSchedule create({
+    required String title,
+    required DateTime startsAt,
+    bool allDay = true,
+    String? relatedClassSourceId,
+  }) {
     final normalizedTitle = _validTitle(title);
     final normalizedStart = startsAt.toUtc();
     store.database.execute(
-      'INSERT INTO calendar_schedules(title, starts_at) VALUES (?, ?)',
-      [normalizedTitle, normalizedStart.millisecondsSinceEpoch],
+      '''INSERT INTO calendar_schedules(
+title, starts_at, all_day, related_class_source_id) VALUES (?, ?, ?, ?)''',
+      [
+        normalizedTitle,
+        normalizedStart.millisecondsSinceEpoch,
+        allDay ? 1 : 0,
+        relatedClassSourceId,
+      ],
     );
     return CalendarSchedule(
       id: store.database.lastInsertRowId,
       title: normalizedTitle,
       startsAt: normalizedStart,
+      allDay: allDay,
+      relatedClassSourceId: relatedClassSourceId,
     );
   }
 
@@ -34,10 +46,13 @@ final class CalendarScheduleRepository implements CalendarScheduleStore {
   void update(CalendarSchedule schedule) {
     final normalizedTitle = _validTitle(schedule.title);
     store.database.execute(
-      'UPDATE calendar_schedules SET title = ?, starts_at = ? WHERE id = ?',
+      '''UPDATE calendar_schedules SET title = ?, starts_at = ?, all_day = ?,
+related_class_source_id = ? WHERE id = ?''',
       [
         normalizedTitle,
         schedule.startsAt.toUtc().millisecondsSinceEpoch,
+        schedule.allDay ? 1 : 0,
+        schedule.relatedClassSourceId,
         schedule.id,
       ],
     );
@@ -61,6 +76,8 @@ final class CalendarScheduleRepository implements CalendarScheduleStore {
       row['starts_at'] as int,
       isUtc: true,
     ),
+    allDay: (row['all_day'] as int) != 0,
+    relatedClassSourceId: row['related_class_source_id'] as String?,
   );
 
   String _validTitle(String value) {

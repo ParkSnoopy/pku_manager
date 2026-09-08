@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pku_manager/domain/course_meeting.dart';
+import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
 
-CourseMeeting meeting(
+Course meeting(
   String id, {
   int day = 1,
   int first = 1,
@@ -13,7 +13,7 @@ CourseMeeting meeting(
   String note = '',
   String exam = '',
   String text = '',
-}) => CourseMeeting(
+}) => Course(
   sourceId: id,
   name: ' 高等数学 ',
   weekday: day,
@@ -93,7 +93,7 @@ void main() {
     expect(() => meeting('a', first: 0), throwsArgumentError);
     expect(() => meeting('a', first: 3, last: 2), throwsArgumentError);
     expect(
-      () => CourseMeeting(
+      () => Course(
         sourceId: 'a',
         name: ' ',
         weekday: 1,
@@ -140,8 +140,7 @@ void main() {
       final groups = table.consecutiveGroups();
       expect(groups.map((g) => g.map((m) => m.sourceId).toList()), [
         ['a', 'b'],
-        ['gap'],
-        ['different-room'],
+        ['gap', 'different-room'],
       ]);
       expect(table.meetings, hasLength(4));
       expect(() => groups.clear(), throwsUnsupportedError);
@@ -149,15 +148,34 @@ void main() {
     },
   );
 
-  test('frequency text, notes and exams prevent incorrect grouping', () {
-    for (final next in [
-      meeting('b', first: 3, last: 4, frequency: WeekFrequency.odd),
-      meeting('b', first: 3, last: 4, text: '保留'),
-      meeting('b', first: 3, last: 4, note: '备注'),
-      meeting('b', first: 3, last: 4, exam: '考试'),
-    ]) {
-      expect(Timetable([meeting('a'), next]).consecutiveGroups(), hasLength(2));
-    }
+  test('source class name alone defines class equality', () {
+    final original = meeting('a');
+    final renamed = Course(
+      sourceId: 'b',
+      sourceName: original.sourceName,
+      name: 'User-renamed display',
+      weekday: 1,
+      firstPeriod: 3,
+      lastPeriod: 4,
+      room: 'Another room',
+      frequency: WeekFrequency.odd,
+      frequencyText: '单周',
+      note: 'Different note',
+      exam: 'Different exam',
+    );
+    expect(Timetable([original, renamed]).consecutiveGroups(), hasLength(1));
+    final differentSourceName = Course(
+      sourceId: 'c',
+      sourceName: 'Different original class',
+      name: original.name,
+      weekday: 1,
+      firstPeriod: 3,
+      lastPeriod: 4,
+    );
+    expect(
+      Timetable([original, differentSourceName]).consecutiveGroups(),
+      hasLength(2),
+    );
   });
 
   test(

@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/data/schedule_xls_parser.dart';
-import 'package:pku_manager/domain/course_meeting.dart';
+import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/schedule_import.dart';
 import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
@@ -183,7 +183,7 @@ void main() {
       expect(t.atPeriod(1, 2).single.firstPeriod, 2);
     },
   );
-  test('E18 separate rooms do not collapse merely because names match', () {
+  test('E18 source-name equality groups touching classes across rooms', () {
     final c = cells([
       _header,
       _row('1', value: _plain),
@@ -191,7 +191,7 @@ void main() {
     ]);
     expect(
       Timetable(c.records.map((r) => r.meeting)).consecutiveGroups(),
-      hasLength(2),
+      hasLength(1),
     );
   });
   test('E19 odd and even occurrences coexist at the same coordinate', () {
@@ -300,7 +300,7 @@ void main() {
     'E26 show-all retains every occurrence while current view filters parity',
     () {
       final t = Timetable([
-        CourseMeeting(
+        Course(
           sourceId: 'a',
           name: 'A',
           weekday: 1,
@@ -309,7 +309,7 @@ void main() {
           frequency: WeekFrequency.odd,
           frequencyText: '单周',
         ),
-        CourseMeeting(
+        Course(
           sourceId: 'b',
           name: 'B',
           weekday: 1,

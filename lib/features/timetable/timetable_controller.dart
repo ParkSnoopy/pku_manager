@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../../domain/course_meeting.dart';
+import '../../domain/course.dart';
 import '../../domain/schedule_import.dart';
 import '../../domain/timetable.dart';
 
@@ -85,7 +85,7 @@ class TimetableController extends ChangeNotifier {
     }
   }
 
-  void complete(Map<String, CourseMeeting> values) {
+  void complete(Map<String, Course> values) {
     final current = candidate;
     if (current == null || _disposed) return;
     try {
@@ -93,7 +93,8 @@ class TimetableController extends ChangeNotifier {
       candidate = null;
       error = null;
     } catch (_) {
-      error = 'Import could not be saved. Check required fields and try again.';
+      error =
+          'Import could not be applied. Check required fields and try again.';
     }
     _notify();
   }
@@ -104,16 +105,16 @@ class TimetableController extends ChangeNotifier {
     _notify();
   }
 
-  void saveMeeting(CourseMeeting meeting) {
+  void saveMeeting(Course meeting) {
     saveMeetings([meeting]);
   }
 
-  void saveMeetings(Iterable<CourseMeeting> meetings) {
+  void saveMeetings(Iterable<Course> meetings) {
     try {
       timetable = schedules.saveMeetings(meetings);
       error = null;
     } catch (_) {
-      error = 'Course changes could not be saved.';
+      error = 'Course changes could not be applied.';
     }
     _notify();
   }

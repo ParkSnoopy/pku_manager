@@ -1,4 +1,4 @@
-import '../domain/course_meeting.dart';
+import '../domain/course.dart';
 import '../domain/schedule_import.dart';
 import '../domain/timetable.dart';
 import '../domain/week_frequency.dart';
@@ -36,8 +36,9 @@ ORDER BY u.rowid''');
         final token = _frequencyText(
           (r['completed_frequency'] ?? r['frequency']) as String,
         );
-        return CourseMeeting(
+        return Course(
           sourceId: r['identity'] as String,
+          sourceName: r['name'] as String,
           name: (r['completed_name'] ?? r['name']) as String,
           weekday: (r['completed_weekday'] ?? r['weekday']) as int,
           firstPeriod: (r['completed_first'] ?? r['first_period']) as int,
@@ -50,7 +51,7 @@ ORDER BY u.rowid''');
         );
       }),
       ...userRows.map(
-        (r) => CourseMeeting(
+        (r) => Course(
           sourceId: r['identity'] as String,
           name: r['name'] as String,
           weekday: r['weekday'] as int,
@@ -69,7 +70,7 @@ ORDER BY u.rowid''');
   @override
   Timetable publish(
     ScheduleCandidate candidate,
-    Map<String, CourseMeeting> completions,
+    Map<String, Course> completions,
   ) {
     final identities = candidate.issues.map((r) => r.meeting.sourceId).toSet();
     if (completions.keys.any((k) => !identities.contains(k))) {
@@ -154,10 +155,10 @@ ORDER BY u.rowid''');
   }
 
   @override
-  Timetable saveMeeting(CourseMeeting meeting) => saveMeetings([meeting]);
+  Timetable saveMeeting(Course meeting) => saveMeetings([meeting]);
 
   @override
-  Timetable saveMeetings(Iterable<CourseMeeting> meetings) {
+  Timetable saveMeetings(Iterable<Course> meetings) {
     final updates = meetings.toList(growable: false);
     if (updates.isEmpty) throw ArgumentError('Meeting group must not be empty');
     if (updates.map((meeting) => meeting.sourceId).toSet().length !=
@@ -173,7 +174,7 @@ ORDER BY u.rowid''');
     });
   }
 
-  void _saveMeeting(int source, CourseMeeting meeting) {
+  void _saveMeeting(int source, Course meeting) {
     final values = [
       source,
       meeting.sourceId,

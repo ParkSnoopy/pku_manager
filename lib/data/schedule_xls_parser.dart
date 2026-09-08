@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:excel2003/excel2003.dart';
 
-import '../domain/course_meeting.dart';
+import '../domain/course.dart';
 import '../domain/schedule_import.dart';
 import '../domain/week_frequency.dart';
 
@@ -208,7 +208,7 @@ class ScheduleXlsParser implements ScheduleDecoder {
         ? sourceToken
         : '每周';
     return ImportRecord(
-      meeting: CourseMeeting(
+      meeting: Course(
         sourceId: id,
         name: name.isEmpty ? raw : name,
         weekday: day,
@@ -277,7 +277,7 @@ class ScheduleXlsParser implements ScheduleDecoder {
         .trim();
     final exam = examStart < 0 ? '' : detail.substring(examStart).trim();
     return ImportRecord(
-      meeting: CourseMeeting(
+      meeting: Course(
         sourceId: main.sourceId,
         name: main.name,
         weekday: day,
@@ -324,7 +324,7 @@ class ScheduleXlsParser implements ScheduleDecoder {
         validTime &&
         unambiguousRoom;
     return ImportRecord(
-      meeting: CourseMeeting(
+      meeting: Course(
         sourceId: '${main.sourceId}/tutorial',
         name: '${main.name} 习题课',
         // Review placeholders are never published until the issue is completed.

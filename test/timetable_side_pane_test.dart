@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pku_manager/domain/course_meeting.dart';
+import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/semester.dart';
 import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
@@ -10,21 +10,21 @@ void main() {
     'upcoming list includes each next grouped occurrence in start order',
     () {
       final timetable = Timetable([
-        CourseMeeting(
+        Course(
           sourceId: 'first',
           name: 'First',
           weekday: 1,
           firstPeriod: 1,
           lastPeriod: 1,
         ),
-        CourseMeeting(
+        Course(
           sourceId: 'second',
           name: 'First',
           weekday: 1,
           firstPeriod: 2,
           lastPeriod: 2,
         ),
-        CourseMeeting(
+        Course(
           sourceId: 'later',
           name: 'Later',
           weekday: 2,

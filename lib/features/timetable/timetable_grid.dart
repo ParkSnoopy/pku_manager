@@ -4,7 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-import '../../domain/course_meeting.dart';
+import '../../domain/calendar_schedule.dart';
+import '../../domain/course.dart';
 import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
 import '../../l10n/app_strings.dart';
@@ -17,7 +18,10 @@ class TimetableGrid extends StatelessWidget {
     required this.timetable,
     required this.days,
     required this.paletteSeed,
+    required this.paletteIndex,
+    required this.fontWeight,
     required this.onEdit,
+    this.schedules = const [],
     this.courseAppearances = const {},
     this.parity,
     this.previousDay,
@@ -26,9 +30,11 @@ class TimetableGrid extends StatelessWidget {
   final Timetable timetable;
   final List<int> days;
   final int paletteSeed;
+  final int paletteIndex;
+  final FontWeight fontWeight;
+  final List<CalendarSchedule> schedules;
   final Map<String, CourseAppearance> courseAppearances;
-  final void Function(int weekday, int period, List<CourseMeeting> meetings)
-  onEdit;
+  final void Function(int weekday, int period, List<Course> meetings) onEdit;
   final WeekParity? parity;
   final VoidCallback? previousDay;
   final VoidCallback? nextDay;
@@ -48,6 +54,9 @@ class TimetableGrid extends StatelessWidget {
                 timetable: timetable,
                 days: days,
                 paletteSeed: paletteSeed,
+                paletteIndex: paletteIndex,
+                fontWeight: fontWeight,
+                schedules: schedules,
                 courseAppearances: courseAppearances,
                 parity: parity,
                 onEdit: onEdit,
@@ -68,6 +77,9 @@ class TimetableGrid extends StatelessWidget {
               timetable: timetable,
               days: days,
               paletteSeed: paletteSeed,
+              paletteIndex: paletteIndex,
+              fontWeight: fontWeight,
+              schedules: schedules,
               courseAppearances: courseAppearances,
               parity: parity,
               onEdit: onEdit,
@@ -87,6 +99,9 @@ class _ReferenceTable extends StatelessWidget {
     required this.timetable,
     required this.days,
     required this.paletteSeed,
+    required this.paletteIndex,
+    required this.fontWeight,
+    required this.schedules,
     required this.courseAppearances,
     required this.parity,
     required this.onEdit,
@@ -98,10 +113,12 @@ class _ReferenceTable extends StatelessWidget {
   final Timetable timetable;
   final List<int> days;
   final int paletteSeed;
+  final int paletteIndex;
+  final FontWeight fontWeight;
+  final List<CalendarSchedule> schedules;
   final Map<String, CourseAppearance> courseAppearances;
   final WeekParity? parity;
-  final void Function(int weekday, int period, List<CourseMeeting> meetings)
-  onEdit;
+  final void Function(int weekday, int period, List<Course> meetings) onEdit;
   final VoidCallback? previousDay;
   final VoidCallback? nextDay;
   final double courseWidth;
@@ -121,12 +138,14 @@ class _ReferenceTable extends StatelessWidget {
               courseWidth: courseWidth,
               previousDay: previousDay,
               nextDay: nextDay,
+              fontWeight: fontWeight,
             ),
             for (var period = 1; period <= timetable.periodCount; period++) ...[
               _PeriodRow(
                 days: days,
                 period: period,
                 courseWidth: courseWidth,
+                fontWeight: fontWeight,
                 onEdit: onEdit,
                 drawTopBorder:
                     period > 1 && !timetableMealBreaks.contains(period - 1),
@@ -148,6 +167,9 @@ class _ReferenceTable extends StatelessWidget {
               day: day,
               courseWidth: courseWidth,
               paletteSeed: paletteSeed,
+              paletteIndex: paletteIndex,
+              fontWeight: fontWeight,
+              schedules: schedules,
               courseAppearances: courseAppearances,
               parity: parity,
               onEdit: onEdit,
@@ -164,12 +186,14 @@ class _Header extends StatelessWidget {
     required this.courseWidth,
     required this.previousDay,
     required this.nextDay,
+    required this.fontWeight,
   });
 
   final List<int> days;
   final double courseWidth;
   final VoidCallback? previousDay;
   final VoidCallback? nextDay;
+  final FontWeight fontWeight;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -191,11 +215,11 @@ class _Header extends StatelessWidget {
                   AppStrings.of(context).weekday(day),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: timetableMonoFont,
                     fontFamilyFallback: timetableFontFallback,
                     fontSize: 20,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: fontWeight,
                     color: timetableInk,
                     height: 1,
                   ),
@@ -231,6 +255,7 @@ class _PeriodRow extends StatelessWidget {
     required this.days,
     required this.period,
     required this.courseWidth,
+    required this.fontWeight,
     required this.onEdit,
     required this.drawTopBorder,
   });
@@ -238,8 +263,8 @@ class _PeriodRow extends StatelessWidget {
   final List<int> days;
   final int period;
   final double courseWidth;
-  final void Function(int weekday, int period, List<CourseMeeting> meetings)
-  onEdit;
+  final FontWeight fontWeight;
+  final void Function(int weekday, int period, List<Course> meetings) onEdit;
   final bool drawTopBorder;
 
   @override
@@ -257,7 +282,7 @@ class _PeriodRow extends StatelessWidget {
           width: timetableIndexWidth,
           child: ColoredBox(
             color: timetableIndexSurface,
-            child: _TimeLabel(period: period),
+            child: _TimeLabel(period: period, fontWeight: fontWeight),
           ),
         ),
         for (final day in days)
@@ -271,53 +296,22 @@ class _PeriodRow extends StatelessWidget {
 }
 
 class _TimeLabel extends StatelessWidget {
-  const _TimeLabel({required this.period});
+  const _TimeLabel({required this.period, required this.fontWeight});
 
   final int period;
+  final FontWeight fontWeight;
 
   @override
-  Widget build(BuildContext context) {
-    final start = timetableClassStarts[period] ?? '';
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        if (start.isNotEmpty)
-          Positioned(top: 10, child: _TimeText(start))
-        else
-          const SizedBox(),
-        Text(
-          '$period',
-          style: const TextStyle(
-            fontFamily: timetablePeriodFont,
-            fontSize: 30,
-            fontWeight: FontWeight.w700,
-            color: timetableInk,
-            height: 1,
-          ),
-        ),
-        if (start.isNotEmpty)
-          Positioned(bottom: 10, child: _TimeText(timetableClassEnd(start)))
-        else
-          const SizedBox(),
-      ],
-    );
-  }
-}
-
-class _TimeText extends StatelessWidget {
-  const _TimeText(this.value);
-
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    value,
-    style: const TextStyle(
-      fontFamily: timetableMonoFont,
-      fontSize: 16,
-      fontWeight: FontWeight.w500,
-      color: timetableMuted,
-      height: 1,
+  Widget build(BuildContext context) => Center(
+    child: Text(
+      '$period',
+      style: TextStyle(
+        fontFamily: timetablePeriodFont,
+        fontSize: 30,
+        fontWeight: fontWeight,
+        color: timetableInk,
+        height: 1,
+      ),
     ),
   );
 }
@@ -331,8 +325,7 @@ class _CourseCell extends StatelessWidget {
 
   final int day;
   final int period;
-  final void Function(int weekday, int period, List<CourseMeeting> meetings)
-  onEdit;
+  final void Function(int weekday, int period, List<Course> meetings) onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -352,6 +345,9 @@ class _DayGroups extends StatelessWidget {
     required this.day,
     required this.courseWidth,
     required this.paletteSeed,
+    required this.paletteIndex,
+    required this.fontWeight,
+    required this.schedules,
     required this.courseAppearances,
     required this.parity,
     required this.onEdit,
@@ -361,16 +357,22 @@ class _DayGroups extends StatelessWidget {
   final int day;
   final double courseWidth;
   final int paletteSeed;
+  final int paletteIndex;
+  final FontWeight fontWeight;
+  final List<CalendarSchedule> schedules;
   final Map<String, CourseAppearance> courseAppearances;
   final WeekParity? parity;
-  final void Function(int weekday, int period, List<CourseMeeting> meetings)
-  onEdit;
+  final void Function(int weekday, int period, List<Course> meetings) onEdit;
 
   @override
   Widget build(BuildContext context) {
     final geometry = TimetableGeometry(timetable.periodCount);
     final layout = TimetableDayLayout.from(timetable, day, parity: parity);
     final laneWidth = courseWidth / layout.laneCount;
+    final sourceNames = {
+      for (final course in timetable.meetings)
+        course.sourceId: course.sourceName,
+    };
     return Stack(
       clipBehavior: Clip.hardEdge,
       children: [
@@ -384,8 +386,19 @@ class _DayGroups extends StatelessWidget {
                 timetablePeriodHeight,
             child: _MeetingTile(
               group.group.primary,
+              firstPeriod: group.firstPeriod,
+              lastPeriod: group.lastPeriod,
               isCurrent: group.group.primary.frequency.isCurrent(parity),
               paletteSeed: paletteSeed,
+              paletteIndex: paletteIndex,
+              fontWeight: fontWeight,
+              schedules: schedules
+                  .where(
+                    (schedule) =>
+                        sourceNames[schedule.relatedClassSourceId] ==
+                        group.group.primary.sourceName,
+                  )
+                  .toList(growable: false),
               appearance: courseAppearances[group.group.primary.sourceId],
               onEdit: () =>
                   onEdit(day, group.firstPeriod, group.group.meetings),
@@ -415,15 +428,25 @@ class _MealBreak extends StatelessWidget {
 class _MeetingTile extends StatefulWidget {
   const _MeetingTile(
     this.meeting, {
+    required this.firstPeriod,
+    required this.lastPeriod,
     required this.isCurrent,
     required this.paletteSeed,
+    required this.paletteIndex,
+    required this.fontWeight,
+    required this.schedules,
     required this.appearance,
     required this.onEdit,
   });
 
-  final CourseMeeting meeting;
+  final Course meeting;
+  final int firstPeriod;
+  final int lastPeriod;
   final bool isCurrent;
   final int paletteSeed;
+  final int paletteIndex;
+  final FontWeight fontWeight;
+  final List<CalendarSchedule> schedules;
   final CourseAppearance? appearance;
   final VoidCallback onEdit;
 
@@ -472,7 +495,12 @@ class _MeetingTileState extends State<_MeetingTile> {
               color: Theme.of(context).colorScheme.surface,
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: _Details(meeting: widget.meeting),
+                child: _Details(
+                  meeting: widget.meeting,
+                  firstPeriod: widget.firstPeriod,
+                  lastPeriod: widget.lastPeriod,
+                  schedules: widget.schedules,
+                ),
               ),
             ),
           ),
@@ -501,6 +529,7 @@ class _MeetingTileState extends State<_MeetingTile> {
       meeting,
       widget.paletteSeed,
       appearance: widget.appearance,
+      paletteIndex: widget.paletteIndex,
     );
     final foreground = background.computeLuminance() > .5
         ? Colors.black
@@ -559,20 +588,20 @@ class _MeetingTileState extends State<_MeetingTile> {
                               meeting.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: timetableCourseNameFontSize,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: widget.fontWeight,
                                 height: 1.15,
                                 letterSpacing: -.2,
                               ),
                             ),
                             Text(
-                              meeting.room,
+                              meeting.room.isEmpty ? '' : '  ${meeting.room}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: timetableClassroomFontSize,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: widget.fontWeight,
                                 height: 1.3,
                               ),
                             ),
@@ -614,9 +643,17 @@ class _MeetingTileState extends State<_MeetingTile> {
 }
 
 class _Details extends StatelessWidget {
-  const _Details({required this.meeting});
+  const _Details({
+    required this.meeting,
+    required this.firstPeriod,
+    required this.lastPeriod,
+    required this.schedules,
+  });
 
-  final CourseMeeting meeting;
+  final Course meeting;
+  final int firstPeriod;
+  final int lastPeriod;
+  final List<CalendarSchedule> schedules;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -624,6 +661,13 @@ class _Details extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(meeting.name, style: Theme.of(context).textTheme.titleMedium),
+      if (timetableClassStarts[firstPeriod] case final start?)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            '$start–${timetableClassEnd(timetableClassStarts[lastPeriod] ?? start)}',
+          ),
+        ),
       for (final text in [
         meeting.room,
         meeting.frequencyText,
@@ -632,6 +676,23 @@ class _Details extends StatelessWidget {
       ])
         if (text.isNotEmpty)
           Padding(padding: const EdgeInsets.only(top: 8), child: Text(text)),
+      for (final schedule in schedules)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(_scheduleLabel(schedule)),
+        ),
     ],
   );
+}
+
+String _scheduleLabel(CalendarSchedule schedule) {
+  final value = schedule.startsAt.toUtc().add(const Duration(hours: 8));
+  final date =
+      '${value.year}-${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
+  final time = schedule.allDay
+      ? ''
+      : ' ${value.hour.toString().padLeft(2, '0')}:'
+            '${value.minute.toString().padLeft(2, '0')}';
+  return '$date$time · ${schedule.title}';
 }

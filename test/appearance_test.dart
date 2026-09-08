@@ -50,10 +50,28 @@ void main() {
     final controller = AppearanceController(store);
     expect(controller.language, AppLanguage.ko);
     expect(controller.paletteSeed, 0);
+    expect(controller.rollPaletteIndex, 0);
+    expect(controller.fontScale, 1.2);
+    expect(controller.fontWeightValue, 400);
+    for (var weight = 100; weight <= 900; weight += 100) {
+      controller.setFontWeight(weight);
+      expect(controller.fontWeight.value, weight);
+    }
+    controller.setFontWeight(400);
+    expect(rollPalettes.first, const [
+      Color(0xff79adac),
+      Color(0xffbeadf2),
+      Color(0xffa0c8f2),
+      Color(0xffadf7b6),
+      Color(0xffffea99),
+    ]);
 
     controller.setLanguage(AppLanguage.zhHans);
     controller.setAccent(const Color(0xff00695c));
     controller.setShowRollInNavbar(false);
+    controller.setRollPalette(3);
+    controller.setFontScale(1.6);
+    controller.setFontWeight(900);
     controller.setCourseAppearance(
       const ['locked'],
       const CourseAppearance(
@@ -79,6 +97,9 @@ void main() {
     expect(restored.language, AppLanguage.zhHans);
     expect(restored.accent, const Color(0xff00695c));
     expect(restored.paletteSeed, 2);
+    expect(restored.rollPaletteIndex, 3);
+    expect(restored.fontScale, 1.6);
+    expect(restored.fontWeightValue, 900);
     expect(restored.showRollInNavbar, isFalse);
     expect(
       restored.courseAppearanceFor('locked'),
@@ -151,6 +172,24 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('custom-accent-color')));
     await tester.pump();
     expect(controller.accent, const Color(0xff234567));
+    await tester.ensureVisible(find.byKey(const ValueKey('roll-palette-2')));
+    await tester.tap(find.byKey(const ValueKey('roll-palette-2')));
+    await tester.pump();
+    expect(controller.rollPaletteIndex, 2);
+    await tester.ensureVisible(find.byKey(const ValueKey('font-scale')));
+    await tester.drag(
+      find.byKey(const ValueKey('font-scale')),
+      const Offset(80, 0),
+    );
+    await tester.pump();
+    expect(controller.fontScale, greaterThan(1.2));
+    await tester.ensureVisible(find.byKey(const ValueKey('font-weight')));
+    await tester.drag(
+      find.byKey(const ValueKey('font-weight')),
+      const Offset(500, 0),
+    );
+    await tester.pump();
+    expect(controller.fontWeightValue, 900);
     await tester.ensureVisible(find.byKey(const ValueKey('show-roll-navbar')));
     await tester.tap(find.byKey(const ValueKey('show-roll-navbar')));
     await tester.pump();

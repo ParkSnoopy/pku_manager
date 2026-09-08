@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
+import '../timetable/timetable_color.dart';
 import 'appearance_controller.dart';
 import 'color_picker_dialog.dart';
 
@@ -91,6 +92,74 @@ class SettingsPage extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          Text(AppStrings.of(context).text(AppText.rollPalette)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              for (final (index, palette) in rollPalettes.indexed)
+                IconButton(
+                  key: ValueKey('roll-palette-$index'),
+                  tooltip: '${index + 1}',
+                  onPressed: () => controller.setRollPalette(index),
+                  icon: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final color in palette)
+                            Container(width: 8, height: 28, color: color),
+                        ],
+                      ),
+                      if (controller.rollPaletteIndex == index)
+                        const Icon(Icons.check, color: Colors.black),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: Text(AppStrings.of(context).text(AppText.fontScale)),
+              ),
+              Text('${controller.fontScale.toStringAsFixed(2)}×'),
+            ],
+          ),
+          Slider(
+            key: const ValueKey('font-scale'),
+            min: 1,
+            max: 2,
+            divisions: 20,
+            value: controller.fontScale,
+            label: '${controller.fontScale.toStringAsFixed(2)}×',
+            onChanged: controller.setFontScale,
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(AppStrings.of(context).text(AppText.fontWeight)),
+              ),
+              Text(
+                AppStrings.of(context)
+                    .text(_fontWeightText(controller.fontWeightValue)),
+              ),
+            ],
+          ),
+          Slider(
+            key: const ValueKey('font-weight'),
+            min: 100,
+            max: 900,
+            divisions: 8,
+            value: controller.fontWeightValue.toDouble(),
+            label: AppStrings.of(context)
+                .text(_fontWeightText(controller.fontWeightValue)),
+            onChanged: (value) => controller.setFontWeight(value.round()),
+          ),
           const SizedBox(height: 32),
           Text(
             AppStrings.of(context).text(AppText.language),
@@ -125,3 +194,16 @@ class SettingsPage extends StatelessWidget {
     ),
   );
 }
+
+AppText _fontWeightText(int value) => switch (value) {
+  100 => AppText.thin,
+  200 => AppText.extraLight,
+  300 => AppText.light,
+  400 => AppText.regular,
+  500 => AppText.medium,
+  600 => AppText.semiBold,
+  700 => AppText.bold,
+  800 => AppText.extraBold,
+  900 => AppText.black,
+  _ => throw ArgumentError.value(value, 'value'),
+};

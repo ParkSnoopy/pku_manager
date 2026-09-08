@@ -1,9 +1,9 @@
-import 'course_meeting.dart';
+import 'course.dart';
 import 'week_frequency.dart';
 
 final class Timetable {
   /// Input order is source order and breaks coordinate ties deterministically.
-  Timetable(Iterable<CourseMeeting> meetings, {int? periodCount})
+  Timetable(Iterable<Course> meetings, {int? periodCount})
     : meetings = _ordered(meetings),
       _periodCount = periodCount {
     if (periodCount != null && periodCount < 1) {
@@ -20,21 +20,19 @@ final class Timetable {
     }
   }
 
-  final List<CourseMeeting> meetings;
+  final List<Course> meetings;
   final int? _periodCount;
 
   int get periodCount =>
       _periodCount ??
       meetings.fold(0, (max, m) => m.lastPeriod > max ? m.lastPeriod : max);
 
-  List<CourseMeeting> visible({
-    bool showAll = true,
-    WeekParity? currentParity,
-  }) => List.unmodifiable(
-    meetings.where((m) => showAll || m.frequency.isCurrent(currentParity)),
-  );
+  List<Course> visible({bool showAll = true, WeekParity? currentParity}) =>
+      List.unmodifiable(
+        meetings.where((m) => showAll || m.frequency.isCurrent(currentParity)),
+      );
 
-  List<CourseMeeting> forDay(
+  List<Course> forDay(
     int weekday, {
     bool showAll = true,
     WeekParity? currentParity,
@@ -48,7 +46,7 @@ final class Timetable {
     );
   }
 
-  List<CourseMeeting> atPeriod(
+  List<Course> atPeriod(
     int weekday,
     int period, {
     bool showAll = true,
@@ -64,15 +62,15 @@ final class Timetable {
     );
   }
 
-  /// Courses with identical displayed details that touch vertically on one day.
+  /// Source-name-equivalent classes that touch vertically on one day.
   /// Source identities remain separate so a group edit can update each record.
-  List<CourseMeetingGroup> groupsForDay(
+  List<CourseGroup> groupsForDay(
     int weekday, {
     Set<int> breakAfter = const {},
     bool showAll = true,
     WeekParity? currentParity,
   }) {
-    final groups = <CourseMeetingGroup>[];
+    final groups = <CourseGroup>[];
     for (final meeting in forDay(
       weekday,
       showAll: showAll,
@@ -85,13 +83,10 @@ final class Timetable {
             !_crossesBreak(group.lastPeriod, meeting.firstPeriod, breakAfter),
       );
       if (matchingIndex < 0) {
-        groups.add(CourseMeetingGroup._([meeting]));
+        groups.add(CourseGroup._([meeting]));
       } else {
         final previous = groups[matchingIndex];
-        groups[matchingIndex] = CourseMeetingGroup._([
-          ...previous.meetings,
-          meeting,
-        ]);
+        groups[matchingIndex] = CourseGroup._([...previous.meetings, meeting]);
       }
     }
     return List.unmodifiable(groups);
@@ -99,11 +94,11 @@ final class Timetable {
 
   /// Presentation-only adjacency grouping; every original identity is retained.
   /// Matching labels never imply that source records are the same record.
-  List<List<CourseMeeting>> consecutiveGroups({
+  List<List<Course>> consecutiveGroups({
     bool showAll = true,
     WeekParity? currentParity,
   }) {
-    final result = <List<CourseMeeting>>[];
+    final result = <List<Course>>[];
     for (var day = 1; day <= 5; day++) {
       for (final group in groupsForDay(
         day,
@@ -116,7 +111,7 @@ final class Timetable {
     return List.unmodifiable(result);
   }
 
-  static List<CourseMeeting> _ordered(Iterable<CourseMeeting> input) {
+  static List<Course> _ordered(Iterable<Course> input) {
     final indexed = input.indexed.toList();
     indexed.sort((a, b) {
       for (final compare in [
@@ -133,13 +128,13 @@ final class Timetable {
   }
 }
 
-final class CourseMeetingGroup {
-  CourseMeetingGroup._(Iterable<CourseMeeting> meetings)
+final class CourseGroup {
+  CourseGroup._(Iterable<Course> meetings)
     : meetings = List.unmodifiable(meetings);
 
-  final List<CourseMeeting> meetings;
+  final List<Course> meetings;
 
-  CourseMeeting get primary => meetings.first;
+  Course get primary => meetings.first;
   int get weekday => primary.weekday;
   int get firstPeriod => meetings.fold(
     primary.firstPeriod,
@@ -152,14 +147,8 @@ final class CourseMeetingGroup {
   );
   String get key => meetings.map((meeting) => meeting.sourceId).join('|');
 
-  bool matches(CourseMeeting meeting) =>
-      weekday == meeting.weekday &&
-      primary.name == meeting.name &&
-      primary.room == meeting.room &&
-      primary.frequency == meeting.frequency &&
-      primary.frequencyText == meeting.frequencyText &&
-      primary.note == meeting.note &&
-      primary.exam == meeting.exam;
+  bool matches(Course meeting) =>
+      weekday == meeting.weekday && primary.sourceName == meeting.sourceName;
 }
 
 bool _crossesBreak(int previousLast, int nextFirst, Set<int> breakAfter) {

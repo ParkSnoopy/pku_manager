@@ -8,7 +8,7 @@ import 'timetable_style.dart';
 final class UpcomingCourse {
   const UpcomingCourse({required this.group, required this.startsAt});
 
-  final CourseMeetingGroup group;
+  final CourseGroup group;
   final DateTime startsAt;
 }
 
@@ -57,11 +57,13 @@ class UpcomingClassPane extends StatelessWidget {
     super.key,
     required this.timetable,
     required this.now,
+    required this.onSelected,
     this.calendar,
   });
 
   final Timetable timetable;
   final DateTime now;
+  final ValueChanged<UpcomingCourse> onSelected;
   final SemesterCalendar? calendar;
 
   @override
@@ -91,7 +93,8 @@ class UpcomingClassPane extends StatelessWidget {
                     child: Text(strings.text(AppText.noUpcomingClass)),
                   )
                 : ListTile(
-                    key: ValueKey('upcoming-course-${meeting.sourceId}'),
+                    key: ValueKey('upcoming-class-${meeting.sourceId}'),
+                    onTap: () => onSelected(item),
                     title: Text(
                       meeting.name,
                       maxLines: 1,

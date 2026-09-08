@@ -9,7 +9,7 @@ import 'package:pku_manager/data/schedule_xls_parser.dart';
 import 'package:pku_manager/data/week_config_parser.dart';
 import 'package:pku_manager/data/week_config_repository.dart';
 import 'package:pku_manager/domain/semester.dart';
-import 'package:pku_manager/domain/course_meeting.dart';
+import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/week_source.dart';
 
 void main() {
@@ -22,6 +22,8 @@ void main() {
     final later = repository.create(
       title: '  Homework deadline  ',
       startsAt: DateTime.utc(2026, 9, 8, 2),
+      allDay: true,
+      relatedClassSourceId: 'source-class',
     );
     final earlier = repository.create(
       title: 'Meeting info',
@@ -33,11 +35,15 @@ void main() {
       later.id,
     ]);
     expect(repository.load().last.title, 'Homework deadline');
+    expect(repository.load().last.allDay, isTrue);
+    expect(repository.load().last.relatedClassSourceId, 'source-class');
 
     repository.update(
       later.copyWith(
         title: 'Revised deadline',
         startsAt: DateTime.utc(2026, 9, 9, 3),
+        allDay: false,
+        relatedClassSourceId: null,
       ),
     );
     repository.remove(earlier.id);
@@ -46,6 +52,8 @@ void main() {
     db = AppDatabase(path);
     repository = CalendarScheduleRepository(db);
     expect(repository.load().single.title, 'Revised deadline');
+    expect(repository.load().single.allDay, isFalse);
+    expect(repository.load().single.relatedClassSourceId, isNull);
     expect(repository.load().single.id, later.id);
     db.close();
   });
@@ -117,7 +125,7 @@ void main() {
     // synthetic corrections here test persistence, not the user's real choices.
     final completions = {
       for (final r in candidate.issues)
-        r.meeting.sourceId: CourseMeeting(
+        r.meeting.sourceId: Course(
           sourceId: r.meeting.sourceId,
           name: r.meeting.name,
           room: 'Synthetic user completion',

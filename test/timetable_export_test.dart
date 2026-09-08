@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 import 'package:excel/excel.dart';
 import 'package:flutter/material.dart' show Color;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pku_manager/domain/course_meeting.dart';
+import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/features/timetable/timetable_export.dart';
 import 'package:pku_manager/features/timetable/timetable_color.dart';
@@ -27,6 +27,7 @@ final class _PngEncoder implements TimetablePngEncoder {
     AppStrings strings,
     int paletteSeed, {
     Map<String, CourseAppearance> courseAppearances = const {},
+    int paletteIndex = 0,
   }) async {
     timetable = value;
     this.courseAppearances = courseAppearances;
@@ -36,7 +37,7 @@ final class _PngEncoder implements TimetablePngEncoder {
 
 void main() {
   final timetable = Timetable([
-    CourseMeeting(
+    Course(
       sourceId: 'a',
       name: 'Algorithms',
       weekday: 1,
@@ -44,7 +45,7 @@ void main() {
       lastPeriod: 2,
       room: 'Room 101',
     ),
-    CourseMeeting(
+    Course(
       sourceId: 'b',
       name: 'Physics',
       weekday: 5,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../domain/course_meeting.dart';
+import '../../domain/course.dart';
 import '../../domain/schedule_import.dart';
 import '../../domain/week_frequency.dart';
 import '../../l10n/app_strings.dart';
@@ -152,12 +152,12 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
     });
   }
 
-  CourseMeeting _meeting(
+  Course _meeting(
     ImportRecord record,
     Map<_Field, TextEditingController> fields,
   ) {
     final frequencyText = fields[_Field.frequency]!.text;
-    return CourseMeeting(
+    return Course(
       sourceId: record.meeting.sourceId,
       name: fields[_Field.name]!.text.trim(),
       room: fields[_Field.room]!.text.trim(),
@@ -195,7 +195,7 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
     return null;
   }
 
-  static String _value(_Field field, CourseMeeting meeting) => switch (field) {
+  static String _value(_Field field, Course meeting) => switch (field) {
     _Field.name => meeting.name,
     _Field.room => meeting.room,
     _Field.weekday => '${meeting.weekday}',

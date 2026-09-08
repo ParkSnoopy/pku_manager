@@ -4,7 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/app/app.dart';
-import 'package:pku_manager/domain/course_meeting.dart';
+import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/schedule_import.dart';
 import 'package:pku_manager/domain/semester.dart';
 import 'package:pku_manager/domain/timetable.dart';
@@ -26,15 +26,15 @@ final class _Store implements ScheduleStore {
   @override
   Timetable publish(
     ScheduleCandidate candidate,
-    Map<String, CourseMeeting> completions,
+    Map<String, Course> completions,
   ) => value;
   @override
-  Timetable saveMeeting(CourseMeeting meeting) => value = Timetable([
+  Timetable saveMeeting(Course meeting) => value = Timetable([
     ...value.meetings.where((item) => item.sourceId != meeting.sourceId),
     meeting,
   ], periodCount: value.periodCount);
   @override
-  Timetable saveMeetings(Iterable<CourseMeeting> meetings) {
+  Timetable saveMeetings(Iterable<Course> meetings) {
     for (final meeting in meetings) {
       saveMeeting(meeting);
     }
@@ -96,26 +96,26 @@ final class _PngEncoder implements TimetablePngEncoder {
     AppStrings strings,
     int paletteSeed, {
     Map<String, CourseAppearance> courseAppearances = const {},
+    int paletteIndex = 0,
   }) async => Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
 }
 
-CourseMeeting _meeting(String id, int period, WeekFrequency frequency) =>
-    CourseMeeting(
-      sourceId: id,
-      name: id == 'even' ? 'Physics' : 'Algebra',
-      weekday: 1,
-      firstPeriod: period,
-      lastPeriod: period,
-      room: 'Room 1',
-      frequency: frequency,
-      frequencyText: switch (frequency) {
-        WeekFrequency.every => '每周',
-        WeekFrequency.odd => '单周',
-        WeekFrequency.even => '双周',
-      },
-      note: 'Bring notes',
-      exam: 'Exam later',
-    );
+Course _meeting(String id, int period, WeekFrequency frequency) => Course(
+  sourceId: id,
+  name: id == 'even' ? 'Physics' : 'Algebra',
+  weekday: 1,
+  firstPeriod: period,
+  lastPeriod: period,
+  room: 'Room 1',
+  frequency: frequency,
+  frequencyText: switch (frequency) {
+    WeekFrequency.every => '每周',
+    WeekFrequency.odd => '单周',
+    WeekFrequency.even => '双周',
+  },
+  note: 'Bring notes',
+  exam: 'Exam later',
+);
 
 void main() {
   testWidgets(
@@ -155,6 +155,15 @@ void main() {
       );
       await tester.pump();
       expect(find.byType(NavigationRail), findsOneWidget);
+      final appTextContext = tester.element(find.text('Calendar'));
+      expect(
+        MediaQuery.textScalerOf(appTextContext).scale(10),
+        moreOrLessEquals(12),
+      );
+      expect(
+        Theme.of(appTextContext).textTheme.bodyMedium?.fontWeight,
+        FontWeight.w400,
+      );
       expect(find.text('Calendar'), findsOneWidget);
       expect(find.text('Show all'), findsNothing);
       expect(find.text('Refresh'), findsNothing);
@@ -227,6 +236,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1));
       final hover = find.byKey(const ValueKey('meeting-hover-first'));
       expect(hover, findsOneWidget);
+      expect(find.text('08:00–09:50'), findsOneWidget);
       final before = tester.getTopLeft(hover);
       await mouse.moveBy(const Offset(30, 20));
       await tester.pump();
@@ -244,12 +254,11 @@ void main() {
         find.byKey(const ValueKey('course-room')),
         'New room',
       );
-      await tester.drag(find.byType(ListView).last, const Offset(0, -700));
       await tester.pump();
-      await tester.ensureVisible(find.text('Save'));
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
+      expect(find.text('Save'), findsNothing);
       expect(controller.timetable!.atPeriod(1, 4).single.name, 'New course');
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
 
       final initialRefreshes = weeks.refreshes;
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
@@ -262,6 +271,7 @@ void main() {
       await tester.ensureVisible(
         find.byKey(const ValueKey('show-roll-navbar')),
       );
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('show-roll-navbar')));
       await tester.pump();
       await tester.tap(find.text('Timetable'));
@@ -302,6 +312,7 @@ void main() {
         ..create(
           title: 'Homework deadline',
           startsAt: DateTime.utc(2026, 9, 7, 1),
+          relatedClassSourceId: 'first',
         );
       addTearDown(calendar.dispose);
       appearance.setCourseAppearance(
@@ -338,6 +349,31 @@ void main() {
       expect(find.text('Upcoming schedule'), findsOneWidget);
       expect(find.text('Homework deadline'), findsOneWidget);
       expect(find.text('Algebra'), findsOneWidget);
+      final relatedMouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+      );
+      await relatedMouse.addPointer(
+        location: tester.getCenter(
+          find.byKey(const ValueKey('meeting-cell-first')),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('meeting-hover-first')),
+          matching: find.textContaining('Homework deadline'),
+        ),
+        findsOneWidget,
+      );
+      await relatedMouse.removePointer();
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('upcoming-schedule-1')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('schedule-editor')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('close-schedule-editor')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Timetable'));
+      await tester.pump();
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('upcoming-schedule-pane')),
@@ -376,8 +412,15 @@ void main() {
         findsNothing,
       );
       expect(find.text('Upcoming schedule'), findsNothing);
-      await tester.tap(find.text('Timetable'));
+      await tester.tap(find.byKey(const ValueKey('upcoming-class-first')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('course-editor-pane')), findsOneWidget);
+      await tester.tap(find.text('Close'));
       await tester.pump();
+      expect(
+        find.byKey(const ValueKey('upcoming-schedule-pane')),
+        findsOneWidget,
+      );
 
       await tester.tap(find.byKey(const ValueKey('meeting-cell-first')));
       await tester.pump();
@@ -387,11 +430,8 @@ void main() {
         find.byKey(const ValueKey('course-name')),
         'Grouped course',
       );
-      await tester.drag(find.byType(ListView).last, const Offset(0, -700));
       await tester.pump();
-      await tester.ensureVisible(find.text('Save'));
-      await tester.tap(find.text('Save'));
-      await tester.pump();
+      expect(find.text('Save'), findsNothing);
       expect(
         controller.timetable!.meetings
             .where(
@@ -400,6 +440,9 @@ void main() {
             .map((meeting) => meeting.name),
         everyElement('Grouped course'),
       );
+      expect(find.byKey(const ValueKey('course-editor-pane')), findsOneWidget);
+      await tester.tap(find.text('Close'));
+      await tester.pump();
       expect(
         find.byKey(const ValueKey('upcoming-schedule-pane')),
         findsOneWidget,

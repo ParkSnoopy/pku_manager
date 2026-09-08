@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pku_manager/domain/course_meeting.dart';
+import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/features/timetable/course_editor_dialog.dart';
 
 import 'package:pku_manager/l10n/app_strings.dart';
@@ -11,14 +11,14 @@ void main() {
   ) async {
     CourseEditResult? result;
     final meetings = [
-      CourseMeeting(
+      Course(
         sourceId: 'first',
         name: '八个汉字课程名称',
         weekday: 1,
         firstPeriod: 1,
         lastPeriod: 1,
       ),
-      CourseMeeting(
+      Course(
         sourceId: 'second',
         name: '八个汉字课程名称',
         weekday: 1,
@@ -68,9 +68,7 @@ void main() {
     await tester.pump();
     initialSlider.onChanged!(3.5);
     await tester.pump();
-    await tester.ensureVisible(find.text('Save'));
-    await tester.tap(find.text('Save'));
-    await tester.pump();
+    expect(find.text('Save'), findsNothing);
     expect(result, isNotNull);
     expect(result!.meetings.map((meeting) => meeting.sourceId), [
       'first',

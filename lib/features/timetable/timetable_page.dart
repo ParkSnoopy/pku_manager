@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../domain/course_meeting.dart';
+import '../../domain/calendar_schedule.dart';
+import '../../domain/course.dart';
 import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
 import '../../l10n/app_strings.dart';
@@ -33,7 +34,7 @@ final class _EditorSelection {
 
   final int weekday;
   final int period;
-  final List<CourseMeeting> meetings;
+  final List<Course> meetings;
 }
 
 class TimetablePage extends StatefulWidget {
@@ -66,6 +67,7 @@ class _TimetablePageState extends State<TimetablePage>
   int _destination = 0;
   bool _exporting = false;
   _EditorSelection? _editor;
+  int? _focusedScheduleId;
   Timetable? _appearanceTimetable;
 
   @override
@@ -100,18 +102,38 @@ class _TimetablePageState extends State<TimetablePage>
     setState(() => _day = (_day + delta).clamp(1, 5));
   }
 
-  Future<void> _editCell(
-    int weekday,
-    int period,
-    List<CourseMeeting> meetings,
-  ) async {
+  void _selectSchedule(CalendarSchedule schedule) {
+    setState(() {
+      _destination = 1;
+      _editor = null;
+      _focusedScheduleId = schedule.id;
+    });
+  }
+
+  void _selectUpcomingClass(UpcomingCourse course) {
+    setState(() {
+      _destination = 0;
+      _day = course.group.weekday;
+      _editor = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _editCell(
+        course.group.weekday,
+        course.group.firstPeriod,
+        course.group.meetings,
+      );
+    });
+  }
+
+  Future<void> _editCell(int weekday, int period, List<Course> meetings) async {
     if (MediaQuery.orientationOf(context) == Orientation.landscape) {
       setState(() => _editor = _EditorSelection(weekday, period, meetings));
       return;
     }
-    final result = await showDialog<CourseEditResult>(
+    await showDialog<void>(
       context: context,
-      builder: (_) => CourseEditorDialog(
+      builder: (dialogContext) => CourseEditorDialog(
         weekday: weekday,
         period: period,
         periodCount: widget.controller.timetable!.periodCount,
@@ -129,12 +151,13 @@ class _TimetablePageState extends State<TimetablePage>
                   meetings.first.sourceId,
                 ),
               ),
+        onCancel: () => Navigator.pop(dialogContext),
+        onResult: (result) => _applyEdit(result, meetings),
       ),
     );
-    if (result != null) _applyEdit(result, meetings);
   }
 
-  void _applyEdit(CourseEditResult result, List<CourseMeeting> original) {
+  void _applyEdit(CourseEditResult result, List<Course> original) {
     if (result.remove) {
       widget.controller.removeUserMeetings(
         original.map((meeting) => meeting.sourceId),
@@ -143,6 +166,7 @@ class _TimetablePageState extends State<TimetablePage>
         original.map((meeting) => meeting.sourceId),
         const CourseAppearance(),
       );
+      setState(() => _editor = null);
     } else {
       widget.controller.saveMeetings(result.meetings);
       widget.appearance.setCourseAppearance(
@@ -150,7 +174,6 @@ class _TimetablePageState extends State<TimetablePage>
         result.appearance,
       );
     }
-    setState(() => _editor = null);
   }
 
   Future<void> _openTeachingPortal() async {
@@ -180,6 +203,7 @@ class _TimetablePageState extends State<TimetablePage>
         timetable,
         strings: AppStrings.of(context),
         paletteSeed: widget.appearance.paletteSeed,
+        paletteIndex: widget.appearance.rollPaletteIndex,
         courseAppearances: widget.appearance.courseAppearances,
       );
     } catch (_) {
@@ -390,6 +414,7 @@ class _TimetablePageState extends State<TimetablePage>
                   ? UpcomingSchedulesPane(
                       controller: widget.calendar,
                       now: controller.clock(),
+                      onSelected: _selectSchedule,
                     )
                   : CourseEditorDialog(
                       key: ValueKey(
@@ -431,6 +456,9 @@ class _TimetablePageState extends State<TimetablePage>
     final calendarPage = CalendarPage(
       now: controller.clock(),
       controller: widget.calendar,
+      timetable: controller.timetable,
+      focusedScheduleId: _focusedScheduleId,
+      onFocusedScheduleOpened: () => setState(() => _focusedScheduleId = null),
     );
     final timetable = controller.timetable;
     if (timetable == null) return calendarPage;
@@ -448,6 +476,7 @@ class _TimetablePageState extends State<TimetablePage>
                 timetable: timetable,
                 now: controller.clock(),
                 calendar: controller.week.calendar,
+                onSelected: _selectUpcomingClass,
               ),
             ),
           ],
@@ -463,6 +492,9 @@ class _TimetablePageState extends State<TimetablePage>
       previousDay: !allDays && _day > 1 ? () => _changeDay(-1) : null,
       nextDay: !allDays && _day < 5 ? () => _changeDay(1) : null,
       paletteSeed: widget.appearance.paletteSeed,
+      paletteIndex: widget.appearance.rollPaletteIndex,
+      fontWeight: widget.appearance.fontWeight,
+      schedules: widget.calendar.schedules,
       courseAppearances: widget.appearance.courseAppearances,
       parity: parity,
       onEdit: _editCell,
