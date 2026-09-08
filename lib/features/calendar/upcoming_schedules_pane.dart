@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../domain/calendar_schedule.dart';
 import '../../l10n/app_strings.dart';
 import 'calendar_schedule_controller.dart';
+import 'schedule_color.dart';
 
 class UpcomingSchedulesPane extends StatelessWidget {
   const UpcomingSchedulesPane({
@@ -50,29 +51,42 @@ class UpcomingSchedulesPane extends StatelessWidget {
                       separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final schedule = schedules[index];
-                        return ListTile(
-                          key: ValueKey('upcoming-schedule-${schedule.id}'),
-                          onTap: () => onSelected(schedule),
-                          title: Text(
-                            schedule.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 15),
-                          ),
-                          subtitle: Text(
-                            _dateTimeLabel(schedule),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          trailing: Text(
-                            strings.startsIn(
-                              schedule.allDay
-                                  ? Duration.zero
-                                  : schedule.startsAt.difference(now),
+                        final background = scheduleColor(schedule.id);
+                        final foreground = scheduleForeground(background);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Material(
+                            key: ValueKey(
+                              'upcoming-schedule-color-${schedule.id}',
                             ),
-                            textAlign: TextAlign.end,
-                            style: const TextStyle(fontSize: 14),
+                            color: background,
+                            child: ListTile(
+                              key: ValueKey('upcoming-schedule-${schedule.id}'),
+                              onTap: () => onSelected(schedule),
+                              textColor: foreground,
+                              title: Text(
+                                schedule.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 15),
+                              ),
+                              subtitle: Text(
+                                _dateLabel(schedule),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                              trailing: Text(
+                                schedule.allDay
+                                    ? strings.text(AppText.allDay)
+                                    : _timeLabel(schedule),
+                                textAlign: TextAlign.end,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
                           ),
                         );
                       },
@@ -85,12 +99,14 @@ class UpcomingSchedulesPane extends StatelessWidget {
   );
 }
 
-String _dateTimeLabel(CalendarSchedule schedule) {
+String _dateLabel(CalendarSchedule schedule) {
   final value = schedule.startsAt.toUtc().add(const Duration(hours: 8));
-  final date = '${value.year}-${_two(value.month)}-${_two(value.day)}';
-  return schedule.allDay
-      ? date
-      : '$date ${_two(value.hour)}:${_two(value.minute)}';
+  return '${value.year}-${_two(value.month)}-${_two(value.day)}';
+}
+
+String _timeLabel(CalendarSchedule schedule) {
+  final value = schedule.startsAt.toUtc().add(const Duration(hours: 8));
+  return '${_two(value.hour)}:${_two(value.minute)}';
 }
 
 bool _isUpcoming(CalendarSchedule schedule, DateTime now) {

@@ -68,6 +68,7 @@ class _TimetablePageState extends State<TimetablePage>
   bool _exporting = false;
   _EditorSelection? _editor;
   int? _focusedScheduleId;
+  Set<String> _focusedCourseSourceIds = const {};
   Timetable? _appearanceTimetable;
 
   @override
@@ -107,6 +108,7 @@ class _TimetablePageState extends State<TimetablePage>
       _destination = 1;
       _editor = null;
       _focusedScheduleId = schedule.id;
+      _focusedCourseSourceIds = const {};
     });
   }
 
@@ -115,18 +117,15 @@ class _TimetablePageState extends State<TimetablePage>
       _destination = 0;
       _day = course.group.weekday;
       _editor = null;
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _editCell(
-        course.group.weekday,
-        course.group.firstPeriod,
-        course.group.meetings,
-      );
+      _focusedScheduleId = null;
+      _focusedCourseSourceIds = course.group.meetings
+          .map((meeting) => meeting.sourceId)
+          .toSet();
     });
   }
 
   Future<void> _editCell(int weekday, int period, List<Course> meetings) async {
+    setState(() => _focusedCourseSourceIds = const {});
     if (MediaQuery.orientationOf(context) == Orientation.landscape) {
       setState(() => _editor = _EditorSelection(weekday, period, meetings));
       return;
@@ -238,6 +237,8 @@ class _TimetablePageState extends State<TimetablePage>
                   setState(() {
                     _destination = value;
                     _editor = null;
+                    _focusedScheduleId = null;
+                    _focusedCourseSourceIds = const {};
                   });
                 }
               },
@@ -458,7 +459,6 @@ class _TimetablePageState extends State<TimetablePage>
       controller: widget.calendar,
       timetable: controller.timetable,
       focusedScheduleId: _focusedScheduleId,
-      onFocusedScheduleOpened: () => setState(() => _focusedScheduleId = null),
     );
     final timetable = controller.timetable;
     if (timetable == null) return calendarPage;
@@ -494,6 +494,7 @@ class _TimetablePageState extends State<TimetablePage>
       paletteSeed: widget.appearance.paletteSeed,
       paletteIndex: widget.appearance.rollPaletteIndex,
       fontWeight: widget.appearance.fontWeight,
+      focusedCourseSourceIds: _focusedCourseSourceIds,
       schedules: widget.calendar.schedules,
       courseAppearances: widget.appearance.courseAppearances,
       parity: parity,

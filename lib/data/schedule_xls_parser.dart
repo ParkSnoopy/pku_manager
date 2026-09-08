@@ -128,15 +128,36 @@ class ScheduleXlsParser implements ScheduleDecoder {
     // destinations. Derived identities are tied to source locations, not titles.
     final tutorials = <ImportRecord>[];
     final seenTutorials = <(String, String)>{};
+    final consumedTutorialNotes = <(String, String)>{};
     for (final record in records) {
       final meeting = record.meeting;
       if (meeting.note.contains('习题课') &&
           seenTutorials.add((meeting.name, meeting.note))) {
         final tutorial = _tutorial(record, periodCount);
-        if (tutorial != null) tutorials.add(tutorial);
+        if (tutorial != null) {
+          tutorials.add(tutorial);
+          // A candidate cannot publish until this derived class is complete, so
+          // its structured source remark must not also remain display content.
+          consumedTutorialNotes.add((meeting.name, meeting.note));
+        }
       }
     }
-    return ScheduleCandidate(bytes, [...records, ...tutorials], periodCount);
+    final cleanedRecords = records.map((record) {
+      final meeting = record.meeting;
+      if (!consumedTutorialNotes.contains((meeting.name, meeting.note))) {
+        return record;
+      }
+      return ImportRecord(
+        meeting: _withNote(meeting, ''),
+        raw: record.raw,
+        issue: record.issue,
+        failedFields: record.failedFields,
+      );
+    });
+    return ScheduleCandidate(bytes, [
+      ...cleanedRecords,
+      ...tutorials,
+    ], periodCount);
   }
 
   ImportRecord parseRecord(String id, String raw, int day, int period) {
@@ -337,13 +358,27 @@ class ScheduleXlsParser implements ScheduleDecoder {
         room: room,
         frequency: WeekFrequency.parse(frequencyMatch?[1] ?? ''),
         frequencyText: frequencyMatch?[1] ?? '每周',
-        note: note,
+        note: '',
       ),
       raw: note,
       issue: failedFields.isEmpty ? null : 'Complete the highlighted fields.',
       failedFields: failedFields,
     );
   }
+
+  Course _withNote(Course meeting, String note) => Course(
+    sourceId: meeting.sourceId,
+    sourceName: meeting.sourceName,
+    name: meeting.name,
+    weekday: meeting.weekday,
+    firstPeriod: meeting.firstPeriod,
+    lastPeriod: meeting.lastPeriod,
+    room: meeting.room,
+    frequency: meeting.frequency,
+    frequencyText: meeting.frequencyText,
+    note: note,
+    exam: meeting.exam,
+  );
 
   int? _period(String value) {
     final lines = value.trim().split(RegExp(r'\r?\n'));

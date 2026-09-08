@@ -4,6 +4,7 @@ import '../../domain/calendar_schedule.dart';
 import '../../domain/timetable.dart';
 import '../../l10n/app_strings.dart';
 import 'calendar_schedule_controller.dart';
+import 'schedule_color.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({
@@ -12,14 +13,12 @@ class CalendarPage extends StatefulWidget {
     required this.controller,
     this.timetable,
     this.focusedScheduleId,
-    this.onFocusedScheduleOpened,
   });
 
   final DateTime now;
   final CalendarScheduleController controller;
   final Timetable? timetable;
   final int? focusedScheduleId;
-  final VoidCallback? onFocusedScheduleOpened;
 
   @override
   State<CalendarPage> createState() => _CalendarPageState();
@@ -32,7 +31,7 @@ class _CalendarPageState extends State<CalendarPage> {
   void initState() {
     super.initState();
     widget.controller.addListener(_scheduleChanged);
-    _openFocusedSchedule();
+    _focusSchedule();
   }
 
   @override
@@ -43,7 +42,7 @@ class _CalendarPageState extends State<CalendarPage> {
       widget.controller.addListener(_scheduleChanged);
     }
     if (oldWidget.focusedScheduleId != widget.focusedScheduleId) {
-      _openFocusedSchedule();
+      _focusSchedule();
     }
   }
 
@@ -57,7 +56,7 @@ class _CalendarPageState extends State<CalendarPage> {
     if (mounted) setState(() {});
   }
 
-  void _openFocusedSchedule() {
+  void _focusSchedule() {
     final id = widget.focusedScheduleId;
     if (id == null) return;
     final schedule = widget.controller.schedules
@@ -65,11 +64,6 @@ class _CalendarPageState extends State<CalendarPage> {
         .firstOrNull;
     if (schedule == null) return;
     _month = _beijingDate(schedule.startsAt);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      widget.onFocusedScheduleOpened?.call();
-      _editSchedule(_beijingDate(schedule.startsAt), schedule);
-    });
   }
 
   void _changeMonth(int delta) =>
@@ -219,6 +213,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         today: today,
                         inMonth: date.month == _month.month,
                         schedules: schedules,
+                        focusedScheduleId: widget.focusedScheduleId,
                         onAdd: () => _editSchedule(date),
                         onEdit: (schedule) => _editSchedule(date, schedule),
                       );
@@ -240,6 +235,7 @@ class _CalendarDay extends StatelessWidget {
     required this.today,
     required this.inMonth,
     required this.schedules,
+    required this.focusedScheduleId,
     required this.onAdd,
     required this.onEdit,
   });
@@ -248,6 +244,7 @@ class _CalendarDay extends StatelessWidget {
   final DateTime today;
   final bool inMonth;
   final List<CalendarSchedule> schedules;
+  final int? focusedScheduleId;
   final VoidCallback onAdd;
   final ValueChanged<CalendarSchedule> onEdit;
 
@@ -311,17 +308,46 @@ class _CalendarDay extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final schedule = schedules[index];
                       final starts = _beijingDateTime(schedule.startsAt);
-                      return InkWell(
-                        key: ValueKey('calendar-schedule-${schedule.id}'),
-                        onTap: () => onEdit(schedule),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Text(
-                            '${schedule.allDay ? '' : '${_two(starts.hour)}:${_two(starts.minute)} '}'
-                            '${schedule.title}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12),
+                      final background = scheduleColor(schedule.id);
+                      final foreground = scheduleForeground(background);
+                      final focused = schedule.id == focusedScheduleId;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Material(
+                          key: ValueKey(
+                            'calendar-schedule-color-${schedule.id}',
+                          ),
+                          color: background,
+                          shape: focused
+                              ? RoundedRectangleBorder(
+                                  side: BorderSide(
+                                    color: colors.primary,
+                                    width: 3,
+                                  ),
+                                )
+                              : null,
+                          child: InkWell(
+                            key: ValueKey('calendar-schedule-${schedule.id}'),
+                            onTap: () => onEdit(schedule),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 3,
+                              ),
+                              child: Text(
+                                '${schedule.allDay ? '' : '${_two(starts.hour)}:${_two(starts.minute)} '}'
+                                '${schedule.title}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: foreground,
+                                  fontSize: 14,
+                                  fontWeight: focused
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       );

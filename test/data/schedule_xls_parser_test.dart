@@ -150,7 +150,12 @@ void main() {
           t.meeting.frequency,
           note.contains('双周') ? WeekFrequency.even : WeekFrequency.every,
         );
+        expect(t.meeting.note, isEmpty);
       }
+      expect(
+        c.records.where((r) => r.raw == raw).map((r) => r.meeting.note),
+        everyElement(isEmpty),
+      );
       expect(c.records.map((r) => r.meeting.sourceId).toSet(), hasLength(4));
       expect(
         c.records.map((r) => r.meeting.sourceId),
@@ -191,7 +196,7 @@ void main() {
       expect(c.records.first.issue, isNull);
       final issue = c.issues.single;
       expect(issue.raw, note);
-      expect(issue.meeting.note, note);
+      expect(issue.meeting.note, isEmpty);
       expect(issue.meeting.name, 'Synthetic Lab 习题课');
       expect(issue.meeting.sourceId, 'sheet:0/row:1/column:1/tutorial');
       expect(issue.failedFields, entry.$2);

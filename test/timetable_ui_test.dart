@@ -11,10 +11,12 @@ import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
 import 'package:pku_manager/domain/week_source.dart';
 import 'package:pku_manager/features/calendar/calendar_schedule_controller.dart';
+import 'package:pku_manager/features/calendar/schedule_color.dart';
 import 'package:pku_manager/features/timetable/timetable_controller.dart';
 import 'package:pku_manager/features/timetable/timetable_color.dart';
 import 'package:pku_manager/features/timetable/timetable_export.dart';
 import 'package:pku_manager/features/timetable/timetable_page.dart';
+import 'package:pku_manager/features/timetable/timetable_style.dart';
 import 'package:pku_manager/features/settings/appearance_controller.dart';
 import 'package:pku_manager/l10n/app_strings.dart';
 
@@ -102,7 +104,11 @@ final class _PngEncoder implements TimetablePngEncoder {
 
 Course _meeting(String id, int period, WeekFrequency frequency) => Course(
   sourceId: id,
-  name: id == 'even' ? 'Physics' : 'Algebra',
+  name: switch (id) {
+    'even' => 'Physics',
+    'chemistry' => 'Chemistry',
+    _ => 'Algebra',
+  },
   weekday: 1,
   firstPeriod: period,
   lastPeriod: period,
@@ -182,7 +188,15 @@ void main() {
       final content = tester.widget<Padding>(
         find.byKey(const ValueKey('meeting-content-first')),
       );
-      expect(content.padding, const EdgeInsets.fromLTRB(10, 8, 10, 8));
+      expect(content.padding, const EdgeInsets.fromLTRB(10, 3, 10, 3));
+      final note = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const ValueKey('meeting-cell-first')),
+          matching: find.text('Notes: Bring notes'),
+        ),
+      );
+      expect(note.style?.fontSize, timetableCourseNoteFontSize);
+      expect(note.style?.height, 1.1);
       expect(
         tester.getSize(find.byKey(const ValueKey('meeting-cell-first'))).height,
         200,
@@ -293,6 +307,7 @@ void main() {
         _meeting('first', 1, WeekFrequency.every),
         _meeting('second', 2, WeekFrequency.every),
         _meeting('even', 3, WeekFrequency.even),
+        _meeting('chemistry', 4, WeekFrequency.every),
       ], periodCount: 4);
       final controller = TimetableController(
         schedules: _Store(table),
@@ -304,7 +319,7 @@ void main() {
             WeekFreshness.cached,
           ),
         ),
-        clock: () => DateTime.utc(2026, 9, 7),
+        clock: () => DateTime.utc(2026, 9, 6, 15),
       )..start();
       final appearance = AppearanceController(MemoryAppearanceStore())
         ..setLanguage(AppLanguage.en);
@@ -312,7 +327,12 @@ void main() {
         ..create(
           title: 'Homework deadline',
           startsAt: DateTime.utc(2026, 9, 7, 1),
+          allDay: false,
           relatedClassSourceId: 'first',
+        )
+        ..create(
+          title: 'All-day deadline',
+          startsAt: DateTime.utc(2026, 9, 6, 16),
         );
       addTearDown(calendar.dispose);
       appearance.setCourseAppearance(
@@ -348,6 +368,18 @@ void main() {
       );
       expect(find.text('Upcoming schedule'), findsOneWidget);
       expect(find.text('Homework deadline'), findsOneWidget);
+      expect(find.text('All-day deadline'), findsOneWidget);
+      expect(find.text('2026-09-07'), findsNWidgets(2));
+      expect(find.text('09:00'), findsOneWidget);
+      expect(find.text('All day'), findsOneWidget);
+      expect(
+        tester
+            .widget<Material>(
+              find.byKey(const ValueKey('upcoming-schedule-color-1')),
+            )
+            .color,
+        scheduleColor(1),
+      );
       expect(find.text('Algebra'), findsOneWidget);
       final relatedMouse = await tester.createGesture(
         kind: PointerDeviceKind.mouse,
@@ -369,9 +401,12 @@ void main() {
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('upcoming-schedule-1')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('schedule-editor')), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('close-schedule-editor')));
-      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('calendar-page')), findsOneWidget);
+      expect(find.byKey(const ValueKey('schedule-editor')), findsNothing);
+      final focusedSchedule = tester.widget<Material>(
+        find.byKey(const ValueKey('calendar-schedule-color-1')),
+      );
+      expect((focusedSchedule.shape! as RoundedRectangleBorder).side.width, 3);
       await tester.tap(find.text('Timetable'));
       await tester.pump();
       expect(
@@ -381,7 +416,6 @@ void main() {
         ),
         findsNothing,
       );
-      expect(find.textContaining('in '), findsWidgets);
       expect(
         tester
             .widget<Material>(find.byKey(const ValueKey('meeting-color-first')))
@@ -402,8 +436,9 @@ void main() {
       expect(find.text('September 2026'), findsOneWidget);
       expect(find.textContaining('Homework deadline'), findsOneWidget);
       expect(find.byKey(const ValueKey('upcoming-class-pane')), findsOneWidget);
-      expect(find.text('Upcoming class'), findsOneWidget);
+      expect(find.text("Tomorrow's classes"), findsOneWidget);
       expect(find.text('Algebra'), findsOneWidget);
+      expect(find.text('Chemistry'), findsOneWidget);
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('upcoming-class-pane')),
@@ -414,13 +449,17 @@ void main() {
       expect(find.text('Upcoming schedule'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('upcoming-class-first')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('course-editor-pane')), findsOneWidget);
-      await tester.tap(find.text('Close'));
-      await tester.pump();
+      expect(find.byKey(const ValueKey('course-editor-pane')), findsNothing);
       expect(
         find.byKey(const ValueKey('upcoming-schedule-pane')),
         findsOneWidget,
       );
+      final focusedCourse = tester.widget<DecoratedBox>(
+        find.byKey(const ValueKey('meeting-outline-first')),
+      );
+      final focusedBorder =
+          (focusedCourse.decoration as BoxDecoration).border! as Border;
+      expect(focusedBorder.top.width, 3);
 
       await tester.tap(find.byKey(const ValueKey('meeting-cell-first')));
       await tester.pump();

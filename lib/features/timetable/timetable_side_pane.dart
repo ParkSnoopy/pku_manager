@@ -52,6 +52,27 @@ List<UpcomingCourse> upcomingCourses(
   return List.unmodifiable(result);
 }
 
+List<UpcomingCourse> tomorrowCourses(
+  Timetable timetable,
+  DateTime now, {
+  SemesterCalendar? calendar,
+}) {
+  final beijingNow = now.toUtc().add(const Duration(hours: 8));
+  final tomorrow = DateTime.utc(
+    beijingNow.year,
+    beijingNow.month,
+    beijingNow.day + 1,
+  );
+  return List.unmodifiable(
+    upcomingCourses(timetable, now, calendar: calendar).where((course) {
+      final date = course.startsAt.toUtc().add(const Duration(hours: 8));
+      return date.year == tomorrow.year &&
+          date.month == tomorrow.month &&
+          date.day == tomorrow.day;
+    }),
+  );
+}
+
 class UpcomingClassPane extends StatelessWidget {
   const UpcomingClassPane({
     super.key,
@@ -69,9 +90,7 @@ class UpcomingClassPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    final upcoming = upcomingCourses(timetable, now, calendar: calendar);
-    final item = upcoming.isEmpty ? null : upcoming.first;
-    final meeting = item?.group.primary;
+    final courses = tomorrowCourses(timetable, now, calendar: calendar);
     return Material(
       key: const ValueKey('upcoming-class-pane'),
       color: Theme.of(context).colorScheme.surface,
@@ -81,45 +100,45 @@ class UpcomingClassPane extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
             child: Text(
-              strings.text(AppText.upcomingClass),
+              strings.text(AppText.tomorrowClasses),
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
           const Divider(height: 1),
           Expanded(
-            child: item == null || meeting == null
+            child: courses.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.all(20),
-                    child: Text(strings.text(AppText.noUpcomingClass)),
+                    child: Text(strings.text(AppText.noClassesTomorrow)),
                   )
-                : ListTile(
-                    key: ValueKey('upcoming-class-${meeting.sourceId}'),
-                    onTap: () => onSelected(item),
-                    title: Text(
-                      meeting.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    subtitle: Text(
-                      '${strings.weekday(meeting.weekday)} '
-                      '${timetableClassStarts[item.group.firstPeriod]}'
-                      '${meeting.room.isEmpty ? '' : ' · ${meeting.room}'}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    trailing: Text(
-                      strings.startsIn(item.startsAt.difference(now)),
-                      textAlign: TextAlign.end,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: courses.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final item = courses[index];
+                      final meeting = item.group.primary;
+                      return ListTile(
+                        key: ValueKey('upcoming-class-${meeting.sourceId}'),
+                        onTap: () => onSelected(item),
+                        title: Text(
+                          meeting.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${timetableClassStarts[item.group.firstPeriod]}'
+                          '${meeting.room.isEmpty ? '' : ' · ${meeting.room}'}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      );
+                    },
                   ),
           ),
         ],

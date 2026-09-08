@@ -23,15 +23,19 @@ class ScheduleImportReview extends StatefulWidget {
 class _ScheduleImportReviewState extends State<ScheduleImportReview> {
   final _form = GlobalKey<FormState>();
   var _index = 0;
+  late final List<List<ImportRecord>> _groups = _groupIssues(
+    widget.candidate.issues,
+  );
   late final Map<String, Map<ImportField, TextEditingController>> _fields = {
-    for (final record in widget.candidate.issues)
-      record.meeting.sourceId: {
+    for (final group in _groups)
+      group.first.meeting.sourceId: {
         for (final field in ImportField.values)
-          field: TextEditingController(text: _value(field, record.meeting)),
+          field: TextEditingController(text: _groupValue(group, field)),
       },
   };
 
-  ImportRecord get _record => widget.candidate.issues[_index];
+  List<ImportRecord> get _group => _groups[_index];
+  ImportRecord get _record => _group.first;
   Map<ImportField, TextEditingController> get _current =>
       _fields[_record.meeting.sourceId]!;
 
@@ -48,9 +52,13 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    final failedFields = _record.failedFields.isEmpty
-        ? ImportField.values.toSet()
-        : _record.failedFields;
+    final failedFields = _group
+        .expand(
+          (record) => record.failedFields.isEmpty
+              ? ImportField.values
+              : record.failedFields,
+        )
+        .toSet();
     final tutorialRooms = _record.meeting.sourceId.endsWith('/tutorial')
         ? _roomChoices(_current[ImportField.room]!.text)
         : const <String>[];
@@ -90,7 +98,7 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
                       ),
                     )
                   else ...[
-                    Text('${_index + 1} / ${widget.candidate.issues.length}'),
+                    Text('${_index + 1} / ${_groups.length}'),
                     const Divider(height: 32),
                     SelectableText(_record.raw),
                   ],
@@ -143,7 +151,7 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
                           onPressed: _advance,
                           child: Text(
                             strings.text(
-                              _index + 1 == widget.candidate.issues.length
+                              _index + 1 == _groups.length
                                   ? AppText.finish
                                   : AppText.next,
                             ),
@@ -168,16 +176,17 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
 
   void _advance() {
     if (!_form.currentState!.validate()) return;
-    if (_index + 1 < widget.candidate.issues.length) {
+    if (_index + 1 < _groups.length) {
       setState(() => _index++);
       return;
     }
     widget.controller.complete({
-      for (final record in widget.candidate.issues)
-        record.meeting.sourceId: _meeting(
-          record,
-          _fields[record.meeting.sourceId]!,
-        ),
+      for (final group in _groups)
+        for (final record in group)
+          record.meeting.sourceId: _meeting(
+            record,
+            _fields[group.first.meeting.sourceId]!,
+          ),
     });
   }
 
@@ -185,19 +194,23 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
     ImportRecord record,
     Map<ImportField, TextEditingController> fields,
   ) {
-    final frequencyText = fields[ImportField.frequency]!.text;
+    String value(ImportField field) =>
+        record.failedFields.isEmpty || record.failedFields.contains(field)
+        ? fields[field]!.text
+        : _value(field, record.meeting);
+    final frequencyText = value(ImportField.frequency);
     return Course(
       sourceId: record.meeting.sourceId,
       sourceName: record.meeting.sourceName,
-      name: fields[ImportField.name]!.text.trim(),
-      room: fields[ImportField.room]!.text.trim(),
-      weekday: int.parse(fields[ImportField.weekday]!.text),
-      firstPeriod: int.parse(fields[ImportField.firstPeriod]!.text),
-      lastPeriod: int.parse(fields[ImportField.lastPeriod]!.text),
+      name: value(ImportField.name).trim(),
+      room: value(ImportField.room).trim(),
+      weekday: int.parse(value(ImportField.weekday)),
+      firstPeriod: int.parse(value(ImportField.firstPeriod)),
+      lastPeriod: int.parse(value(ImportField.lastPeriod)),
       frequency: WeekFrequency.parse(frequencyText),
       frequencyText: frequencyText,
-      note: fields[ImportField.note]!.text,
-      exam: fields[ImportField.exam]!.text,
+      note: value(ImportField.note),
+      exam: value(ImportField.exam),
     );
   }
 
@@ -240,6 +253,23 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
     ImportField.note => meeting.note,
     ImportField.exam => meeting.exam,
   };
+
+  static String _groupValue(List<ImportRecord> group, ImportField field) {
+    for (final record in group) {
+      if (record.failedFields.contains(field)) {
+        return _value(field, record.meeting);
+      }
+    }
+    return _value(field, group.first.meeting);
+  }
+
+  static List<List<ImportRecord>> _groupIssues(List<ImportRecord> records) {
+    final groups = <String, List<ImportRecord>>{};
+    for (final record in records) {
+      groups.putIfAbsent(record.meeting.sourceName, () => []).add(record);
+    }
+    return groups.values.map(List<ImportRecord>.unmodifiable).toList();
+  }
 
   static String _label(AppStrings strings, ImportField field) =>
       strings.text(switch (field) {

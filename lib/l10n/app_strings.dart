@@ -65,8 +65,8 @@ enum AppText {
   periodRangeTooShort,
   upcomingSchedule,
   noUpcomingSchedule,
-  upcomingClass,
-  noUpcomingClass,
+  tomorrowClasses,
+  noClassesTomorrow,
   addSchedule,
   editSchedule,
   scheduleTitle,
@@ -141,33 +141,6 @@ class AppStrings {
     'zh' => '${month.year}年${month.month}月',
     _ => '${month.year}년 ${month.month}월',
   };
-
-  String startsIn(Duration duration) {
-    final minutes = duration.inMinutes < 1 ? 1 : duration.inMinutes;
-    final days = minutes ~/ (24 * 60);
-    final hours = (minutes % (24 * 60)) ~/ 60;
-    final remainder = minutes % 60;
-    return switch (locale.languageCode) {
-      'en' =>
-        days > 0
-            ? 'in ${days}d ${hours}h'
-            : hours > 0
-            ? 'in ${hours}h ${remainder}m'
-            : 'in ${remainder}m',
-      'zh' =>
-        days > 0
-            ? '$days天$hours小时后'
-            : hours > 0
-            ? '$hours小时$remainder分钟后'
-            : '$remainder分钟后',
-      _ =>
-        days > 0
-            ? '$days일 $hours시간 후'
-            : hours > 0
-            ? '$hours시간 $remainder분 후'
-            : '$remainder분 후',
-    };
-  }
 
   static const _weekdays = <String, List<String>>{
     'ko': ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'],
@@ -248,8 +221,8 @@ class AppStrings {
       AppText.periodRangeTooShort: '그룹의 모든 강의에 사용할 교시가 부족합니다',
       AppText.upcomingSchedule: '다가오는 일정',
       AppText.noUpcomingSchedule: '예정된 일정이 없습니다',
-      AppText.upcomingClass: '다가오는 수업',
-      AppText.noUpcomingClass: '예정된 수업이 없습니다',
+      AppText.tomorrowClasses: '내일 수업',
+      AppText.noClassesTomorrow: '내일 수업이 없습니다',
       AppText.addSchedule: '일정 추가',
       AppText.editSchedule: '일정 편집',
       AppText.scheduleTitle: '일정',
@@ -337,8 +310,8 @@ class AppStrings {
           'The range is too short for this course group',
       AppText.upcomingSchedule: 'Upcoming schedule',
       AppText.noUpcomingSchedule: 'No upcoming schedule',
-      AppText.upcomingClass: 'Upcoming class',
-      AppText.noUpcomingClass: 'No upcoming class',
+      AppText.tomorrowClasses: "Tomorrow's classes",
+      AppText.noClassesTomorrow: 'No classes tomorrow',
       AppText.addSchedule: 'Add schedule',
       AppText.editSchedule: 'Edit schedule',
       AppText.scheduleTitle: 'Schedule',
@@ -425,8 +398,8 @@ class AppStrings {
       AppText.periodRangeTooShort: '节次范围不足以容纳该课程组',
       AppText.upcomingSchedule: '后续安排',
       AppText.noUpcomingSchedule: '暂无后续安排',
-      AppText.upcomingClass: '下一节课',
-      AppText.noUpcomingClass: '暂无后续课程',
+      AppText.tomorrowClasses: '明天的课程',
+      AppText.noClassesTomorrow: '明天没有课程',
       AppText.addSchedule: '添加安排',
       AppText.editSchedule: '编辑安排',
       AppText.scheduleTitle: '安排',

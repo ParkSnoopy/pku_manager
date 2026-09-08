@@ -166,4 +166,41 @@ void main() {
     expect(store.completions.values.single.room, 'Room B');
     expect(controller.candidate, isNull);
   });
+
+  testWidgets('one class correction resolves every matching occurrence', (
+    tester,
+  ) async {
+    ImportRecord issue(String id, int weekday) => ImportRecord(
+      meeting: Course(
+        sourceId: id,
+        sourceName: 'Repeated class',
+        name: 'Repeated class',
+        weekday: weekday,
+        firstPeriod: 1,
+        lastPeriod: 1,
+      ),
+      raw: 'Repeated class',
+      issue: 'Complete the highlighted fields.',
+      failedFields: const {ImportField.room},
+    );
+    final candidate = ScheduleCandidate(Uint8List.fromList([1]), [
+      issue('first', 1),
+      issue('second', 2),
+    ], 12);
+    await pumpReview(tester, candidate);
+
+    expect(find.text('1 / 1'), findsOneWidget);
+    expect(find.byKey(const ValueKey('import-room')), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('import-room')), 'Room A');
+    await tester.tap(find.text('Import'));
+    await tester.pump();
+
+    expect(store.completions, hasLength(2));
+    expect(store.completions.values.map((course) => course.room), [
+      'Room A',
+      'Room A',
+    ]);
+    expect(store.completions['first']!.weekday, 1);
+    expect(store.completions['second']!.weekday, 2);
+  });
 }

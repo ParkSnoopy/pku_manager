@@ -29,6 +29,8 @@ const timetableDividerWidth = 1.0;
 const timetableMealBreaks = <int>{4, 9};
 const timetableCourseNameFontSize = 22.5;
 const timetableClassroomFontSize = 22.5;
+const timetableCourseNoteFontSize = 16.0;
+const timetableCourseLineSpacing = 4.0;
 const timetableCourseContentPadding = 10.0;
 
 const timetableClassStarts = <int, String>{
