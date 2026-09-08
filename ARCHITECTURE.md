@@ -88,7 +88,7 @@ Initial scope has one timetable-focused home destination. Import, errors, and na
 ### Timetable
 
 - `timetable.dart` owns ordered meetings and read-only projections by day, period, and preview mode.
-- Consecutive cells for the same occurrence can be grouped for rendering without changing persisted source bytes.
+- Vertically touching meetings with identical details on one weekday form one source-preserving group. Rendering uses one block, and group edits update every retained source identity atomically without changing workbook bytes.
 - Ordering is deterministic: weekday, first period, last period, then source order.
 - Display colors and responsive geometry are presentation concerns, not timetable fields.
 
@@ -185,8 +185,13 @@ Incomplete-import review is separate from schedule state. It holds a transient c
 - `course_editor_dialog.dart` creates user meetings and writes imported-record corrections without changing source bytes.
 - `timetable_export.dart` generates complete five-weekday PNG and XLSX files from the same reference geometry. PNG adds 12 logical units of canvas padding and renders the complete table at 4× resolution; XLSX represents each period with four role rows and matching dimensions, fonts, and alignment.
 - `features/settings/appearance_controller.dart` owns persistent accent, language, and timetable-palette state; `settings_page.dart` edits accent and advances language through one cyclic button rather than exposing all language entries simultaneously.
+- `course_appearance` stores optional manual color, roll lock, and importance-outline values by active-source meeting identity. Locked manual colors are invariant under palette rolls; rolling clears only unlocked manual colors. The same typed appearance map feeds screen, PNG, and XLSX output. Settings can persistently hide the rail's Roll colors action, and both theme and course colors use the shared arbitrary-color palette picker.
+- Landscape timetable layouts reserve a right-side pane for each course's next start and live remaining time. Selecting a course replaces the list with the shared editor inline; portrait layouts use the same editor inside a dialog.
+- The third navigation-rail action launches the fixed PKU Teaching Network HTTPS URL through the platform default browser. The launcher is injectable at the widget boundary so tests verify the exact URI without opening a real browser.
 
 Widgets consume domain projections supplied by the controller. They do not filter frequency with local string checks. Every meeting is shown; meetings outside current parity render at half opacity.
+
+Version `0.1.0` is the first persistence compatibility boundary. Its canonical database uses `PRAGMA user_version = 100`; databases from pre-`0.1.0` development builds are deliberately rejected rather than migrated.
 
 Course colors are deterministic presentation values derived from course identity plus a persisted roll seed and are the deliberate exception to reference visual parity. They fill cells containing only course and room. Shape, size, fonts, alignment, row timing labels, meal breaks, fitting, and export resolution follow the reference. Foreground contrast is calculated from the chosen background. Repeated adjacent cells show identical content without continuation labels. After 1000 ms hover, a pointer-following overlay shows full course details including frequency. Rolling repeatedly changes the combination without persisting per-course colors.
 

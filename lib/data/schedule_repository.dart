@@ -154,73 +154,97 @@ ORDER BY u.rowid''');
   }
 
   @override
-  Timetable saveMeeting(CourseMeeting meeting) {
+  Timetable saveMeeting(CourseMeeting meeting) => saveMeetings([meeting]);
+
+  @override
+  Timetable saveMeetings(Iterable<CourseMeeting> meetings) {
+    final updates = meetings.toList(growable: false);
+    if (updates.isEmpty) throw ArgumentError('Meeting group must not be empty');
+    if (updates.map((meeting) => meeting.sourceId).toSet().length !=
+        updates.length) {
+      throw ArgumentError('Meeting identities must be unique');
+    }
     return store.transaction(() {
       final source = _activeSourceId();
-      final values = [
-        source,
-        meeting.sourceId,
-        meeting.name,
-        meeting.weekday,
-        meeting.firstPeriod,
-        meeting.lastPeriod,
-        meeting.room,
-        _frequencyText(meeting.frequencyText),
-        meeting.note,
-        meeting.exam,
-      ];
-      if (meeting.sourceId.startsWith('user:')) {
-        store.database.execute(
-          '''INSERT INTO user_meetings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(source, identity) DO UPDATE SET name=excluded.name,
-weekday=excluded.weekday, first_period=excluded.first_period,
-last_period=excluded.last_period, room=excluded.room,
-frequency=excluded.frequency, note=excluded.note, exam=excluded.exam''',
-          values,
-        );
-      } else {
-        final exists = store.database.select(
-          'SELECT 1 FROM meetings WHERE source = ? AND identity = ?',
-          [source, meeting.sourceId],
-        );
-        if (exists.isEmpty) {
-          throw ArgumentError('Meeting does not belong to active schedule');
-        }
-        store.database.execute(
-          '''INSERT INTO completions(source, identity, name, room, frequency,
-weekday, first_period, last_period, note, exam) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(source, identity) DO UPDATE SET name=excluded.name,
-room=excluded.room, frequency=excluded.frequency, weekday=excluded.weekday,
-first_period=excluded.first_period, last_period=excluded.last_period,
-note=excluded.note, exam=excluded.exam''',
-          [
-            source,
-            meeting.sourceId,
-            meeting.name,
-            meeting.room,
-            _frequencyText(meeting.frequencyText),
-            meeting.weekday,
-            meeting.firstPeriod,
-            meeting.lastPeriod,
-            meeting.note,
-            meeting.exam,
-          ],
-        );
+      for (final meeting in updates) {
+        _saveMeeting(source, meeting);
       }
       return load()!;
     });
   }
 
+  void _saveMeeting(int source, CourseMeeting meeting) {
+    final values = [
+      source,
+      meeting.sourceId,
+      meeting.name,
+      meeting.weekday,
+      meeting.firstPeriod,
+      meeting.lastPeriod,
+      meeting.room,
+      _frequencyText(meeting.frequencyText),
+      meeting.note,
+      meeting.exam,
+    ];
+    if (meeting.sourceId.startsWith('user:')) {
+      store.database.execute(
+        '''INSERT INTO user_meetings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(source, identity) DO UPDATE SET name=excluded.name,
+weekday=excluded.weekday, first_period=excluded.first_period,
+last_period=excluded.last_period, room=excluded.room,
+frequency=excluded.frequency, note=excluded.note, exam=excluded.exam''',
+        values,
+      );
+    } else {
+      final exists = store.database.select(
+        'SELECT 1 FROM meetings WHERE source = ? AND identity = ?',
+        [source, meeting.sourceId],
+      );
+      if (exists.isEmpty) {
+        throw ArgumentError('Meeting does not belong to active schedule');
+      }
+      store.database.execute(
+        '''INSERT INTO completions(source, identity, name, room, frequency,
+weekday, first_period, last_period, note, exam) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(source, identity) DO UPDATE SET name=excluded.name,
+room=excluded.room, frequency=excluded.frequency, weekday=excluded.weekday,
+first_period=excluded.first_period, last_period=excluded.last_period,
+note=excluded.note, exam=excluded.exam''',
+        [
+          source,
+          meeting.sourceId,
+          meeting.name,
+          meeting.room,
+          _frequencyText(meeting.frequencyText),
+          meeting.weekday,
+          meeting.firstPeriod,
+          meeting.lastPeriod,
+          meeting.note,
+          meeting.exam,
+        ],
+      );
+    }
+  }
+
   @override
-  Timetable removeUserMeeting(String sourceId) {
-    if (!sourceId.startsWith('user:')) {
+  Timetable removeUserMeeting(String sourceId) =>
+      removeUserMeetings([sourceId]);
+
+  @override
+  Timetable removeUserMeetings(Iterable<String> sourceIds) {
+    final identities = sourceIds.toList(growable: false);
+    if (identities.isEmpty ||
+        identities.any((sourceId) => !sourceId.startsWith('user:'))) {
       throw ArgumentError('Only user-created meetings can be removed');
     }
     return store.transaction(() {
-      store.database.execute(
-        'DELETE FROM user_meetings WHERE source = ? AND identity = ?',
-        [_activeSourceId(), sourceId],
-      );
+      final source = _activeSourceId();
+      for (final sourceId in identities) {
+        store.database.execute(
+          'DELETE FROM user_meetings WHERE source = ? AND identity = ?',
+          [source, sourceId],
+        );
+      }
       return load()!;
     });
   }

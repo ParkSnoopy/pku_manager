@@ -10,12 +10,7 @@ class AppDatabase {
     database.execute('PRAGMA synchronous = FULL');
     final version =
         database.select('PRAGMA user_version').first.values.first as int;
-    if (version != 0 &&
-        version != 1 &&
-        version != 2 &&
-        version != 3 &&
-        version != 4 &&
-        version != 5) {
+    if (version != 0 && version != 100) {
       database.close();
       throw const FormatException('Unsupported database version');
     }
@@ -37,6 +32,10 @@ CREATE TABLE meetings(
 CREATE TABLE completions(
  source INTEGER NOT NULL, identity TEXT NOT NULL, name TEXT NOT NULL,
  room TEXT NOT NULL, frequency TEXT NOT NULL,
+ weekday INTEGER NOT NULL CHECK(weekday BETWEEN 1 AND 5),
+ first_period INTEGER NOT NULL CHECK(first_period > 0),
+ last_period INTEGER NOT NULL CHECK(last_period >= first_period),
+ note TEXT NOT NULL, exam TEXT NOT NULL,
  PRIMARY KEY(source, identity),
  FOREIGN KEY(source, identity) REFERENCES meetings(source, identity));
 CREATE TABLE issues(source INTEGER NOT NULL, identity TEXT NOT NULL, message TEXT NOT NULL,
@@ -45,53 +44,12 @@ CREATE TABLE active_schedule(id INTEGER PRIMARY KEY CHECK(id = 1),
  source INTEGER NOT NULL REFERENCES sources(id));
 CREATE TABLE week_cache(id INTEGER PRIMARY KEY CHECK(id = 1),
  content TEXT NOT NULL, fetched_at TEXT NOT NULL);
-PRAGMA user_version = 1;
-''');
-      });
-    }
-    if (version == 0 || version == 1) {
-      transaction(() {
-        database.execute('''
-ALTER TABLE completions ADD COLUMN weekday INTEGER CHECK(weekday BETWEEN 1 AND 7);
-ALTER TABLE completions ADD COLUMN first_period INTEGER CHECK(first_period > 0);
-ALTER TABLE completions ADD COLUMN last_period INTEGER CHECK(last_period >= first_period);
-ALTER TABLE completions ADD COLUMN note TEXT;
-ALTER TABLE completions ADD COLUMN exam TEXT;
-PRAGMA user_version = 2;
-''');
-      });
-    }
-    if (version == 0 || version == 1 || version == 2) {
-      transaction(() {
-        database.execute('''
 CREATE TABLE appearance(
  id INTEGER PRIMARY KEY CHECK(id = 1),
  accent INTEGER NOT NULL,
  palette_seed INTEGER NOT NULL CHECK(palette_seed >= 0),
- language TEXT NOT NULL CHECK(language IN ('ko', 'en', 'zh')));
-PRAGMA user_version = 4;
-''');
-      });
-    }
-    if (version == 3) {
-      transaction(() {
-        database.execute('''
-CREATE TABLE appearance_new(
- id INTEGER PRIMARY KEY CHECK(id = 1),
- accent INTEGER NOT NULL,
- palette_seed INTEGER NOT NULL CHECK(palette_seed >= 0),
- language TEXT NOT NULL CHECK(language IN ('ko', 'en', 'zh')));
-INSERT INTO appearance_new(id, accent, palette_seed, language)
- SELECT id, accent, palette_seed, 'ko' FROM appearance;
-DROP TABLE appearance;
-ALTER TABLE appearance_new RENAME TO appearance;
-PRAGMA user_version = 4;
-''');
-      });
-    }
-    if (version <= 4) {
-      transaction(() {
-        database.execute('''
+ language TEXT NOT NULL CHECK(language IN ('ko', 'en', 'zh')),
+ show_roll_nav INTEGER NOT NULL CHECK(show_roll_nav IN (0, 1)));
 CREATE TABLE user_meetings(
  source INTEGER NOT NULL REFERENCES sources(id),
  identity TEXT NOT NULL, name TEXT NOT NULL,
@@ -101,7 +59,14 @@ CREATE TABLE user_meetings(
  room TEXT NOT NULL, frequency TEXT NOT NULL,
  note TEXT NOT NULL, exam TEXT NOT NULL,
  PRIMARY KEY(source, identity));
-PRAGMA user_version = 5;
+CREATE TABLE course_appearance(
+ source INTEGER NOT NULL REFERENCES sources(id),
+ identity TEXT NOT NULL,
+ color INTEGER,
+ lock_color INTEGER NOT NULL CHECK(lock_color IN (0, 1)),
+ outlined INTEGER NOT NULL CHECK(outlined IN (0, 1)),
+ PRIMARY KEY(source, identity));
+PRAGMA user_version = 100;
 ''');
       });
     }

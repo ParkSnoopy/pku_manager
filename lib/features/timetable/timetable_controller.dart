@@ -105,8 +105,12 @@ class TimetableController extends ChangeNotifier {
   }
 
   void saveMeeting(CourseMeeting meeting) {
+    saveMeetings([meeting]);
+  }
+
+  void saveMeetings(Iterable<CourseMeeting> meetings) {
     try {
-      timetable = schedules.saveMeeting(meeting);
+      timetable = schedules.saveMeetings(meetings);
       error = null;
     } catch (_) {
       error = 'Course changes could not be saved.';
@@ -115,8 +119,12 @@ class TimetableController extends ChangeNotifier {
   }
 
   void removeUserMeeting(String sourceId) {
+    removeUserMeetings([sourceId]);
+  }
+
+  void removeUserMeetings(Iterable<String> sourceIds) {
     try {
-      timetable = schedules.removeUserMeeting(sourceId);
+      timetable = schedules.removeUserMeetings(sourceIds);
       error = null;
     } catch (_) {
       error = 'Course could not be removed.';

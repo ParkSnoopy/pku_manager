@@ -31,7 +31,9 @@ abstract interface class ScheduleStore {
     Map<String, CourseMeeting> completions,
   );
   Timetable saveMeeting(CourseMeeting meeting);
+  Timetable saveMeetings(Iterable<CourseMeeting> meetings);
   Timetable removeUserMeeting(String sourceId);
+  Timetable removeUserMeetings(Iterable<String> sourceIds);
 }
 
 abstract interface class ScheduleDecoder {

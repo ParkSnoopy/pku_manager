@@ -1,16 +1,37 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../domain/course_meeting.dart';
+import '../../domain/timetable.dart';
+import '../../domain/week_frequency.dart';
 import '../../l10n/app_strings.dart';
 import '../schedule_import/schedule_import_review.dart';
 import '../settings/appearance_controller.dart';
 import '../settings/settings_page.dart';
 import 'course_editor_dialog.dart';
 import 'timetable_controller.dart';
+import 'timetable_color.dart';
 import 'timetable_export.dart';
 import 'timetable_grid.dart';
+import 'timetable_side_pane.dart';
+
+const teachingPortalUrl =
+    'https://course.pku.edu.cn/webapps/portal/execute/tabs/tabAction?tab_tab_group_id=_1_1';
+
+typedef BrowserLauncher = Future<bool> Function(Uri uri);
+
+Future<bool> launchInDefaultBrowser(Uri uri) =>
+    launchUrl(uri, mode: LaunchMode.externalApplication);
+
+final class _EditorSelection {
+  const _EditorSelection(this.weekday, this.period, this.meetings);
+
+  final int weekday;
+  final int period;
+  final List<CourseMeeting> meetings;
+}
 
 class TimetablePage extends StatefulWidget {
   const TimetablePage({
@@ -18,10 +39,12 @@ class TimetablePage extends StatefulWidget {
     required this.controller,
     required this.appearance,
     required this.exporter,
+    this.browserLauncher = launchInDefaultBrowser,
   });
   final TimetableController controller;
   final AppearanceController appearance;
   final TimetableExporter exporter;
+  final BrowserLauncher browserLauncher;
   @override
   State<TimetablePage> createState() => _TimetablePageState();
 }
@@ -37,11 +60,15 @@ class _TimetablePageState extends State<TimetablePage>
   double _dragDistance = 0;
   int _destination = 0;
   bool _exporting = false;
+  _EditorSelection? _editor;
+  Timetable? _appearanceTimetable;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _appearanceTimetable = widget.controller.timetable;
+    widget.controller.addListener(_syncCourseAppearances);
   }
 
   @override
@@ -54,7 +81,14 @@ class _TimetablePageState extends State<TimetablePage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    widget.controller.removeListener(_syncCourseAppearances);
     super.dispose();
+  }
+
+  void _syncCourseAppearances() {
+    if (identical(_appearanceTimetable, widget.controller.timetable)) return;
+    _appearanceTimetable = widget.controller.timetable;
+    widget.appearance.reloadCourseAppearances();
   }
 
   void _changeDay(int delta) {
@@ -64,22 +98,70 @@ class _TimetablePageState extends State<TimetablePage>
   Future<void> _editCell(
     int weekday,
     int period,
-    CourseMeeting? meeting,
+    List<CourseMeeting> meetings,
   ) async {
+    if (MediaQuery.orientationOf(context) == Orientation.landscape) {
+      setState(() => _editor = _EditorSelection(weekday, period, meetings));
+      return;
+    }
     final result = await showDialog<CourseEditResult>(
       context: context,
       builder: (_) => CourseEditorDialog(
         weekday: weekday,
         period: period,
         periodCount: widget.controller.timetable!.periodCount,
-        meeting: meeting,
+        meetings: meetings,
+        courseAppearance: meetings.isEmpty
+            ? const CourseAppearance()
+            : widget.appearance.courseAppearanceFor(meetings.first.sourceId) ??
+                  const CourseAppearance(),
+        suggestedColor: meetings.isEmpty
+            ? courseColorChoices.first
+            : timetableCourseColor(
+                meetings.first,
+                widget.appearance.paletteSeed,
+                appearance: widget.appearance.courseAppearanceFor(
+                  meetings.first.sourceId,
+                ),
+              ),
       ),
     );
-    if (result == null) return;
+    if (result != null) _applyEdit(result, meetings);
+  }
+
+  void _applyEdit(CourseEditResult result, List<CourseMeeting> original) {
     if (result.remove) {
-      widget.controller.removeUserMeeting(meeting!.sourceId);
+      widget.controller.removeUserMeetings(
+        original.map((meeting) => meeting.sourceId),
+      );
+      widget.appearance.setCourseAppearance(
+        original.map((meeting) => meeting.sourceId),
+        const CourseAppearance(),
+      );
     } else {
-      widget.controller.saveMeeting(result.meeting!);
+      widget.controller.saveMeetings(result.meetings);
+      widget.appearance.setCourseAppearance(
+        result.meetings.map((meeting) => meeting.sourceId),
+        result.appearance,
+      );
+    }
+    setState(() => _editor = null);
+  }
+
+  Future<void> _openTeachingPortal() async {
+    try {
+      final opened = await widget.browserLauncher(Uri.parse(teachingPortalUrl));
+      if (!opened) throw StateError('Browser did not open');
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.of(context).text(AppText.openBrowserFailed),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -93,6 +175,7 @@ class _TimetablePageState extends State<TimetablePage>
         timetable,
         strings: AppStrings.of(context),
         paletteSeed: widget.appearance.paletteSeed,
+        courseAppearances: widget.appearance.courseAppearances,
       );
     } catch (_) {
       if (mounted) {
@@ -119,8 +202,16 @@ class _TimetablePageState extends State<TimetablePage>
           children: [
             NavigationRail(
               selectedIndex: _destination,
-              onDestinationSelected: (value) =>
-                  setState(() => _destination = value),
+              onDestinationSelected: (value) {
+                if (value == 2) {
+                  unawaited(_openTeachingPortal());
+                } else {
+                  setState(() {
+                    _destination = value;
+                    _editor = null;
+                  });
+                }
+              },
               labelType: NavigationRailLabelType.all,
               destinations: [
                 NavigationRailDestination(
@@ -133,58 +224,67 @@ class _TimetablePageState extends State<TimetablePage>
                   selectedIcon: const Icon(Icons.settings),
                   label: Text(strings.text(AppText.settings)),
                 ),
+                NavigationRailDestination(
+                  icon: const Icon(Icons.school_outlined),
+                  selectedIcon: const Icon(Icons.school),
+                  label: Text(strings.text(AppText.teachingPortal)),
+                ),
               ],
               trailing: Expanded(
                 child: Align(
                   alignment: Alignment.bottomCenter,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        onPressed: c.timetable == null
-                            ? null
-                            : widget.appearance.rollPalette,
-                        tooltip: strings.text(AppText.rollColors),
-                        icon: const Icon(Icons.casino_outlined),
-                      ),
-                      PopupMenuButton<TimetableExportFormat>(
-                        enabled: c.timetable != null && !_exporting,
-                        tooltip: strings.text(AppText.export),
-                        icon: _exporting
-                            ? const SizedBox.square(
-                                dimension: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.ios_share_outlined),
-                        onSelected: _export,
-                        itemBuilder: (_) => [
-                          PopupMenuItem(
-                            value: TimetableExportFormat.png,
-                            child: Text(strings.text(AppText.exportPng)),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.appearance.showRollInNavbar)
+                          IconButton(
+                            onPressed: c.timetable == null
+                                ? null
+                                : widget.appearance.rollPalette,
+                            tooltip: strings.text(AppText.rollColors),
+                            icon: const Icon(Icons.casino_outlined),
                           ),
-                          PopupMenuItem(
-                            value: TimetableExportFormat.xlsx,
-                            child: Text(strings.text(AppText.exportXlsx)),
-                          ),
-                        ],
-                      ),
-                      IconButton(
-                        onPressed: c.importing || c.candidate != null
-                            ? null
-                            : c.import,
-                        tooltip: strings.text(AppText.import),
-                        icon: c.importing
-                            ? const SizedBox.square(
-                                dimension: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.file_open_outlined),
-                      ),
-                    ],
+                        PopupMenuButton<TimetableExportFormat>(
+                          enabled: c.timetable != null && !_exporting,
+                          tooltip: strings.text(AppText.export),
+                          icon: _exporting
+                              ? const SizedBox.square(
+                                  dimension: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.ios_share_outlined),
+                          onSelected: _export,
+                          itemBuilder: (_) => [
+                            PopupMenuItem(
+                              value: TimetableExportFormat.png,
+                              child: Text(strings.text(AppText.exportPng)),
+                            ),
+                            PopupMenuItem(
+                              value: TimetableExportFormat.xlsx,
+                              child: Text(strings.text(AppText.exportXlsx)),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: c.importing || c.candidate != null
+                              ? null
+                              : c.import,
+                          tooltip: strings.text(AppText.import),
+                          icon: c.importing
+                              ? const SizedBox.square(
+                                  dimension: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.file_open_outlined),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -230,61 +330,7 @@ class _TimetablePageState extends State<TimetablePage>
                           ),
 
                         Expanded(
-                          child: c.candidate != null
-                              ? ScheduleImportReview(
-                                  key: ObjectKey(c.candidate),
-                                  candidate: c.candidate!,
-                                  controller: c,
-                                )
-                              : c.timetable == null
-                              ? Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(24),
-                                    child: Text(
-                                      strings.text(AppText.noTimetable),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                )
-                              : LayoutBuilder(
-                                  builder: (context, constraints) =>
-                                      constraints.maxWidth >= 1000
-                                      ? TimetableGrid(
-                                          timetable: c.timetable!,
-                                          days: List.generate(5, (i) => i + 1),
-                                          paletteSeed:
-                                              widget.appearance.paletteSeed,
-                                          parity: semesterWeek?.parity,
-                                          onEdit: _editCell,
-                                        )
-                                      : GestureDetector(
-                                          onHorizontalDragStart: (_) =>
-                                              _dragDistance = 0,
-                                          onHorizontalDragUpdate: (details) =>
-                                              _dragDistance += details.delta.dx,
-                                          onHorizontalDragEnd: (_) {
-                                            if (_dragDistance.abs() >= 40) {
-                                              _changeDay(
-                                                _dragDistance < 0 ? 1 : -1,
-                                              );
-                                            }
-                                          },
-                                          child: TimetableGrid(
-                                            timetable: c.timetable!,
-                                            days: [_day],
-                                            previousDay: _day > 1
-                                                ? () => _changeDay(-1)
-                                                : null,
-                                            nextDay: _day < 5
-                                                ? () => _changeDay(1)
-                                                : null,
-                                            paletteSeed:
-                                                widget.appearance.paletteSeed,
-                                            parity: semesterWeek?.parity,
-                                            onEdit: _editCell,
-                                          ),
-                                        ),
-                                ),
+                          child: _timetableBody(c, semesterWeek?.parity),
                         ),
                       ],
                     ),
@@ -294,4 +340,103 @@ class _TimetablePageState extends State<TimetablePage>
       );
     },
   );
+
+  Widget _timetableBody(TimetableController controller, WeekParity? parity) {
+    final candidate = controller.candidate;
+    if (candidate != null) {
+      return ScheduleImportReview(
+        key: ObjectKey(candidate),
+        candidate: candidate,
+        controller: controller,
+      );
+    }
+    final timetable = controller.timetable;
+    if (timetable == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            AppStrings.of(context).text(AppText.noTimetable),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final landscape = constraints.maxWidth > constraints.maxHeight;
+        if (!landscape) return _grid(timetable, parity, false);
+        final paneWidth = (constraints.maxWidth * .28).clamp(280.0, 360.0);
+        final allDays = constraints.maxWidth - paneWidth >= 700;
+        return Row(
+          children: [
+            Expanded(child: _grid(timetable, parity, allDays)),
+            const VerticalDivider(width: 1),
+            SizedBox(
+              width: paneWidth,
+              child: _editor == null
+                  ? UpcomingClassesPane(
+                      timetable: timetable,
+                      now: controller.clock(),
+                      calendar: controller.week.calendar,
+                    )
+                  : CourseEditorDialog(
+                      key: ValueKey(
+                        'editor-${_editor!.weekday}-${_editor!.period}-'
+                        '${_editor!.meetings.map((m) => m.sourceId).join('|')}',
+                      ),
+                      weekday: _editor!.weekday,
+                      period: _editor!.period,
+                      periodCount: timetable.periodCount,
+                      meetings: _editor!.meetings,
+                      embedded: true,
+                      courseAppearance: _editor!.meetings.isEmpty
+                          ? const CourseAppearance()
+                          : widget.appearance.courseAppearanceFor(
+                                  _editor!.meetings.first.sourceId,
+                                ) ??
+                                const CourseAppearance(),
+                      suggestedColor: _editor!.meetings.isEmpty
+                          ? courseColorChoices.first
+                          : timetableCourseColor(
+                              _editor!.meetings.first,
+                              widget.appearance.paletteSeed,
+                              appearance: widget.appearance.courseAppearanceFor(
+                                _editor!.meetings.first.sourceId,
+                              ),
+                            ),
+                      onCancel: () => setState(() => _editor = null),
+                      onResult: (result) =>
+                          _applyEdit(result, _editor!.meetings),
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _grid(Timetable timetable, WeekParity? parity, bool allDays) {
+    final grid = TimetableGrid(
+      timetable: timetable,
+      days: allDays ? List.generate(5, (index) => index + 1) : [_day],
+      previousDay: !allDays && _day > 1 ? () => _changeDay(-1) : null,
+      nextDay: !allDays && _day < 5 ? () => _changeDay(1) : null,
+      paletteSeed: widget.appearance.paletteSeed,
+      courseAppearances: widget.appearance.courseAppearances,
+      parity: parity,
+      onEdit: _editCell,
+    );
+    if (allDays) return grid;
+    return GestureDetector(
+      onHorizontalDragStart: (_) => _dragDistance = 0,
+      onHorizontalDragUpdate: (details) => _dragDistance += details.delta.dx,
+      onHorizontalDragEnd: (_) {
+        if (_dragDistance.abs() >= 40) {
+          _changeDay(_dragDistance < 0 ? 1 : -1);
+        }
+      },
+      child: grid,
+    );
+  }
 }

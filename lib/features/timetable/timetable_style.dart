@@ -62,6 +62,11 @@ final class TimetableGeometry {
   );
 
   double get width => timetableIndexWidth + courseWidth * 5;
+  double periodTop(int period) =>
+      timetableHeaderHeight +
+      (period - 1) * timetablePeriodHeight +
+      timetableMealBreaks.where((breakPeriod) => breakPeriod < period).length *
+          timetableMealBreakHeight;
   int get exportWidth =>
       ((width + timetableExportPadding * 2) * timetableExportScale).round();
   int get exportHeight =>
@@ -73,4 +78,13 @@ String timetableClassEnd(String start) {
   final end = parts[0] * 60 + parts[1] + 50;
   return '${(end ~/ 60).toString().padLeft(2, '0')}:'
       '${(end % 60).toString().padLeft(2, '0')}';
+}
+
+double timetableCourseNameFontSize(String text, double availableWidth) {
+  final units = text.runes.fold<double>(
+    0,
+    (value, rune) => value + (rune <= 0x7f ? .62 : 1),
+  );
+  final fitted = (availableWidth - 8) / math.max(8, units);
+  return fitted.clamp(14, 28).toDouble();
 }

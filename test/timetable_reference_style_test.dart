@@ -18,4 +18,10 @@ void main() {
     expect(timetableClassStarts[12], '20:40');
     expect(timetableClassEnd(timetableClassStarts[12]!), '21:30');
   });
+
+  test('course names fit eight CJK characters and scale longer names down', () {
+    expect(timetableCourseNameFontSize('八个汉字课程名称', 232), 28);
+    expect(timetableCourseNameFontSize('十六个汉字课程名称需要缩小字号啊', 232), 14);
+    expect(timetableCourseNameFontSize('A', 232), 28);
+  });
 }

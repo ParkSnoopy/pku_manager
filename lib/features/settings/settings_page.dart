@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
 import 'appearance_controller.dart';
+import 'color_picker_dialog.dart';
 
 const appearanceAccents = <Color>[
   Color(0xff171717),
@@ -13,9 +14,14 @@ const appearanceAccents = <Color>[
 ];
 
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key, required this.controller});
+  const SettingsPage({
+    super.key,
+    required this.controller,
+    this.colorPicker = showAppColorPicker,
+  });
 
   final AppearanceController controller;
+  final ColorPickerLauncher colorPicker;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -60,6 +66,29 @@ class SettingsPage extends StatelessWidget {
                     ),
                   ),
                 ),
+              Semantics(
+                label: AppStrings.of(context).text(AppText.chooseColor),
+                button: true,
+                child: IconButton(
+                  key: const ValueKey('custom-accent-color'),
+                  tooltip: AppStrings.of(context).text(AppText.chooseColor),
+                  onPressed: () async {
+                    final color = await colorPicker(
+                      context,
+                      color: controller.accent,
+                      title: AppStrings.of(context).text(AppText.chooseColor),
+                    );
+                    controller.setAccent(color);
+                  },
+                  icon: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(Icons.circle, color: controller.accent, size: 32),
+                      const Icon(Icons.palette_outlined, size: 18),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 32),
@@ -82,6 +111,14 @@ class SettingsPage extends StatelessWidget {
                 }),
               ),
             ),
+          ),
+          const SizedBox(height: 24),
+          SwitchListTile(
+            key: const ValueKey('show-roll-navbar'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(AppStrings.of(context).text(AppText.showRollInNavbar)),
+            value: controller.showRollInNavbar,
+            onChanged: controller.setShowRollInNavbar,
           ),
         ],
       ),

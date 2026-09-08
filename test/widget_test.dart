@@ -58,7 +58,7 @@ void main() {
       store.publish(candidate, {});
       controller.start();
       await tester.pumpAndSettle();
-      expect(find.text('Algebra'), findsOneWidget);
+      expect(find.text('Algebra'), findsNWidgets(2));
       expect(find.text('Monday'), findsOneWidget);
       final indexPosition = tester.getTopLeft(find.text('1'));
       await tester.drag(find.byType(TimetableGrid), const Offset(-600, 0));

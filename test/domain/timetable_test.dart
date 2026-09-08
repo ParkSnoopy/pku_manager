@@ -159,4 +159,25 @@ void main() {
       expect(Timetable([meeting('a'), next]).consecutiveGroups(), hasLength(2));
     }
   });
+
+  test(
+    'same-day touching courses form one editable source-preserving group',
+    () {
+      final table = Timetable([
+        meeting('first', first: 1, last: 2),
+        meeting('second', first: 3, last: 4),
+        meeting('after-break', first: 5, last: 6),
+      ]);
+      final groups = table.groupsForDay(1, breakAfter: const {4, 9});
+      expect(groups, hasLength(2));
+      expect(groups.first.firstPeriod, 1);
+      expect(groups.first.lastPeriod, 4);
+      expect(groups.first.meetings.map((value) => value.sourceId), [
+        'first',
+        'second',
+      ]);
+      expect(groups.last.meetings.single.sourceId, 'after-break');
+      expect(() => groups.first.meetings.clear(), throwsUnsupportedError);
+    },
+  );
 }

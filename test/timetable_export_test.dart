@@ -2,10 +2,12 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:excel/excel.dart';
+import 'package:flutter/material.dart' show Color;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/domain/course_meeting.dart';
 import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/features/timetable/timetable_export.dart';
+import 'package:pku_manager/features/timetable/timetable_color.dart';
 import 'package:pku_manager/l10n/app_strings.dart';
 
 final class _Writer implements ExportFileWriter {
@@ -17,14 +19,17 @@ final class _Writer implements ExportFileWriter {
 
 final class _PngEncoder implements TimetablePngEncoder {
   Timetable? timetable;
+  Map<String, CourseAppearance>? courseAppearances;
 
   @override
   Future<Uint8List> encode(
     Timetable value,
     AppStrings strings,
-    int paletteSeed,
-  ) async {
+    int paletteSeed, {
+    Map<String, CourseAppearance> courseAppearances = const {},
+  }) async {
     timetable = value;
+    this.courseAppearances = courseAppearances;
     return Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
   }
 }
@@ -59,6 +64,9 @@ void main() {
         timetable,
         strings: strings,
         paletteSeed: 4,
+        courseAppearances: const {
+          'a': CourseAppearance(color: Color(0xff123456), outlined: true),
+        },
       );
 
       final file = writer.file!;
@@ -92,6 +100,9 @@ void main() {
         sheet.cell(CellIndex.indexByString('B6')).value.toString(),
         'Algorithms',
       );
+      final styled = sheet.cell(CellIndex.indexByString('B2')).cellStyle!;
+      expect(styled.backgroundColor.colorHex, 'FF123456');
+      expect(styled.leftBorder.borderStyle, BorderStyle.Medium);
     },
   );
 
@@ -103,6 +114,9 @@ void main() {
       timetable,
       strings: strings,
       paletteSeed: 4,
+      courseAppearances: const {
+        'a': CourseAppearance(color: Color(0xff123456)),
+      },
     );
 
     final file = writer.file!;
@@ -110,5 +124,6 @@ void main() {
     expect(file.mimeType, 'image/png');
     expect(file.bytes.take(8), [137, 80, 78, 71, 13, 10, 26, 10]);
     expect(encoder.timetable, same(timetable));
+    expect(encoder.courseAppearances!['a']!.color, const Color(0xff123456));
   });
 }

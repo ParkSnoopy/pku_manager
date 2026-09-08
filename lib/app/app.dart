@@ -21,10 +21,12 @@ class PkuManagerApp extends StatefulWidget {
     this.controller,
     this.appearance,
     this.exporter,
+    this.browserLauncher,
   });
   final TimetableController? controller;
   final AppearanceController? appearance;
   final TimetableExporter? exporter;
+  final BrowserLauncher? browserLauncher;
   @override
   State<PkuManagerApp> createState() => _PkuManagerAppState();
 }
@@ -97,6 +99,7 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
               controller: _controller!,
               appearance: _appearance,
               exporter: _exporter,
+              browserLauncher: widget.browserLauncher ?? launchInDefaultBrowser,
             )
           : Scaffold(
               body: Center(

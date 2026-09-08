@@ -63,6 +63,18 @@ enum AppText {
   finish,
   noTimetable,
   exportFailed,
+  periodRangeTooShort,
+  upcomingClasses,
+  noUpcomingClasses,
+  teachingPortal,
+  openBrowserFailed,
+  showRollInNavbar,
+  chooseColor,
+  classColor,
+  rolledColor,
+  manualColor,
+  keepColorWhenRolling,
+  importantOutline,
 }
 
 class AppStrings {
@@ -89,6 +101,33 @@ class AppStrings {
 
   String weekday(int value) =>
       (_weekdays[locale.languageCode] ?? _weekdays['ko']!)[value - 1];
+
+  String startsIn(Duration duration) {
+    final minutes = duration.inMinutes < 1 ? 1 : duration.inMinutes;
+    final days = minutes ~/ (24 * 60);
+    final hours = (minutes % (24 * 60)) ~/ 60;
+    final remainder = minutes % 60;
+    return switch (locale.languageCode) {
+      'en' =>
+        days > 0
+            ? 'in ${days}d ${hours}h'
+            : hours > 0
+            ? 'in ${hours}h ${remainder}m'
+            : 'in ${remainder}m',
+      'zh' =>
+        days > 0
+            ? '$days天$hours小时后'
+            : hours > 0
+            ? '$hours小时$remainder分钟后'
+            : '$remainder分钟后',
+      _ =>
+        days > 0
+            ? '$days일 $hours시간 후'
+            : hours > 0
+            ? '$hours시간 $remainder분 후'
+            : '$remainder분 후',
+    };
+  }
 
   static const _weekdays = <String, List<String>>{
     'ko': ['월요일', '화요일', '수요일', '목요일', '금요일'],
@@ -144,6 +183,18 @@ class AppStrings {
       AppText.finish: '가져오기',
       AppText.noTimetable: '내보낸 schedule.xls 파일을 가져오세요.\n시간표는 이 기기에만 저장됩니다.',
       AppText.exportFailed: '내보내기에 실패했습니다',
+      AppText.periodRangeTooShort: '그룹의 모든 강의에 사용할 교시가 부족합니다',
+      AppText.upcomingClasses: '다가오는 강의',
+      AppText.noUpcomingClasses: '예정된 강의가 없습니다',
+      AppText.teachingPortal: '教学网',
+      AppText.openBrowserFailed: '기본 브라우저를 열지 못했습니다',
+      AppText.showRollInNavbar: '탐색 모음에 색상 조합 변경 표시',
+      AppText.chooseColor: '색상 선택',
+      AppText.classColor: '강의 색상',
+      AppText.rolledColor: '자동 색상',
+      AppText.manualColor: '사용자 지정 색상',
+      AppText.keepColorWhenRolling: '색상 조합을 변경해도 이 색상 유지',
+      AppText.importantOutline: '중요 강의 테두리',
     },
     'en': {
       AppText.appTitle: 'PKU Manager',
@@ -192,6 +243,19 @@ class AppStrings {
       AppText.finish: 'Import',
       AppText.noTimetable: 'Import your exported schedule.xls.\nYour timetable stays on this device.',
       AppText.exportFailed: 'Export failed',
+      AppText.periodRangeTooShort:
+          'The range is too short for this course group',
+      AppText.upcomingClasses: 'Upcoming classes',
+      AppText.noUpcomingClasses: 'No upcoming classes',
+      AppText.teachingPortal: '教学网',
+      AppText.openBrowserFailed: 'Could not open the default browser',
+      AppText.showRollInNavbar: 'Show Roll colors in navigation',
+      AppText.chooseColor: 'Choose color',
+      AppText.classColor: 'Class color',
+      AppText.rolledColor: 'Rolled color',
+      AppText.manualColor: 'Custom color',
+      AppText.keepColorWhenRolling: 'Keep this color when rolling',
+      AppText.importantOutline: 'Important class outline',
     },
     'zh': {
       AppText.appTitle: 'PKU Manager',
@@ -240,6 +304,18 @@ class AppStrings {
       AppText.finish: '导入',
       AppText.noTimetable: '请导入已导出的 schedule.xls。\n课程表仅保存在此设备上。',
       AppText.exportFailed: '导出失败',
+      AppText.periodRangeTooShort: '节次范围不足以容纳该课程组',
+      AppText.upcomingClasses: '即将开始的课程',
+      AppText.noUpcomingClasses: '暂无后续课程',
+      AppText.teachingPortal: '教学网',
+      AppText.openBrowserFailed: '无法打开默认浏览器',
+      AppText.showRollInNavbar: '在导航栏显示更换配色',
+      AppText.chooseColor: '选择颜色',
+      AppText.classColor: '课程颜色',
+      AppText.rolledColor: '自动配色',
+      AppText.manualColor: '自定义颜色',
+      AppText.keepColorWhenRolling: '更换配色时保留此颜色',
+      AppText.importantOutline: '重要课程边框',
     },
   };
 }

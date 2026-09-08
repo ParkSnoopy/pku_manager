@@ -35,8 +35,9 @@ abstract interface class TimetablePngEncoder {
   Future<Uint8List> encode(
     Timetable timetable,
     AppStrings strings,
-    int paletteSeed,
-  );
+    int paletteSeed, {
+    Map<String, CourseAppearance> courseAppearances = const {},
+  });
 }
 
 final class NativeExportFileWriter implements ExportFileWriter {
@@ -88,13 +89,20 @@ final class TimetableExporter {
     Timetable timetable, {
     required AppStrings strings,
     required int paletteSeed,
+    Map<String, CourseAppearance> courseAppearances = const {},
   }) async {
     final bytes = switch (format) {
-      TimetableExportFormat.xlsx => _xlsx(timetable, strings, paletteSeed),
+      TimetableExportFormat.xlsx => _xlsx(
+        timetable,
+        strings,
+        paletteSeed,
+        courseAppearances,
+      ),
       TimetableExportFormat.png => await pngEncoder.encode(
         timetable,
         strings,
         paletteSeed,
+        courseAppearances: courseAppearances,
       ),
     };
     await writer.save(
@@ -111,7 +119,12 @@ final class TimetableExporter {
     );
   }
 
-  Uint8List _xlsx(Timetable timetable, AppStrings strings, int paletteSeed) {
+  Uint8List _xlsx(
+    Timetable timetable,
+    AppStrings strings,
+    int paletteSeed,
+    Map<String, CourseAppearance> courseAppearances,
+  ) {
     final excel = Excel.createExcel();
     excel.rename(excel.getDefaultSheet()!, 'Timetable');
     final sheet = excel['Timetable'];
@@ -156,6 +169,10 @@ final class TimetableExporter {
         final meetings = row == 0 || column == 0
             ? const <CourseMeeting>[]
             : timetable.atPeriod(column, period);
+        final courseAppearance = meetings.isEmpty
+            ? null
+            : courseAppearances[meetings.first.sourceId];
+        final important = courseAppearance?.outlined ?? false;
         final index = row == 0 || column == 0;
         final outer = ExcelColor.fromHexString('#FF92918D');
         final thin = ExcelColor.fromHexString('#FFE6DFD8');
@@ -185,23 +202,37 @@ final class TimetableExporter {
                     ? ExcelColor.fromHexString('#FFE8E0D2')
                     : ExcelColor.fromHexString('#FFFAF9F5'))
               : ExcelColor.fromHexString(
-                  _hex(timetableCourseColor(meetings.first, paletteSeed)),
+                  _hex(
+                    timetableCourseColor(
+                      meetings.first,
+                      paletteSeed,
+                      appearance: courseAppearance,
+                    ),
+                  ),
                 ),
           leftBorder: Border(
-            borderStyle: column == 0 ? BorderStyle.Medium : BorderStyle.Thin,
-            borderColorHex: column == 0 ? outer : thin,
+            borderStyle: column == 0 || important
+                ? BorderStyle.Medium
+                : BorderStyle.Thin,
+            borderColorHex: column == 0 || important ? outer : thin,
           ),
           rightBorder: Border(
-            borderStyle: column == 5 ? BorderStyle.Medium : BorderStyle.Thin,
-            borderColorHex: column == 5 ? outer : thin,
+            borderStyle: column == 5 || important
+                ? BorderStyle.Medium
+                : BorderStyle.Thin,
+            borderColorHex: column == 5 || important ? outer : thin,
           ),
           topBorder: Border(
-            borderStyle: row == 0 ? BorderStyle.Medium : BorderStyle.None,
+            borderStyle: row == 0 || (important && role == 0)
+                ? BorderStyle.Medium
+                : BorderStyle.None,
             borderColorHex: outer,
           ),
           bottomBorder: Border(
             borderStyle: row == 0
                 ? BorderStyle.Thin
+                : important && role == 3
+                ? BorderStyle.Medium
                 : role == 3
                 ? BorderStyle.Medium
                 : BorderStyle.None,
@@ -221,8 +252,9 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
   Future<Uint8List> encode(
     Timetable timetable,
     AppStrings strings,
-    int paletteSeed,
-  ) async {
+    int paletteSeed, {
+    Map<String, CourseAppearance> courseAppearances = const {},
+  }) async {
     final geometry = TimetableGeometry(timetable.periodCount);
     final logicalWidth = geometry.width + timetableExportPadding * 2;
     final logicalHeight = geometry.height + timetableExportPadding * 2;
@@ -326,21 +358,41 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
             rect.width,
             itemHeight,
           );
+          final appearance = courseAppearances[meeting.sourceId];
           canvas.drawRect(
             item,
-            ui.Paint()..color = timetableCourseColor(meeting, paletteSeed),
+            ui.Paint()
+              ..color = timetableCourseColor(
+                meeting,
+                paletteSeed,
+                appearance: appearance,
+              ),
           );
           final foreground =
-              timetableCourseColor(meeting, paletteSeed).computeLuminance() > .5
+              timetableCourseColor(
+                    meeting,
+                    paletteSeed,
+                    appearance: appearance,
+                  ).computeLuminance() >
+                  .5
               ? const ui.Color(0xff000000)
               : const ui.Color(0xffffffff);
+          if (appearance?.outlined ?? false) {
+            canvas.drawRect(
+              item.deflate(2),
+              ui.Paint()
+                ..color = foreground
+                ..style = ui.PaintingStyle.stroke
+                ..strokeWidth = 4,
+            );
+          }
           _drawReferenceText(
             canvas,
             meeting.name,
             ui.Rect.fromLTWH(item.left + 4, item.top + 2, item.width - 8, 24),
             fontFamily: timetableMonoFont,
             fontFallback: timetableFontFallback,
-            fontSize: 18,
+            fontSize: timetableCourseNameFontSize(meeting.name, item.width),
             bold: true,
             color: foreground,
             letterSpacing: -.2,

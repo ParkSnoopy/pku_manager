@@ -191,9 +191,14 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Match timetable shape, dimensions, bundled reference fonts, font sizes, alignment, class-time labels, meal breaks, aspect fitting, and 4× PNG export resolution to the `pages` reference; retain application-owned course colors as the only intentional visual exception.
 - Derive course colors from course identity plus a persistent roll seed, allow repeated color rolls after import, and maintain readable foreground contrast.
 - Default to Korean, persist English and Simplified Chinese alternatives, localize all application controls, and expose one active-language button that cycles through the three entries per click.
-- Add and edit weekday meetings without mutating imported source bytes; export the complete timetable as PNG or XLSX.
+- Group vertically touching identical weekday meetings into one block and atomically edit all retained source identities without mutating imported source bytes; export the complete timetable as PNG or XLSX.
+- Persist arbitrary manual colors, explicit manual-color markers, roll locks, and importance outlines by source identity. Apply them consistently to the timetable and exports; clear only unlocked manual colors during a palette roll.
+- Let Settings choose an arbitrary theme accent and hide the Roll colors rail action. Scale grouped course names up for an eight-Chinese-character line and down to the minimum readable size for longer names.
+- In landscape, use a right-side upcoming-class/countdown pane and replace it with the inline editor on selection. Keep dialog editing for portrait layouts.
+- Add a **教学网** rail action that opens the exact PKU Teaching Network URL in the platform default browser.
 - Use flat visual hierarchy, no gradients, bounded labels, accessible semantics, and keyboard navigation on desktop.
-- Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation, reference timetable geometry/typography, course-and-room full-cell color, repeated color rolls, cyclic language selection, persistent theme editing, 1000 ms pointer-following details, foreground refresh, and reference export dimensions.
+- Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation and exact external URL dispatch, grouped inline editing, upcoming countdowns, reference timetable geometry/typography, course-and-room full-cell color, repeated color rolls, cyclic language selection, persistent theme editing, 1000 ms pointer-following details, foreground refresh, and reference export dimensions.
+- Treat `0.1.0` as the first persistence contract and reject databases written by earlier development versions instead of maintaining migration code for them.
 
 ### 9. Apply Product Identity
 

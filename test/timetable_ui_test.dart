@@ -11,7 +11,9 @@ import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
 import 'package:pku_manager/domain/week_source.dart';
 import 'package:pku_manager/features/timetable/timetable_controller.dart';
+import 'package:pku_manager/features/timetable/timetable_color.dart';
 import 'package:pku_manager/features/timetable/timetable_export.dart';
+import 'package:pku_manager/features/timetable/timetable_page.dart';
 import 'package:pku_manager/features/settings/appearance_controller.dart';
 import 'package:pku_manager/l10n/app_strings.dart';
 
@@ -31,10 +33,25 @@ final class _Store implements ScheduleStore {
     meeting,
   ], periodCount: value.periodCount);
   @override
+  Timetable saveMeetings(Iterable<CourseMeeting> meetings) {
+    for (final meeting in meetings) {
+      saveMeeting(meeting);
+    }
+    return value;
+  }
+
+  @override
   Timetable removeUserMeeting(String sourceId) => value = Timetable(
     value.meetings.where((meeting) => meeting.sourceId != sourceId),
     periodCount: value.periodCount,
   );
+  @override
+  Timetable removeUserMeetings(Iterable<String> sourceIds) {
+    for (final sourceId in sourceIds) {
+      removeUserMeeting(sourceId);
+    }
+    return value;
+  }
 }
 
 final class _Picker implements SchedulePicker {
@@ -76,8 +93,9 @@ final class _PngEncoder implements TimetablePngEncoder {
   Future<Uint8List> encode(
     Timetable timetable,
     AppStrings strings,
-    int paletteSeed,
-  ) async => Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
+    int paletteSeed, {
+    Map<String, CourseAppearance> courseAppearances = const {},
+  }) async => Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
 }
 
 CourseMeeting _meeting(String id, int period, WeekFrequency frequency) =>
@@ -139,12 +157,12 @@ void main() {
       expect(find.text('Show all'), findsNothing);
       expect(find.text('Refresh'), findsNothing);
       expect(find.text('Current'), findsNothing);
-      expect(find.text('Algebra'), findsNWidgets(2));
+      expect(find.text('Algebra'), findsOneWidget);
       expect(find.textContaining('continued'), findsNothing);
       expect(find.text('Physics'), findsOneWidget);
       expect(
         tester.getSize(find.byKey(const ValueKey('meeting-cell-first'))).height,
-        100,
+        200,
       );
 
       final opacity = tester.widget<Opacity>(
@@ -212,6 +230,9 @@ void main() {
         find.byKey(const ValueKey('course-room')),
         'New room',
       );
+      await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+      await tester.pump();
+      await tester.ensureVisible(find.text('Save'));
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
       expect(controller.timetable!.atPeriod(1, 4).single.name, 'New course');
@@ -224,6 +245,121 @@ void main() {
       await tester.tap(find.text('Settings'));
       await tester.pump();
       expect(find.text('Theme'), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('show-roll-navbar')),
+      );
+      await tester.tap(find.byKey(const ValueKey('show-roll-navbar')));
+      await tester.pump();
+      await tester.tap(find.text('Timetable'));
+      await tester.pump();
+      expect(find.byTooltip('Roll colors'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      controller.dispose();
+    },
+  );
+
+  testWidgets(
+    'landscape uses the right pane for upcoming classes and group editing',
+    (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final table = Timetable([
+        _meeting('first', 1, WeekFrequency.every),
+        _meeting('second', 2, WeekFrequency.every),
+        _meeting('even', 3, WeekFrequency.even),
+      ], periodCount: 4);
+      final controller = TimetableController(
+        schedules: _Store(table),
+        decoder: _Decoder(),
+        picker: _Picker(),
+        weeks: _Weeks(
+          WeekStatus(
+            SemesterCalendar(starts: [DateTime.utc(2026, 9, 7)]),
+            WeekFreshness.cached,
+          ),
+        ),
+        clock: () => DateTime.utc(2026, 9, 7),
+      )..start();
+      final appearance = AppearanceController(MemoryAppearanceStore())
+        ..setLanguage(AppLanguage.en);
+      appearance.setCourseAppearance(
+        const ['first', 'second'],
+        const CourseAppearance(
+          color: Color(0xff123456),
+          lockColor: true,
+          outlined: true,
+        ),
+      );
+      Uri? launched;
+      await tester.pumpWidget(
+        PkuManagerApp(
+          controller: controller,
+          appearance: appearance,
+          exporter: TimetableExporter(
+            _ExportWriter(),
+            pngEncoder: _PngEncoder(),
+          ),
+          browserLauncher: (uri) async {
+            launched = uri;
+            return true;
+          },
+        ),
+      );
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey('upcoming-classes-pane')),
+        findsOneWidget,
+      );
+      expect(find.text('Upcoming classes'), findsOneWidget);
+      expect(find.text('Algebra'), findsNWidgets(2));
+      expect(find.textContaining('in '), findsWidgets);
+      expect(
+        tester
+            .widget<Material>(find.byKey(const ValueKey('meeting-color-first')))
+            .color,
+        const Color(0xff123456),
+      );
+      expect(find.byKey(const ValueKey('manual-color-first')), findsOneWidget);
+      final decoration = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: find.byKey(const ValueKey('meeting-color-first')),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      expect((decoration.decoration as BoxDecoration).border, isNotNull);
+
+      await tester.tap(find.byKey(const ValueKey('meeting-cell-first')));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('course-editor-pane')), findsOneWidget);
+      expect(find.byType(Dialog), findsNothing);
+      await tester.enterText(
+        find.byKey(const ValueKey('course-name')),
+        'Grouped course',
+      );
+      await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+      await tester.pump();
+      await tester.ensureVisible(find.text('Save'));
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      expect(
+        controller.timetable!.meetings
+            .where(
+              (meeting) => const {'first', 'second'}.contains(meeting.sourceId),
+            )
+            .map((meeting) => meeting.name),
+        everyElement('Grouped course'),
+      );
+      expect(
+        find.byKey(const ValueKey('upcoming-classes-pane')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('教学网'));
+      await tester.pump();
+      expect(launched.toString(), teachingPortalUrl);
+      expect(find.text('教学网'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
       controller.dispose();
     },
