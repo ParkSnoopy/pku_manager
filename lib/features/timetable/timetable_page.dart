@@ -387,7 +387,6 @@ class _TimetablePageState extends State<TimetablePage>
                       timetable: timetable,
                       now: controller.clock(),
                       calendar: controller.week.calendar,
-                      mode: UpcomingPaneMode.schedule,
                     )
                   : CourseEditorDialog(
                       key: ValueKey(
@@ -426,36 +425,7 @@ class _TimetablePageState extends State<TimetablePage>
   }
 
   Widget _calendarBody(TimetableController controller) {
-    final timetable =
-        controller.timetable ?? Timetable(const [], periodCount: 12);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final calendar = CalendarPage(
-          timetable: timetable,
-          now: controller.clock(),
-          calendar: controller.week.calendar,
-          paletteSeed: widget.appearance.paletteSeed,
-          courseAppearances: widget.appearance.courseAppearances,
-        );
-        if (constraints.maxWidth <= constraints.maxHeight) return calendar;
-        final paneWidth = (constraints.maxWidth * .28).clamp(280.0, 360.0);
-        return Row(
-          children: [
-            Expanded(child: calendar),
-            const VerticalDivider(width: 1),
-            SizedBox(
-              width: paneWidth,
-              child: UpcomingClassesPane(
-                timetable: timetable,
-                now: controller.clock(),
-                calendar: controller.week.calendar,
-                mode: UpcomingPaneMode.nextClass,
-              ),
-            ),
-          ],
-        );
-      },
-    );
+    return CalendarPage(now: controller.clock());
   }
 
   Widget _grid(Timetable timetable, WeekParity? parity, bool allDays) {

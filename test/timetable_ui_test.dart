@@ -272,7 +272,7 @@ void main() {
   );
 
   testWidgets(
-    'landscape uses the right pane for upcoming classes and group editing',
+    'landscape uses the timetable pane and keeps calendar independent',
     (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1;
@@ -348,8 +348,11 @@ void main() {
       await tester.pump();
       expect(find.byKey(const ValueKey('calendar-page')), findsOneWidget);
       expect(find.text('September 2026'), findsOneWidget);
-      expect(find.byKey(const ValueKey('upcoming-class-pane')), findsOneWidget);
-      expect(find.text('Upcoming class'), findsOneWidget);
+      expect(find.text('Algebra'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('upcoming-schedule-pane')),
+        findsNothing,
+      );
       expect(find.text('Upcoming schedule'), findsNothing);
       await tester.tap(find.text('Timetable'));
       await tester.pump();

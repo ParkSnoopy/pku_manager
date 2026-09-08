@@ -6,7 +6,7 @@ Build an offline-first school life management application for Android, iOS, Linu
 
 ## Current Context
 
-- The Flutter application is at version `0.0.2`; all `0.0.x` builds keep schema version 0 without compatibility code.
+- The Flutter application is at version `0.0.3`; all `0.0.x` builds keep schema version 0 without compatibility code.
 - Android, iOS, Linux, macOS, and Windows Flutter runners exist. Web is unsupported.
 - Domain, SQLite, workbook parsing, responsive timetable, editing, appearance, export, and native packaging layers are implemented.
 - The deployed Week Parity application currently reads `https://parksnoopy-undergraduate.github.io/week/config.toml`.
@@ -194,7 +194,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Group vertically touching identical weekday meetings into one block and atomically edit all retained source identities without mutating imported source bytes; export the complete timetable as PNG or XLSX.
 - Persist arbitrary manual colors, explicit manual-color markers, roll locks, and configurable importance-outline colors and thicknesses by source identity. Apply them consistently to the timetable and exports; clear only unlocked manual colors during a palette roll.
 - Let Settings choose an arbitrary theme accent and hide the Roll colors rail action. Use fixed padded one-line course typography with truncation.
-- Add a month Calendar derived from course recurrence and semester parity. In landscape, Timetable uses an upcoming-schedule pane that becomes the inline editor on selection; Calendar uses an upcoming-class pane. Keep dialog editing for portrait timetable layouts.
+- Add an independent user-controlled month Calendar that never derives entries from imported timetable classes. In landscape, Timetable uses an upcoming-schedule pane that becomes the inline editor on selection. Keep dialog editing for portrait timetable layouts.
 - Add a **教学网** rail action that opens the exact PKU Teaching Network URL in the platform default browser.
 - Use flat visual hierarchy, no gradients, bounded labels, accessible semantics, and keyboard navigation on desktop.
 - Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation and exact external URL dispatch, grouped inline editing, upcoming countdowns, reference timetable geometry/typography, course-and-room full-cell color, repeated color rolls, cyclic language selection, persistent theme editing, 100 ms pointer-following details, foreground refresh, and reference export dimensions.

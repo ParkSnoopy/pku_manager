@@ -1,40 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../domain/semester.dart';
-import '../../domain/timetable.dart';
 import '../../l10n/app_strings.dart';
-import '../timetable/timetable_color.dart';
-
-List<CourseMeetingGroup> calendarCoursesOn(
-  Timetable timetable,
-  DateTime date, {
-  SemesterCalendar? calendar,
-}) {
-  if (date.weekday > DateTime.friday) return const [];
-  final week = calendar?.weekAt(DateTime.utc(date.year, date.month, date.day));
-  if (calendar != null && week == null) return const [];
-  return List.unmodifiable(
-    timetable
-        .groupsForDay(date.weekday, currentParity: week?.parity)
-        .where((group) => group.primary.frequency.isCurrent(week?.parity)),
-  );
-}
 
 class CalendarPage extends StatefulWidget {
-  const CalendarPage({
-    super.key,
-    required this.timetable,
-    required this.now,
-    required this.paletteSeed,
-    this.calendar,
-    this.courseAppearances = const {},
-  });
+  const CalendarPage({super.key, required this.now});
 
-  final Timetable timetable;
   final DateTime now;
-  final SemesterCalendar? calendar;
-  final int paletteSeed;
-  final Map<String, CourseAppearance> courseAppearances;
 
   @override
   State<CalendarPage> createState() => _CalendarPageState();
@@ -118,13 +89,6 @@ class _CalendarPageState extends State<CalendarPage> {
                         date: date,
                         today: today,
                         inMonth: date.month == _month.month,
-                        courses: calendarCoursesOn(
-                          widget.timetable,
-                          date,
-                          calendar: widget.calendar,
-                        ),
-                        paletteSeed: widget.paletteSeed,
-                        courseAppearances: widget.courseAppearances,
                       );
                     },
                   );
@@ -143,17 +107,11 @@ class _CalendarDay extends StatelessWidget {
     required this.date,
     required this.today,
     required this.inMonth,
-    required this.courses,
-    required this.paletteSeed,
-    required this.courseAppearances,
   });
 
   final DateTime date;
   final DateTime today;
   final bool inMonth;
-  final List<CourseMeetingGroup> courses;
-  final int paletteSeed;
-  final Map<String, CourseAppearance> courseAppearances;
 
   @override
   Widget build(BuildContext context) {
@@ -183,39 +141,6 @@ class _CalendarDay extends StatelessWidget {
                     fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
-                for (final group in courses.take(2))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 3),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 4,
-                          height: 16,
-                          color: timetableCourseColor(
-                            group.primary,
-                            paletteSeed,
-                            appearance:
-                                courseAppearances[group.primary.sourceId],
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: Text(
-                            group.primary.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: inMonth
-                                  ? colors.onSurface
-                                  : colors.outline,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
               ],
             ),
           ),

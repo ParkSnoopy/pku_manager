@@ -58,27 +58,18 @@ class UpcomingClassesPane extends StatelessWidget {
     required this.timetable,
     required this.now,
     this.calendar,
-    this.mode = UpcomingPaneMode.schedule,
   });
 
   final Timetable timetable;
   final DateTime now;
   final SemesterCalendar? calendar;
-  final UpcomingPaneMode mode;
 
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final upcoming = upcomingCourses(timetable, now, calendar: calendar);
-    final visible = mode == UpcomingPaneMode.nextClass
-        ? upcoming.take(1).toList(growable: false)
-        : upcoming;
     return Material(
-      key: ValueKey(
-        mode == UpcomingPaneMode.schedule
-            ? 'upcoming-schedule-pane'
-            : 'upcoming-class-pane',
-      ),
+      key: const ValueKey('upcoming-schedule-pane'),
       color: Theme.of(context).colorScheme.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -86,33 +77,23 @@ class UpcomingClassesPane extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
             child: Text(
-              strings.text(
-                mode == UpcomingPaneMode.schedule
-                    ? AppText.upcomingSchedule
-                    : AppText.upcomingClass,
-              ),
+              strings.text(AppText.upcomingSchedule),
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
           const Divider(height: 1),
           Expanded(
-            child: visible.isEmpty
+            child: upcoming.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.all(20),
-                    child: Text(
-                      strings.text(
-                        mode == UpcomingPaneMode.schedule
-                            ? AppText.noUpcomingSchedule
-                            : AppText.noUpcomingClass,
-                      ),
-                    ),
+                    child: Text(strings.text(AppText.noUpcomingSchedule)),
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: visible.length,
+                    itemCount: upcoming.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, index) {
-                      final item = visible[index];
+                      final item = upcoming[index];
                       final meeting = item.group.primary;
                       final remaining = item.startsAt.difference(now);
                       return ListTile(
@@ -151,5 +132,3 @@ class UpcomingClassesPane extends StatelessWidget {
     );
   }
 }
-
-enum UpcomingPaneMode { schedule, nextClass }
