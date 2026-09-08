@@ -50,6 +50,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('course-short-name')),
+      'Short',
+    );
+    await tester.pump();
     expect(find.text('Rolled color'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('course-custom-color')));
     await tester.pump();
@@ -73,6 +78,10 @@ void main() {
     expect(result!.meetings.map((meeting) => meeting.sourceId), [
       'first',
       'second',
+    ]);
+    expect(result!.meetings.map((meeting) => meeting.shortName), [
+      'Short',
+      'Short',
     ]);
     expect(result!.appearance.color, const Color(0xff135724));
     expect(result!.appearance.lockColor, isFalse);

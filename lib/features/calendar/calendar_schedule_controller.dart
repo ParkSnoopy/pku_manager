@@ -22,12 +22,16 @@ final class CalendarScheduleController extends ChangeNotifier {
     required DateTime startsAt,
     bool allDay = true,
     String? relatedClassSourceId,
+    String note = '',
+    int colorValue = 0xffffd6a5,
   }) {
     final schedule = store.create(
       title: title,
       startsAt: startsAt,
       allDay: allDay,
       relatedClassSourceId: relatedClassSourceId,
+      note: note,
+      colorValue: colorValue,
     );
     reload();
     return schedule;
@@ -62,6 +66,8 @@ final class MemoryCalendarScheduleStore implements CalendarScheduleStore {
     required DateTime startsAt,
     bool allDay = true,
     String? relatedClassSourceId,
+    String note = '',
+    int colorValue = 0xffffd6a5,
   }) {
     final normalized = title.trim();
     if (normalized.isEmpty) {
@@ -73,6 +79,8 @@ final class MemoryCalendarScheduleStore implements CalendarScheduleStore {
       startsAt: startsAt.toUtc(),
       allDay: allDay,
       relatedClassSourceId: relatedClassSourceId,
+      note: note,
+      colorValue: colorValue,
     );
     _schedules.add(schedule);
     return schedule;

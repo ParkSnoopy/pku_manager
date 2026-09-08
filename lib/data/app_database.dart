@@ -35,6 +35,7 @@ CREATE TABLE meetings(
  CHECK(first_period > 0 AND last_period >= first_period));
 CREATE TABLE completions(
  source INTEGER NOT NULL, identity TEXT NOT NULL, name TEXT NOT NULL,
+ short_name TEXT NOT NULL,
  room TEXT NOT NULL, frequency TEXT NOT NULL,
  weekday INTEGER NOT NULL CHECK(weekday BETWEEN 1 AND 5),
  first_period INTEGER NOT NULL CHECK(first_period > 0),
@@ -56,10 +57,12 @@ CREATE TABLE appearance(
  language TEXT NOT NULL CHECK(language IN ('ko', 'en', 'zh')),
  show_roll_nav INTEGER NOT NULL CHECK(show_roll_nav IN (0, 1)),
  font_scale REAL NOT NULL CHECK(font_scale BETWEEN 1 AND 2),
- font_weight INTEGER NOT NULL CHECK(font_weight IN (100, 200, 300, 400, 500, 600, 700, 800, 900)));
+ font_weight INTEGER NOT NULL CHECK(font_weight IN (100, 200, 300, 400, 500, 600, 700, 800, 900)),
+ timetable_index_color INTEGER NOT NULL,
+ auto_text_color INTEGER NOT NULL CHECK(auto_text_color IN (0, 1)));
 CREATE TABLE user_meetings(
  source INTEGER NOT NULL REFERENCES sources(id),
- identity TEXT NOT NULL, name TEXT NOT NULL,
+ identity TEXT NOT NULL, name TEXT NOT NULL, short_name TEXT NOT NULL,
  weekday INTEGER NOT NULL CHECK(weekday BETWEEN 1 AND 5),
  first_period INTEGER NOT NULL CHECK(first_period > 0),
  last_period INTEGER NOT NULL CHECK(last_period >= first_period),
@@ -80,7 +83,9 @@ CREATE TABLE calendar_schedules(
  title TEXT NOT NULL CHECK(length(trim(title)) > 0),
  starts_at INTEGER NOT NULL,
  all_day INTEGER NOT NULL CHECK(all_day IN (0, 1)),
- related_class_source_id TEXT);
+ related_class_source_id TEXT,
+ note TEXT NOT NULL,
+ color INTEGER NOT NULL);
 ''');
       });
     }

@@ -6,7 +6,7 @@ Build an offline-first school life management application for Android, iOS, Linu
 
 ## Current Context
 
-- The Flutter application is at version `0.0.8`; all `0.0.x` builds keep schema version 0 without compatibility code.
+- The Flutter application is at version `0.0.9`; all `0.0.x` builds keep schema version 0 without compatibility code.
 - Android, iOS, Linux, macOS, and Windows Flutter runners exist. Web is unsupported.
 - Domain, SQLite, workbook parsing, responsive timetable, editing, appearance, export, and native packaging layers are implemented.
 - The deployed Week Parity application currently reads `https://parksnoopy-undergraduate.github.io/week/config.toml`.
@@ -190,13 +190,13 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Map unsupported frequency tokens to `每周`.
 - Match timetable shape, dimensions, alignment, meal breaks, aspect fitting, and 4× PNG export resolution to the `pages` reference. Keep start/end time out of index cells and in hover details. Package each CJK family as one Static Super OTC instead of separate region/weight files; keep both Sans and future-use Serif collections.
 - Derive course colors from the immutable workbook class name plus a persistent Roll palette and seed. Initialize the palette from the pinned upstream `palette.json`, allow repeated color rolls after import, and maintain readable foreground contrast.
-- Apply valid course and personal-schedule edits immediately without Save actions. Default personal schedules to all-day, allow an optional related-class source ID, and show related schedules in class hover details.
+- Apply valid course edits immediately without a Save action. Use a larger Cancel/Save draft editor for personal schedules, with blank new titles, notes, colors, all-day/time controls, and optional related classes.
 - Default application text to 1.2× and expose immediate 1.0×–2.0× scale plus every Thin–Black weight. Render classroom and class names at the same base size with two leading room spaces.
 - Default to Korean, persist English and Simplified Chinese alternatives, localize all application controls, and expose one active-language button that cycles through the three entries per click.
 - Group vertically touching identical weekday meetings into one block and atomically edit all retained source identities without mutating imported source bytes; export the complete timetable as PNG or XLSX.
 - Persist arbitrary manual colors, explicit manual-color markers, roll locks, and configurable importance-outline colors and thicknesses by source identity. Apply them consistently to the timetable and exports; clear only unlocked manual colors during a palette roll.
 - Let Settings choose an arbitrary theme accent and hide the Roll colors rail action. Use fixed padded one-line course typography with truncation.
-- Add an independent user-controlled, color-coded month Calendar for personal schedules. In landscape, Timetable shows upcoming personal schedules with exact times and swaps that pane for the inline course editor only on direct timetable selection; Calendar lists every class scheduled tomorrow. Side-pane navigation reveals and highlights targets without opening editors. Never project timetable classes into the month or show class information in the upcoming-schedule pane. Keep dialog editing for portrait timetable layouts.
+- Add an independent user-controlled, color-coded month Calendar with light-grey adjacent-month cells. In landscape, Timetable appends related classes beneath upcoming schedules and opens schedule details before an explicit Calendar jump; Calendar lists every class scheduled tomorrow, each class's schedules, and unassociated schedules last. Side-pane navigation uses a transient flashing target outline without opening editors. Never project timetable classes into the month. Keep dialog editing for portrait timetable layouts.
 - Add a **教学网** rail action that opens the exact PKU Teaching Network URL in the platform default browser.
 - Use flat visual hierarchy, no gradients, bounded labels, accessible semantics, and keyboard navigation on desktop.
 - Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation and exact external URL dispatch, grouped inline editing, exact upcoming-schedule times, tomorrow-class lists, reference timetable geometry/typography, course-and-room full-cell color, repeated color rolls, cyclic language selection, persistent theme editing, 100 ms pointer-following details, foreground refresh, and reference export dimensions.

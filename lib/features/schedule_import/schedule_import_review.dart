@@ -203,6 +203,7 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
       sourceId: record.meeting.sourceId,
       sourceName: record.meeting.sourceName,
       name: value(ImportField.name).trim(),
+      shortName: record.meeting.shortName,
       room: value(ImportField.room).trim(),
       weekday: int.parse(value(ImportField.weekday)),
       firstPeriod: int.parse(value(ImportField.firstPeriod)),

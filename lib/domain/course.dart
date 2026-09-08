@@ -6,6 +6,7 @@ final class Course {
     required this.sourceId,
     required this.name,
     String? sourceName,
+    this.shortName = '',
     required this.weekday,
     required this.firstPeriod,
     required this.lastPeriod,
@@ -30,6 +31,8 @@ final class Course {
   /// User-created classes use their initial name as their source name.
   final String sourceName;
   final String name;
+  final String shortName;
+  String get displayName => shortName.trim().isEmpty ? name : shortName.trim();
   final int weekday;
   final int firstPeriod;
   final int lastPeriod;

@@ -40,6 +40,7 @@ void main() {
     Course(
       sourceId: 'a',
       name: 'Algorithms',
+      shortName: 'Algo',
       weekday: 1,
       firstPeriod: 1,
       lastPeriod: 2,
@@ -96,7 +97,7 @@ void main() {
       );
       expect(
         sheet.cell(CellIndex.indexByString('B2')).value.toString(),
-        'Algorithms\n  Room 101',
+        'Algo\n  Room 101',
       );
       expect(sheet.cell(CellIndex.indexByString('B3')).value, isNull);
       expect(sheet.cell(CellIndex.indexByString('B6')).value, isNull);

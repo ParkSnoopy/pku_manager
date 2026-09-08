@@ -26,6 +26,7 @@ void main() {
       Course(
         sourceId: sourceId,
         name: 'Edited',
+        shortName: 'Short',
         weekday: 1,
         firstPeriod: 1,
         lastPeriod: 1,
@@ -53,6 +54,8 @@ void main() {
       'Added',
     ]);
     expect(restored.meetings.first.sourceName, 'Course');
+    expect(restored.meetings.first.shortName, 'Short');
+    expect(restored.meetings.first.displayName, 'Short');
     expect(database.activeSource, [1, 2, 3]);
     repository.removeUserMeeting('user:fixed');
     expect(repository.load()!.meetings.map((meeting) => meeting.name), [

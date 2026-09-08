@@ -157,6 +157,33 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
+          Text(AppStrings.of(context).text(AppText.timetableIndexColor)),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: const ValueKey('timetable-index-color'),
+              onPressed: () async {
+                final color = await colorPicker(
+                  context,
+                  color: controller.timetableIndexColor,
+                  title: AppStrings.of(context)
+                      .text(AppText.timetableIndexColor),
+                );
+                controller.setTimetableIndexColor(color);
+              },
+              icon: Icon(Icons.circle, color: controller.timetableIndexColor),
+              label: Text(AppStrings.of(context).text(AppText.chooseColor)),
+            ),
+          ),
+          SwitchListTile(
+            key: const ValueKey('auto-text-color'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(AppStrings.of(context).text(AppText.autoTextColor)),
+            value: controller.autoTextColor,
+            onChanged: controller.setAutoTextColor,
+          ),
+          const SizedBox(height: 24),
           Row(
             children: [
               Expanded(

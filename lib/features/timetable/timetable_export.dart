@@ -277,7 +277,9 @@ final class TimetableExporter {
         sheet.merge(
           start,
           CellIndex.indexByColumnRow(columnIndex: day, rowIndex: endRow),
-          customValue: TextCellValue('${meeting.name}\n  ${meeting.room}'),
+          customValue: TextCellValue(
+            '${meeting.displayName}\n  ${meeting.room}',
+          ),
         );
         sheet.cell(start).cellStyle = style;
       }
@@ -404,7 +406,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
         }
         _drawReferenceText(
           canvas,
-          meeting.name,
+          meeting.displayName,
           ui.Rect.fromLTWH(
             item.left + inset,
             item.top + 8,
@@ -454,7 +456,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
 }
 
 String _xlsxCourseValue(List<Course> meetings, int role) => switch (role) {
-  0 => meetings.map((meeting) => meeting.name).join('\n'),
+  0 => meetings.map((meeting) => meeting.displayName).join('\n'),
   1 => meetings.map((meeting) => '  ${meeting.room}').join('\n'),
   _ => '',
 };

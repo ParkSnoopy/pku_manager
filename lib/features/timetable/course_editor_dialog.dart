@@ -64,6 +64,9 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
   late final String _newSourceId =
       'user:${DateTime.now().microsecondsSinceEpoch}';
   late final _name = TextEditingController(text: _primary?.name ?? '');
+  late final _shortName = TextEditingController(
+    text: _primary?.shortName ?? '',
+  );
   late final _room = TextEditingController(text: _primary?.room ?? '');
   late final _note = TextEditingController(text: _primary?.note ?? '');
   late final _exam = TextEditingController(text: _primary?.exam ?? '');
@@ -89,6 +92,7 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
   @override
   void dispose() {
     _name.dispose();
+    _shortName.dispose();
     _room.dispose();
     _note.dispose();
     _exam.dispose();
@@ -131,6 +135,14 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
                     validator: (value) => value == null || value.trim().isEmpty
                         ? strings.text(AppText.required)
                         : null,
+                    onChanged: (_) => _publish(),
+                  ),
+                  TextFormField(
+                    key: const ValueKey('course-short-name'),
+                    controller: _shortName,
+                    decoration: InputDecoration(
+                      labelText: strings.text(AppText.shortName),
+                    ),
                     onChanged: (_) => _publish(),
                   ),
                   TextFormField(
@@ -372,6 +384,7 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
           sourceId: originals[index].sourceId,
           sourceName: originals[index].sourceName,
           name: _name.text.trim(),
+          shortName: _shortName.text.trim(),
           weekday: _weekday,
           firstPeriod: first,
           lastPeriod: last,

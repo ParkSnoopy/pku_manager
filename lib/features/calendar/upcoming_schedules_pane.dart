@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/calendar_schedule.dart';
+import '../../domain/timetable.dart';
 import '../../l10n/app_strings.dart';
 import 'calendar_schedule_controller.dart';
 import 'schedule_color.dart';
@@ -11,11 +12,13 @@ class UpcomingSchedulesPane extends StatelessWidget {
     required this.controller,
     required this.now,
     required this.onSelected,
+    this.timetable,
   });
 
   final CalendarScheduleController controller;
   final DateTime now;
   final ValueChanged<CalendarSchedule> onSelected;
+  final Timetable? timetable;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -23,7 +26,7 @@ class UpcomingSchedulesPane extends StatelessWidget {
     builder: (context, _) {
       final strings = AppStrings.of(context);
       final schedules = controller.schedules
-          .where((schedule) => _isUpcoming(schedule, now))
+          .where((schedule) => isUpcomingSchedule(schedule, now))
           .toList(growable: false);
       return Material(
         key: const ValueKey('upcoming-schedule-pane'),
@@ -51,8 +54,15 @@ class UpcomingSchedulesPane extends StatelessWidget {
                       separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final schedule = schedules[index];
-                        final background = scheduleColor(schedule.id);
+                        final background = scheduleColor(schedule);
                         final foreground = scheduleForeground(background);
+                        final relatedClass = timetable?.meetings
+                            .where(
+                              (course) =>
+                                  course.sourceId ==
+                                  schedule.relatedClassSourceId,
+                            )
+                            .firstOrNull;
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Material(
@@ -71,21 +81,25 @@ class UpcomingSchedulesPane extends StatelessWidget {
                                 style: const TextStyle(fontSize: 15),
                               ),
                               subtitle: Text(
-                                _dateLabel(schedule),
-                                maxLines: 1,
+                                [
+                                  scheduleDateLabel(schedule),
+                                  if (relatedClass != null)
+                                    relatedClass.displayName,
+                                ].join('\n'),
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontSize: 14),
                               ),
-                              trailing: Text(
-                                schedule.allDay
-                                    ? strings.text(AppText.allDay)
-                                    : _timeLabel(schedule),
-                                textAlign: TextAlign.end,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                              trailing: schedule.allDay
+                                  ? null
+                                  : Text(
+                                      scheduleTimeLabel(schedule),
+                                      textAlign: TextAlign.end,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                             ),
                           ),
                         );
@@ -99,17 +113,17 @@ class UpcomingSchedulesPane extends StatelessWidget {
   );
 }
 
-String _dateLabel(CalendarSchedule schedule) {
+String scheduleDateLabel(CalendarSchedule schedule) {
   final value = schedule.startsAt.toUtc().add(const Duration(hours: 8));
   return '${value.year}-${_two(value.month)}-${_two(value.day)}';
 }
 
-String _timeLabel(CalendarSchedule schedule) {
+String scheduleTimeLabel(CalendarSchedule schedule) {
   final value = schedule.startsAt.toUtc().add(const Duration(hours: 8));
   return '${_two(value.hour)}:${_two(value.minute)}';
 }
 
-bool _isUpcoming(CalendarSchedule schedule, DateTime now) {
+bool isUpcomingSchedule(CalendarSchedule schedule, DateTime now) {
   if (!schedule.allDay) return schedule.startsAt.isAfter(now);
   final scheduleDate = schedule.startsAt.toUtc().add(const Duration(hours: 8));
   final nowDate = now.toUtc().add(const Duration(hours: 8));

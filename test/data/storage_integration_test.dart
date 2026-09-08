@@ -24,6 +24,8 @@ void main() {
       startsAt: DateTime.utc(2026, 9, 8, 2),
       allDay: true,
       relatedClassSourceId: 'source-class',
+      note: 'Bring notes',
+      colorValue: 0xff123456,
     );
     final earlier = repository.create(
       title: 'Meeting info',
@@ -37,6 +39,8 @@ void main() {
     expect(repository.load().last.title, 'Homework deadline');
     expect(repository.load().last.allDay, isTrue);
     expect(repository.load().last.relatedClassSourceId, 'source-class');
+    expect(repository.load().last.note, 'Bring notes');
+    expect(repository.load().last.colorValue, 0xff123456);
 
     repository.update(
       later.copyWith(
@@ -44,6 +48,8 @@ void main() {
         startsAt: DateTime.utc(2026, 9, 9, 3),
         allDay: false,
         relatedClassSourceId: null,
+        note: 'Revised note',
+        colorValue: 0xff654321,
       ),
     );
     repository.remove(earlier.id);
@@ -54,6 +60,8 @@ void main() {
     expect(repository.load().single.title, 'Revised deadline');
     expect(repository.load().single.allDay, isFalse);
     expect(repository.load().single.relatedClassSourceId, isNull);
+    expect(repository.load().single.note, 'Revised note');
+    expect(repository.load().single.colorValue, 0xff654321);
     expect(repository.load().single.id, later.id);
     db.close();
   });

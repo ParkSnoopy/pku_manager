@@ -370,6 +370,7 @@ class ScheduleXlsParser implements ScheduleDecoder {
     sourceId: meeting.sourceId,
     sourceName: meeting.sourceName,
     name: meeting.name,
+    shortName: meeting.shortName,
     weekday: meeting.weekday,
     firstPeriod: meeting.firstPeriod,
     lastPeriod: meeting.lastPeriod,

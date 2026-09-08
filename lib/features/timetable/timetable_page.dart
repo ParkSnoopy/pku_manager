@@ -69,6 +69,7 @@ class _TimetablePageState extends State<TimetablePage>
   _EditorSelection? _editor;
   int? _focusedScheduleId;
   Set<String> _focusedCourseSourceIds = const {};
+  Timer? _focusTimer;
   Timetable? _appearanceTimetable;
 
   @override
@@ -90,6 +91,7 @@ class _TimetablePageState extends State<TimetablePage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.removeListener(_syncCourseAppearances);
+    _focusTimer?.cancel();
     super.dispose();
   }
 
@@ -103,25 +105,81 @@ class _TimetablePageState extends State<TimetablePage>
     setState(() => _day = (_day + delta).clamp(1, 5));
   }
 
-  void _selectSchedule(CalendarSchedule schedule) {
+  void _navigateToSchedule(CalendarSchedule schedule) {
+    _focusTimer?.cancel();
     setState(() {
       _destination = 1;
       _editor = null;
       _focusedScheduleId = schedule.id;
       _focusedCourseSourceIds = const {};
     });
+    _focusTimer = Timer(const Duration(milliseconds: 1400), () {
+      if (mounted && _focusedScheduleId == schedule.id) {
+        setState(() => _focusedScheduleId = null);
+      }
+    });
   }
 
   void _selectUpcomingClass(UpcomingCourse course) {
+    final sourceIds = course.group.meetings
+        .map((meeting) => meeting.sourceId)
+        .toSet();
+    _focusTimer?.cancel();
     setState(() {
       _destination = 0;
       _day = course.group.weekday;
       _editor = null;
       _focusedScheduleId = null;
-      _focusedCourseSourceIds = course.group.meetings
-          .map((meeting) => meeting.sourceId)
-          .toSet();
+      _focusedCourseSourceIds = sourceIds;
     });
+    _focusTimer = Timer(const Duration(milliseconds: 1400), () {
+      if (mounted && _focusedCourseSourceIds == sourceIds) {
+        setState(() => _focusedCourseSourceIds = const {});
+      }
+    });
+  }
+
+  Future<void> _showScheduleDetails(CalendarSchedule schedule) async {
+    final strings = AppStrings.of(context);
+    final date = scheduleDateLabel(schedule);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: ValueKey('schedule-details-${schedule.id}'),
+        title: Text(schedule.title),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                schedule.allDay ? date : '$date ${scheduleTimeLabel(schedule)}',
+              ),
+              if (schedule.note.isNotEmpty) ...[
+                const Divider(height: 24),
+                Text(schedule.note),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(strings.text(AppText.close)),
+          ),
+          FilledButton.icon(
+            key: const ValueKey('schedule-details-calendar'),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _navigateToSchedule(schedule);
+            },
+            icon: const Icon(Icons.calendar_month_outlined),
+            label: Text(strings.text(AppText.openInCalendar)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _editCell(int weekday, int period, List<Course> meetings) async {
@@ -415,7 +473,8 @@ class _TimetablePageState extends State<TimetablePage>
                   ? UpcomingSchedulesPane(
                       controller: widget.calendar,
                       now: controller.clock(),
-                      onSelected: _selectSchedule,
+                      timetable: timetable,
+                      onSelected: _showScheduleDetails,
                     )
                   : CourseEditorDialog(
                       key: ValueKey(
@@ -476,7 +535,9 @@ class _TimetablePageState extends State<TimetablePage>
                 timetable: timetable,
                 now: controller.clock(),
                 calendar: controller.week.calendar,
+                schedules: widget.calendar.schedules,
                 onSelected: _selectUpcomingClass,
+                onScheduleSelected: _navigateToSchedule,
               ),
             ),
           ],
@@ -495,6 +556,8 @@ class _TimetablePageState extends State<TimetablePage>
       paletteIndex: widget.appearance.rollPaletteIndex,
       fontWeight: widget.appearance.fontWeight,
       focusedCourseSourceIds: _focusedCourseSourceIds,
+      indexColor: widget.appearance.timetableIndexColor,
+      autoTextColor: widget.appearance.autoTextColor,
       schedules: widget.calendar.schedules,
       courseAppearances: widget.appearance.courseAppearances,
       parity: parity,

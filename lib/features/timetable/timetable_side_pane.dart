@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/calendar_schedule.dart';
 import '../../domain/semester.dart';
 import '../../domain/timetable.dart';
 import '../../l10n/app_strings.dart';
+import '../calendar/schedule_color.dart';
+import '../calendar/upcoming_schedules_pane.dart';
 import 'timetable_style.dart';
 
 final class UpcomingCourse {
@@ -79,18 +82,40 @@ class UpcomingClassPane extends StatelessWidget {
     required this.timetable,
     required this.now,
     required this.onSelected,
+    required this.schedules,
+    required this.onScheduleSelected,
     this.calendar,
   });
 
   final Timetable timetable;
   final DateTime now;
   final ValueChanged<UpcomingCourse> onSelected;
+  final List<CalendarSchedule> schedules;
+  final ValueChanged<CalendarSchedule> onScheduleSelected;
   final SemesterCalendar? calendar;
 
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final courses = tomorrowCourses(timetable, now, calendar: calendar);
+    final upcomingSchedules = schedules
+        .where((schedule) => isUpcomingSchedule(schedule, now))
+        .toList(growable: false);
+    final sourceNames = {
+      for (final course in timetable.meetings)
+        course.sourceId: course.sourceName,
+    };
+    List<CalendarSchedule> schedulesFor(UpcomingCourse course) =>
+        upcomingSchedules
+            .where(
+              (schedule) =>
+                  sourceNames[schedule.relatedClassSourceId] ==
+                  course.group.primary.sourceName,
+            )
+            .toList(growable: false);
+    final unrelated = upcomingSchedules
+        .where((schedule) => schedule.relatedClassSourceId == null)
+        .toList(growable: false);
     return Material(
       key: const ValueKey('upcoming-class-pane'),
       color: Theme.of(context).colorScheme.surface,
@@ -106,42 +131,101 @@ class UpcomingClassPane extends StatelessWidget {
           ),
           const Divider(height: 1),
           Expanded(
-            child: courses.isEmpty
+            child: courses.isEmpty && unrelated.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.all(20),
                     child: Text(strings.text(AppText.noClassesTomorrow)),
                   )
-                : ListView.separated(
+                : ListView(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: courses.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final item = courses[index];
-                      final meeting = item.group.primary;
-                      return ListTile(
-                        key: ValueKey('upcoming-class-${meeting.sourceId}'),
-                        onTap: () => onSelected(item),
-                        title: Text(
-                          meeting.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                    children: [
+                      for (final item in courses) ...[
+                        ListTile(
+                          key: ValueKey(
+                            'upcoming-class-${item.group.primary.sourceId}',
+                          ),
+                          onTap: () => onSelected(item),
+                          title: Text(
+                            item.group.primary.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${timetableClassStarts[item.group.firstPeriod]}'
+                            '${item.group.primary.room.isEmpty ? '' : ' · ${item.group.primary.room}'}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14),
                           ),
                         ),
-                        subtitle: Text(
-                          '${timetableClassStarts[item.group.firstPeriod]}'
-                          '${meeting.room.isEmpty ? '' : ' · ${meeting.room}'}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 14),
+                        for (final schedule in schedulesFor(item))
+                          _ScheduleEntry(
+                            schedule: schedule,
+                            onTap: () => onScheduleSelected(schedule),
+                          ),
+                        const Divider(height: 1),
+                      ],
+                      if (unrelated.isNotEmpty) ...[
+                        const Divider(height: 24, thickness: 2),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 16, 8),
+                          child: Text(
+                            strings.text(AppText.unrelatedSchedules),
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
                         ),
-                      );
-                    },
+                        for (final schedule in unrelated)
+                          _ScheduleEntry(
+                            schedule: schedule,
+                            onTap: () => onScheduleSelected(schedule),
+                          ),
+                      ],
+                    ],
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ScheduleEntry extends StatelessWidget {
+  const _ScheduleEntry({required this.schedule, required this.onTap});
+
+  final CalendarSchedule schedule;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = scheduleColor(schedule);
+    final foreground = scheduleForeground(background);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 8, 8),
+      child: Material(
+        key: ValueKey('tomorrow-schedule-color-${schedule.id}'),
+        color: background,
+        child: ListTile(
+          key: ValueKey('tomorrow-schedule-${schedule.id}'),
+          onTap: onTap,
+          textColor: foreground,
+          dense: true,
+          title: Text(
+            schedule.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            schedule.allDay
+                ? scheduleDateLabel(schedule)
+                : '${scheduleDateLabel(schedule)} ${scheduleTimeLabel(schedule)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ),
     );
   }

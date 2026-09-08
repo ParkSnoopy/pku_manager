@@ -9,8 +9,11 @@ final class CalendarScheduleRepository implements CalendarScheduleStore {
   @override
   List<CalendarSchedule> load() => List.unmodifiable(
     store.database
-        .select('''SELECT id, title, starts_at, all_day, related_class_source_id
-FROM calendar_schedules ORDER BY starts_at, id''')
+        .select(
+          '''SELECT id, title, starts_at, all_day, related_class_source_id,
+note, color
+FROM calendar_schedules ORDER BY starts_at, id''',
+        )
         .map(_fromRow),
   );
 
@@ -20,17 +23,22 @@ FROM calendar_schedules ORDER BY starts_at, id''')
     required DateTime startsAt,
     bool allDay = true,
     String? relatedClassSourceId,
+    String note = '',
+    int colorValue = 0xffffd6a5,
   }) {
     final normalizedTitle = _validTitle(title);
     final normalizedStart = startsAt.toUtc();
     store.database.execute(
       '''INSERT INTO calendar_schedules(
-title, starts_at, all_day, related_class_source_id) VALUES (?, ?, ?, ?)''',
+title, starts_at, all_day, related_class_source_id, note, color)
+VALUES (?, ?, ?, ?, ?, ?)''',
       [
         normalizedTitle,
         normalizedStart.millisecondsSinceEpoch,
         allDay ? 1 : 0,
         relatedClassSourceId,
+        note,
+        colorValue,
       ],
     );
     return CalendarSchedule(
@@ -39,6 +47,8 @@ title, starts_at, all_day, related_class_source_id) VALUES (?, ?, ?, ?)''',
       startsAt: normalizedStart,
       allDay: allDay,
       relatedClassSourceId: relatedClassSourceId,
+      note: note,
+      colorValue: colorValue,
     );
   }
 
@@ -47,12 +57,14 @@ title, starts_at, all_day, related_class_source_id) VALUES (?, ?, ?, ?)''',
     final normalizedTitle = _validTitle(schedule.title);
     store.database.execute(
       '''UPDATE calendar_schedules SET title = ?, starts_at = ?, all_day = ?,
-related_class_source_id = ? WHERE id = ?''',
+related_class_source_id = ?, note = ?, color = ? WHERE id = ?''',
       [
         normalizedTitle,
         schedule.startsAt.toUtc().millisecondsSinceEpoch,
         schedule.allDay ? 1 : 0,
         schedule.relatedClassSourceId,
+        schedule.note,
+        schedule.colorValue,
         schedule.id,
       ],
     );
@@ -78,6 +90,8 @@ related_class_source_id = ? WHERE id = ?''',
     ),
     allDay: (row['all_day'] as int) != 0,
     relatedClassSourceId: row['related_class_source_id'] as String?,
+    note: row['note'] as String,
+    colorValue: row['color'] as int,
   );
 
   String _validTitle(String value) {

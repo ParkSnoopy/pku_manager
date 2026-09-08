@@ -5,6 +5,8 @@ final class CalendarSchedule {
     required this.startsAt,
     this.allDay = true,
     this.relatedClassSourceId,
+    this.note = '',
+    this.colorValue = 0xffffd6a5,
   });
 
   final int id;
@@ -12,12 +14,16 @@ final class CalendarSchedule {
   final DateTime startsAt;
   final bool allDay;
   final String? relatedClassSourceId;
+  final String note;
+  final int colorValue;
 
   CalendarSchedule copyWith({
     String? title,
     DateTime? startsAt,
     bool? allDay,
     Object? relatedClassSourceId = _unchanged,
+    String? note,
+    int? colorValue,
   }) => CalendarSchedule(
     id: id,
     title: title ?? this.title,
@@ -26,6 +32,8 @@ final class CalendarSchedule {
     relatedClassSourceId: identical(relatedClassSourceId, _unchanged)
         ? this.relatedClassSourceId
         : relatedClassSourceId as String?,
+    note: note ?? this.note,
+    colorValue: colorValue ?? this.colorValue,
   );
 }
 
@@ -39,6 +47,8 @@ abstract interface class CalendarScheduleStore {
     required DateTime startsAt,
     bool allDay = true,
     String? relatedClassSourceId,
+    String note = '',
+    int colorValue = 0xffffd6a5,
   });
 
   void update(CalendarSchedule schedule);

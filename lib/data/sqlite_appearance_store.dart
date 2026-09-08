@@ -14,7 +14,8 @@ final class SqliteAppearanceStore implements AppearanceStore {
   AppearanceSettings load() {
     final rows = database.database.select(
       '''SELECT accent, palette_seed, roll_palette, language, show_roll_nav,
-font_scale, font_weight FROM appearance WHERE id = 1''',
+font_scale, font_weight, timetable_index_color, auto_text_color
+FROM appearance WHERE id = 1''',
     );
     if (rows.isEmpty) return const AppearanceSettings();
     final row = rows.single;
@@ -26,6 +27,8 @@ font_scale, font_weight FROM appearance WHERE id = 1''',
       showRollInNavbar: (row['show_roll_nav'] as int) != 0,
       fontScale: (row['font_scale'] as num).toDouble(),
       fontWeightValue: row['font_weight'] as int,
+      timetableIndexColor: Color(row['timetable_index_color'] as int),
+      autoTextColor: (row['auto_text_color'] as int) != 0,
     );
   }
 
@@ -54,11 +57,13 @@ JOIN active_schedule ON course_appearance.source = active_schedule.source''');
   ) {
     database.transaction(() {
       database.database.execute(
-        '''INSERT INTO appearance VALUES (1, ?, ?, ?, ?, ?, ?, ?)
+        '''INSERT INTO appearance VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET accent=excluded.accent,
 palette_seed=excluded.palette_seed, roll_palette=excluded.roll_palette,
 language=excluded.language, show_roll_nav=excluded.show_roll_nav,
-font_scale=excluded.font_scale, font_weight=excluded.font_weight''',
+font_scale=excluded.font_scale, font_weight=excluded.font_weight,
+timetable_index_color=excluded.timetable_index_color,
+auto_text_color=excluded.auto_text_color''',
         [
           settings.accent.toARGB32(),
           settings.paletteSeed,
@@ -67,6 +72,8 @@ font_scale=excluded.font_scale, font_weight=excluded.font_weight''',
           settings.showRollInNavbar ? 1 : 0,
           settings.fontScale,
           settings.fontWeightValue,
+          settings.timetableIndexColor.toARGB32(),
+          settings.autoTextColor ? 1 : 0,
         ],
       );
       final active = database.database.select(

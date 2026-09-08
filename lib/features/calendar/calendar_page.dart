@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../domain/calendar_schedule.dart';
 import '../../domain/timetable.dart';
 import '../../l10n/app_strings.dart';
+import '../../ui/flashing_outline.dart';
+import '../settings/color_picker_dialog.dart';
 import 'calendar_schedule_controller.dart';
 import 'schedule_color.dart';
 
@@ -13,12 +15,14 @@ class CalendarPage extends StatefulWidget {
     required this.controller,
     this.timetable,
     this.focusedScheduleId,
+    this.colorPicker = showAppColorPicker,
   });
 
   final DateTime now;
   final CalendarScheduleController controller;
   final Timetable? timetable;
   final int? focusedScheduleId;
+  final ColorPickerLauncher colorPicker;
 
   @override
   State<CalendarPage> createState() => _CalendarPageState();
@@ -76,25 +80,36 @@ class _CalendarPageState extends State<CalendarPage> {
     try {
       final target =
           schedule ??
-          widget.controller.create(
-            title: AppStrings.of(context).text(AppText.newSchedule),
+          CalendarSchedule(
+            id: 0,
+            title: '',
             startsAt: DateTime.utc(
               date.year,
               date.month,
               date.day,
             ).subtract(const Duration(hours: 8)),
           );
-      await showDialog<void>(
+      final result = await showDialog<CalendarSchedule>(
         context: context,
         builder: (_) => _ScheduleEditor(
           schedule: target,
           timetable: widget.timetable,
-          onChanged: _updateSchedule,
-          onRemove: () {
-            if (_removeSchedule(target.id)) Navigator.pop(context);
-          },
+          colorPicker: widget.colorPicker,
         ),
       );
+      if (result == null) return;
+      if (schedule == null) {
+        widget.controller.create(
+          title: result.title,
+          startsAt: result.startsAt,
+          allDay: result.allDay,
+          relatedClassSourceId: result.relatedClassSourceId,
+          note: result.note,
+          colorValue: result.colorValue,
+        );
+      } else {
+        widget.controller.update(result);
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -106,35 +121,6 @@ class _CalendarPageState extends State<CalendarPage> {
         );
       }
     }
-  }
-
-  void _updateSchedule(CalendarSchedule schedule) {
-    try {
-      widget.controller.update(schedule);
-    } catch (_) {
-      _showUpdateFailure();
-    }
-  }
-
-  bool _removeSchedule(int id) {
-    try {
-      widget.controller.remove(id);
-      return true;
-    } catch (_) {
-      _showUpdateFailure();
-      return false;
-    }
-  }
-
-  void _showUpdateFailure() {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppStrings.of(context).text(AppText.scheduleUpdateFailed),
-        ),
-      ),
-    );
   }
 
   @override
@@ -258,6 +244,7 @@ class _CalendarDay extends StatelessWidget {
       child: DecoratedBox(
         key: ValueKey('calendar-day-${date.year}-${date.month}-${date.day}'),
         decoration: BoxDecoration(
+          color: inMonth ? Colors.transparent : const Color(0xffd3d3d3),
           border: Border.all(
             color: isToday ? colors.primary : colors.outlineVariant,
             width: isToday ? 2 : .5,
@@ -308,43 +295,39 @@ class _CalendarDay extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final schedule = schedules[index];
                       final starts = _beijingDateTime(schedule.startsAt);
-                      final background = scheduleColor(schedule.id);
+                      final background = scheduleColor(schedule);
                       final foreground = scheduleForeground(background);
                       final focused = schedule.id == focusedScheduleId;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 2),
-                        child: Material(
+                        child: FlashingOutline(
                           key: ValueKey(
-                            'calendar-schedule-color-${schedule.id}',
+                            'calendar-schedule-flash-${schedule.id}',
                           ),
-                          color: background,
-                          shape: focused
-                              ? RoundedRectangleBorder(
-                                  side: BorderSide(
-                                    color: colors.primary,
-                                    width: 3,
+                          active: focused,
+                          child: Material(
+                            key: ValueKey(
+                              'calendar-schedule-color-${schedule.id}',
+                            ),
+                            color: background,
+                            child: InkWell(
+                              key: ValueKey('calendar-schedule-${schedule.id}'),
+                              onTap: () => onEdit(schedule),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 3,
+                                ),
+                                child: Text(
+                                  '${schedule.allDay ? '' : '${_two(starts.hour)}:${_two(starts.minute)} '}'
+                                  '${schedule.title}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: foreground,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                )
-                              : null,
-                          child: InkWell(
-                            key: ValueKey('calendar-schedule-${schedule.id}'),
-                            onTap: () => onEdit(schedule),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 3,
-                              ),
-                              child: Text(
-                                '${schedule.allDay ? '' : '${_two(starts.hour)}:${_two(starts.minute)} '}'
-                                '${schedule.title}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: foreground,
-                                  fontSize: 14,
-                                  fontWeight: focused
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
                                 ),
                               ),
                             ),
@@ -366,15 +349,13 @@ class _CalendarDay extends StatelessWidget {
 class _ScheduleEditor extends StatefulWidget {
   const _ScheduleEditor({
     required this.schedule,
-    required this.onChanged,
-    required this.onRemove,
+    required this.colorPicker,
     this.timetable,
   });
 
   final CalendarSchedule schedule;
   final Timetable? timetable;
-  final ValueChanged<CalendarSchedule> onChanged;
-  final VoidCallback onRemove;
+  final ColorPickerLauncher colorPicker;
 
   @override
   State<_ScheduleEditor> createState() => _ScheduleEditorState();
@@ -384,7 +365,11 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
   late final TextEditingController _title = TextEditingController(
     text: widget.schedule.title,
   );
+  late final TextEditingController _note = TextEditingController(
+    text: widget.schedule.note,
+  );
   late CalendarSchedule _schedule = widget.schedule;
+  late Color _color = Color(widget.schedule.colorValue);
   late DateTime _date = _beijingDate(widget.schedule.startsAt);
   late TimeOfDay _time = TimeOfDay.fromDateTime(
     _beijingDateTime(widget.schedule.startsAt),
@@ -394,6 +379,7 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
   @override
   void dispose() {
     _title.dispose();
+    _note.dispose();
     super.dispose();
   }
 
@@ -426,12 +412,7 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
       _schedule.allDay ? 0 : _time.hour,
       _schedule.allDay ? 0 : _time.minute,
     ).subtract(const Duration(hours: 8));
-    _publish(_schedule.copyWith(startsAt: startsAt));
-  }
-
-  void _publish(CalendarSchedule value) {
-    setState(() => _schedule = value);
-    widget.onChanged(value);
+    setState(() => _schedule = _schedule.copyWith(startsAt: startsAt));
   }
 
   List<({String sourceId, String name})> get _classes {
@@ -446,105 +427,160 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
       ..sort((a, b) => a.name.compareTo(b.name));
   }
 
+  Future<void> _chooseColor() async {
+    final color = await widget.colorPicker(
+      context,
+      color: _color,
+      title: AppStrings.of(context).text(AppText.scheduleColor),
+    );
+    if (mounted) setState(() => _color = color);
+  }
+
+  void _save() {
+    final title = _title.text.trim();
+    if (title.isEmpty) {
+      setState(() => _showRequired = true);
+      return;
+    }
+    Navigator.pop(
+      context,
+      _schedule.copyWith(
+        title: title,
+        note: _note.text.trim(),
+        colorValue: _color.toARGB32(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     return AlertDialog(
       key: const ValueKey('schedule-editor'),
+      insetPadding: const EdgeInsets.all(24),
+      backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 1),
+      surfaceTintColor: Colors.transparent,
       title: Text(strings.text(AppText.editSchedule)),
-      content: SizedBox(
-        width: 360,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              key: const ValueKey('schedule-title'),
-              controller: _title,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: strings.text(AppText.scheduleTitle),
-                errorText: _showRequired
-                    ? strings.text(AppText.scheduleTitleRequired)
-                    : null,
-              ),
-              onChanged: (value) {
-                final title = value.trim();
-                setState(() => _showRequired = title.isEmpty);
-                if (title.isNotEmpty) {
-                  _publish(_schedule.copyWith(title: title));
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-            SwitchListTile(
-              key: const ValueKey('schedule-all-day'),
-              contentPadding: EdgeInsets.zero,
-              title: Text(strings.text(AppText.allDay)),
-              value: _schedule.allDay,
-              onChanged: (value) {
-                _schedule = _schedule.copyWith(allDay: value);
-                _publishDateTime();
-              },
-            ),
-            Row(
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 620),
+        child: SizedBox(
+          width: 560,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
+                TextField(
+                  key: const ValueKey('schedule-title'),
+                  controller: _title,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: strings.text(AppText.scheduleTitle),
+                    errorText: _showRequired
+                        ? strings.text(AppText.scheduleTitleRequired)
+                        : null,
+                  ),
+                  onChanged: (value) {
+                    if (_showRequired && value.trim().isNotEmpty) {
+                      setState(() => _showRequired = false);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  key: const ValueKey('schedule-all-day'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(strings.text(AppText.allDay)),
+                  value: _schedule.allDay,
+                  onChanged: (value) {
+                    _schedule = _schedule.copyWith(allDay: value);
+                    _publishDateTime();
+                  },
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        key: const ValueKey('schedule-date'),
+                        onPressed: _chooseDate,
+                        icon: const Icon(Icons.calendar_today_outlined),
+                        label: Text(
+                          '${_date.year}-${_two(_date.month)}-${_two(_date.day)}',
+                        ),
+                      ),
+                    ),
+                    if (!_schedule.allDay) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('schedule-time'),
+                          onPressed: _chooseTime,
+                          icon: const Icon(Icons.schedule),
+                          label: Text(_time.format(context)),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String?>(
+                  key: const ValueKey('schedule-related-class'),
+                  initialValue: _schedule.relatedClassSourceId,
+                  decoration: InputDecoration(
+                    labelText: strings.text(AppText.relatedClass),
+                  ),
+                  items: [
+                    DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text(strings.text(AppText.noRelatedClass)),
+                    ),
+                    for (final course in _classes)
+                      DropdownMenuItem<String?>(
+                        value: course.sourceId,
+                        child: Text(course.name),
+                      ),
+                  ],
+                  onChanged: (value) => setState(
+                    () => _schedule = _schedule.copyWith(
+                      relatedClassSourceId: value,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  key: const ValueKey('schedule-note'),
+                  controller: _note,
+                  minLines: 3,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    labelText: strings.text(AppText.scheduleNote),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
                   child: OutlinedButton.icon(
-                    key: const ValueKey('schedule-date'),
-                    onPressed: _chooseDate,
-                    icon: const Icon(Icons.calendar_today_outlined),
-                    label: Text(
-                      '${_date.year}-${_two(_date.month)}-${_two(_date.day)}',
-                    ),
+                    key: const ValueKey('schedule-color'),
+                    onPressed: _chooseColor,
+                    icon: Icon(Icons.circle, color: _color),
+                    label: Text(strings.text(AppText.scheduleColor)),
                   ),
                 ),
-                if (!_schedule.allDay) ...[
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      key: const ValueKey('schedule-time'),
-                      onPressed: _chooseTime,
-                      icon: const Icon(Icons.schedule),
-                      label: Text(_time.format(context)),
-                    ),
-                  ),
-                ],
               ],
             ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String?>(
-              key: const ValueKey('schedule-related-class'),
-              initialValue: _schedule.relatedClassSourceId,
-              decoration: InputDecoration(
-                labelText: strings.text(AppText.relatedClass),
-              ),
-              items: [
-                DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text(strings.text(AppText.noRelatedClass)),
-                ),
-                for (final course in _classes)
-                  DropdownMenuItem<String?>(
-                    value: course.sourceId,
-                    child: Text(course.name),
-                  ),
-              ],
-              onChanged: (value) =>
-                  _publish(_schedule.copyWith(relatedClassSourceId: value)),
-            ),
-          ],
+          ),
         ),
       ),
       actions: [
         TextButton(
-          key: const ValueKey('remove-schedule'),
-          onPressed: widget.onRemove,
-          child: Text(strings.text(AppText.remove)),
-        ),
-        TextButton(
-          key: const ValueKey('close-schedule-editor'),
+          key: const ValueKey('cancel-schedule-editor'),
           onPressed: () => Navigator.pop(context),
-          child: Text(strings.text(AppText.close)),
+          child: Text(strings.text(AppText.cancel)),
+        ),
+        FilledButton(
+          key: const ValueKey('save-schedule-editor'),
+          onPressed: _save,
+          child: Text(strings.text(AppText.save)),
         ),
       ],
     );

@@ -13,6 +13,8 @@ final class AppearanceSettings {
     this.showRollInNavbar = true,
     this.fontScale = 1.2,
     this.fontWeightValue = 400,
+    this.timetableIndexColor = const Color(0xffe8e0d2),
+    this.autoTextColor = false,
   });
 
   final Color accent;
@@ -22,6 +24,8 @@ final class AppearanceSettings {
   final bool showRollInNavbar;
   final double fontScale;
   final int fontWeightValue;
+  final Color timetableIndexColor;
+  final bool autoTextColor;
 
   AppearanceSettings copyWith({
     Color? accent,
@@ -31,6 +35,8 @@ final class AppearanceSettings {
     bool? showRollInNavbar,
     double? fontScale,
     int? fontWeightValue,
+    Color? timetableIndexColor,
+    bool? autoTextColor,
   }) => AppearanceSettings(
     accent: accent ?? this.accent,
     paletteSeed: paletteSeed ?? this.paletteSeed,
@@ -39,6 +45,8 @@ final class AppearanceSettings {
     showRollInNavbar: showRollInNavbar ?? this.showRollInNavbar,
     fontScale: fontScale ?? this.fontScale,
     fontWeightValue: fontWeightValue ?? this.fontWeightValue,
+    timetableIndexColor: timetableIndexColor ?? this.timetableIndexColor,
+    autoTextColor: autoTextColor ?? this.autoTextColor,
   );
 }
 
@@ -86,6 +94,8 @@ final class AppearanceController extends ChangeNotifier {
   double get fontScale => _settings.fontScale;
   int get fontWeightValue => _settings.fontWeightValue;
   FontWeight get fontWeight => FontWeight.values[fontWeightValue ~/ 100 - 1];
+  Color get timetableIndexColor => _settings.timetableIndexColor;
+  bool get autoTextColor => _settings.autoTextColor;
   Map<String, CourseAppearance> get courseAppearances =>
       Map.unmodifiable(_courseAppearances);
 
@@ -113,6 +123,12 @@ final class AppearanceController extends ChangeNotifier {
     }
     _set(_settings.copyWith(fontWeightValue: value));
   }
+
+  void setTimetableIndexColor(Color value) =>
+      _set(_settings.copyWith(timetableIndexColor: value));
+
+  void setAutoTextColor(bool value) =>
+      _set(_settings.copyWith(autoTextColor: value));
 
   void setRollPalette(int value) {
     RangeError.checkValueInInterval(value, 0, rollPalettes.length - 1);

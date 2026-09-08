@@ -15,7 +15,8 @@ class ScheduleRepository implements ScheduleStore {
 SELECT m.*, c.name AS completed_name, c.room AS completed_room,
 c.frequency AS completed_frequency, c.weekday AS completed_weekday,
 c.first_period AS completed_first, c.last_period AS completed_last,
-c.note AS completed_note, c.exam AS completed_exam FROM meetings m
+c.note AS completed_note, c.exam AS completed_exam,
+c.short_name AS completed_short_name FROM meetings m
 JOIN active_schedule a ON a.source = m.source
 LEFT JOIN completions c ON c.source = m.source AND c.identity = m.identity
 WHERE m.weekday BETWEEN 1 AND 5
@@ -40,6 +41,7 @@ ORDER BY u.rowid''');
           sourceId: r['identity'] as String,
           sourceName: r['name'] as String,
           name: (r['completed_name'] ?? r['name']) as String,
+          shortName: (r['completed_short_name'] ?? '') as String,
           weekday: (r['completed_weekday'] ?? r['weekday']) as int,
           firstPeriod: (r['completed_first'] ?? r['first_period']) as int,
           lastPeriod: (r['completed_last'] ?? r['last_period']) as int,
@@ -54,6 +56,7 @@ ORDER BY u.rowid''');
         (r) => Course(
           sourceId: r['identity'] as String,
           name: r['name'] as String,
+          shortName: r['short_name'] as String,
           weekday: r['weekday'] as int,
           firstPeriod: r['first_period'] as int,
           lastPeriod: r['last_period'] as int,
@@ -130,11 +133,12 @@ ORDER BY u.rowid''');
         final c = completions[m.sourceId];
         if (c != null) {
           db.execute(
-            'INSERT INTO completions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO completions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
               source,
               m.sourceId,
               c.name,
+              c.shortName,
               c.room,
               _frequencyText(c.frequencyText),
               c.weekday,
@@ -179,6 +183,7 @@ ORDER BY u.rowid''');
       source,
       meeting.sourceId,
       meeting.name,
+      meeting.shortName,
       meeting.weekday,
       meeting.firstPeriod,
       meeting.lastPeriod,
@@ -189,8 +194,9 @@ ORDER BY u.rowid''');
     ];
     if (meeting.sourceId.startsWith('user:')) {
       store.database.execute(
-        '''INSERT INTO user_meetings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        '''INSERT INTO user_meetings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(source, identity) DO UPDATE SET name=excluded.name,
+short_name=excluded.short_name,
 weekday=excluded.weekday, first_period=excluded.first_period,
 last_period=excluded.last_period, room=excluded.room,
 frequency=excluded.frequency, note=excluded.note, exam=excluded.exam''',
@@ -205,16 +211,18 @@ frequency=excluded.frequency, note=excluded.note, exam=excluded.exam''',
         throw ArgumentError('Meeting does not belong to active schedule');
       }
       store.database.execute(
-        '''INSERT INTO completions(source, identity, name, room, frequency,
-weekday, first_period, last_period, note, exam) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        '''INSERT INTO completions(source, identity, name, short_name, room, frequency,
+weekday, first_period, last_period, note, exam) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(source, identity) DO UPDATE SET name=excluded.name,
-room=excluded.room, frequency=excluded.frequency, weekday=excluded.weekday,
+short_name=excluded.short_name, room=excluded.room,
+frequency=excluded.frequency, weekday=excluded.weekday,
 first_period=excluded.first_period, last_period=excluded.last_period,
 note=excluded.note, exam=excluded.exam''',
         [
           source,
           meeting.sourceId,
           meeting.name,
+          meeting.shortName,
           meeting.room,
           _frequencyText(meeting.frequencyText),
           meeting.weekday,
