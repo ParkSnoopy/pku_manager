@@ -56,6 +56,7 @@ enum AppText {
   editCourse,
   addCourse,
   chooseTutorialRoom,
+  notAvailable,
   next,
   back,
   finish,
@@ -128,6 +129,12 @@ class AppStrings {
 
   String weekday(int value) =>
       (_weekdays[locale.languageCode] ?? _weekdays['ko']!)[value - 1];
+
+  String periodRange(int first, int last) => switch (locale.languageCode) {
+    'en' => first == last ? 'Period $first' : 'Periods $first–$last',
+    'zh' => first == last ? '第$first节' : '第$first–$last节',
+    _ => first == last ? '$first교시' : '$first–$last교시',
+  };
 
   String monthLabel(DateTime month) => switch (locale.languageCode) {
     'en' => '${_months[month.month - 1]} ${month.year}',
@@ -231,7 +238,8 @@ class AppStrings {
       AppText.chinese: '简体中文',
       AppText.editCourse: '강의 편집',
       AppText.addCourse: '강의 추가',
-      AppText.chooseTutorialRoom: '연습 수업 강의실 선택',
+      AppText.chooseTutorialRoom: '강의실 선택',
+      AppText.notAvailable: '미정',
       AppText.next: '다음',
       AppText.back: '이전',
       AppText.finish: '가져오기',
@@ -318,7 +326,8 @@ class AppStrings {
       AppText.chinese: '简体中文',
       AppText.editCourse: 'Edit course',
       AppText.addCourse: 'Add course',
-      AppText.chooseTutorialRoom: 'Choose tutorial room',
+      AppText.chooseTutorialRoom: 'Select classroom',
+      AppText.notAvailable: 'Not available',
       AppText.next: 'Next',
       AppText.back: 'Back',
       AppText.finish: 'Import',
@@ -406,7 +415,8 @@ class AppStrings {
       AppText.chinese: '简体中文',
       AppText.editCourse: '编辑课程',
       AppText.addCourse: '添加课程',
-      AppText.chooseTutorialRoom: '选择习题课教室',
+      AppText.chooseTutorialRoom: '选择教室',
+      AppText.notAvailable: '暂无',
       AppText.next: '下一项',
       AppText.back: '上一项',
       AppText.finish: '导入',

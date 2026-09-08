@@ -43,89 +43,90 @@ final class CourseAppearance {
       Object.hash(color, lockColor, outlined, outlineColor, outlineWidth);
 }
 
-const courseColorChoices = <Color>[
-  Color(0xff79adac),
-  Color(0xffbeadf2),
-  Color(0xffa0c8f2),
-  Color(0xffadf7b6),
-  Color(0xffffea99),
-];
+final class RollPalette {
+  const RollPalette(this.name, this.colors);
 
-// Exact usable palettes from ParkSnoopy/pku-elective-prettify palette.json
-// at eaacca788e246a18c36ea013ced2bed6b62bd995. The upstream palette whose
-// literal `##ffafcc` entry is invalid is deliberately not normalized.
-const rollPalettes = <List<Color>>[
-  [
+  final String name;
+  final List<Color> colors;
+}
+
+// Exact usable palettes and names from ParkSnoopy/pku-elective-prettify
+// palette.json at eaacca788e246a18c36ea013ced2bed6b62bd995. The upstream
+// palette whose literal `##ffafcc` entry is invalid is not normalized.
+const rollPalettes = <RollPalette>[
+  RollPalette('default Colorful', [
     Color(0xff79adac),
     Color(0xffbeadf2),
     Color(0xffa0c8f2),
     Color(0xffadf7b6),
     Color(0xffffea99),
-  ],
-  [
+  ]),
+  RollPalette('Pastel Dreams', [
     Color(0xff809bce),
     Color(0xff95b8d1),
     Color(0xffb8e0d2),
     Color(0xffd6eadf),
     Color(0xffeac4d5),
-  ],
-  [
+  ]),
+  RollPalette('Golden Summer Fields', [
     Color(0xffccd5ae),
     Color(0xffe9edc9),
     Color(0xfffefae0),
     Color(0xfffaedcd),
     Color(0xffd4a373),
-  ],
-  [
+  ]),
+  RollPalette('Spring Delight', [
     Color(0xff79addc),
     Color(0xffffc09f),
     Color(0xffffee93),
     Color(0xfffcf5c7),
     Color(0xffadf7b6),
-  ],
-  [
+  ]),
+  RollPalette('Passtel colors', [
     Color(0xfff1c494),
     Color(0xfffaf3a5),
     Color(0xff9df79c),
     Color(0xff89d1fb),
     Color(0xffcfaaf6),
-  ],
-  [
+  ]),
+  RollPalette('Pastel Grass', [
     Color(0xffb7e4ba),
     Color(0xff95d59d),
     Color(0xff74c691),
     Color(0xff52b776),
     Color(0xff40915d),
-  ],
-  [
+  ]),
+  RollPalette('Henggarae - Hana', [
     Color(0xffb8d6ec),
     Color(0xfff6c7b7),
     Color(0xffd6c8e8),
     Color(0xfff9f3e3),
     Color(0xffcfcbc5),
-  ],
-  [
+  ]),
+  RollPalette('SaltwaterTaffy', [
     Color(0xfff0ed5f),
     Color(0xfff3c6fc),
     Color(0xff9de0e7),
     Color(0xffedbb7d),
     Color(0xffb5c4fa),
-  ],
-  [
+  ]),
+  RollPalette('ego death at the bachelorette party', [
     Color(0xffea7d72),
     Color(0xff97851e),
     Color(0xff3e5241),
     Color(0xff2194c2),
     Color(0xffb085de),
-  ],
-  [
+  ]),
+  RollPalette('Dark Winter Pastel Blues', [
     Color(0xffabb9c2),
     Color(0xffc6d6da),
     Color(0xffa9c7ce),
     Color(0xffc8dce9),
     Color(0xffa3b6ba),
-  ],
+  ]),
 ];
+
+List<Color> get courseColorChoices => rollPalettes.first.colors;
 
 Color timetableCourseColor(
   Course meeting,
@@ -138,6 +139,6 @@ Color timetableCourseColor(
     0,
     (value, rune) => (value * 31 + rune) & 0x7fffffff,
   );
-  final palette = rollPalettes[paletteIndex];
+  final palette = rollPalettes[paletteIndex].colors;
   return palette[(hash + paletteSeed) % palette.length];
 }

@@ -80,7 +80,7 @@ The navigation shell owns Timetable, Calendar, and Settings destinations. Import
 
 ### Course Meetings
 
-- `course_meeting.dart` represents one normalized occurrence of a course.
+- `course.dart` represents one normalized occurrence of a course.
 - A meeting owns stable source-record identity, course name, weekday, first and last periods, room, frequency, note, and exam information.
 - Weekday covers Monday through Friday. Source weekend columns are intentionally excluded from the application timetable.
 - Period ranges are positive, ordered, and bounded by the imported timetable structure.
@@ -118,7 +118,7 @@ The navigation shell owns Timetable, Calendar, and Settings destinations. Import
 2. Layout detector inspects workbook structure rather than trusting the extension or filename.
 3. A layout parser handles each supported PKU shape.
 4. Field parser extracts course details, source-record identity, and typed frequency.
-5. Timetable validator rejects impossible coordinates and reports every unsupported or incomplete nonempty record.
+5. Timetable validator rejects impossible coordinates and reports each field that could not be parsed for every unsupported or incomplete nonempty record.
 
 Initial layout implementations cover legacy one-row records and newer paired rows. Both produce the same domain model. Adding a source layout requires a new recognizer/parser pair, not changes to widgets or persistence.
 
@@ -130,7 +130,7 @@ The spreadsheet package remains isolated behind the workbook decoder. Replacing 
 - Source BLOBs retain selected workbook bytes exactly and are immutable after insertion.
 - Import validates size, decodes, parses, and reports every issue before any authoritative write.
 - A complete candidate is inserted and activated in one SQLite transaction.
-- An incomplete candidate remains transient while the user either supplies every required completion field or rejects it. Completed values are stored separately from source-derived values.
+- An incomplete candidate remains transient while the user supplies only the fields identified as failed or rejects it. Multi-room exercise classes use the `pages`-branch classroom-choice interaction rather than a full correction form. Completed values are stored separately from source-derived values.
 - Failed, cancelled, or rejected import leaves the previous active source and published timetable unchanged.
 - Startup reads the active parsed structure and verifies its immutable source record. Corruption is reported without destructive repair.
 
@@ -185,7 +185,7 @@ Incomplete-import review is separate from schedule state. It holds a transient c
 - Import feedback stays in `timetable_page.dart`; `schedule_import_review.dart` owns the completion form.
 - `course_editor_dialog.dart` creates user courses and applies every valid imported-record correction immediately without changing source bytes or exposing a Save action.
 - `timetable_export.dart` generates complete five-weekday PNG and XLSX files from the same grouped-span geometry as the screen. PNG adds 12 logical units of canvas padding and renders the complete table at 4× resolution; XLSX retains four role rows per period underneath merged course blocks with matching dimensions, fonts, and alignment.
-- `features/settings/appearance_controller.dart` owns persistent accent, language, font scale, font weight, and timetable-palette state; `settings_page.dart` applies those values immediately and advances language through one cyclic button rather than exposing all language entries simultaneously.
+- `features/settings/appearance_controller.dart` owns persistent accent, language, font scale, font weight, and timetable-palette state; `settings_page.dart` applies those values immediately, presents Roll palettes by their upstream names and swatches instead of indexes, and advances language through one cyclic button rather than exposing all language entries simultaneously.
 - `course_appearance` stores optional manual color, roll lock, and importance-outline color/thickness by active-source meeting identity. Locked manual colors are invariant under palette rolls; rolling clears only unlocked manual colors. The same typed appearance map feeds screen, PNG, and XLSX output. Settings can persistently hide the rail's Roll colors action, and theme, course, and outline colors use the shared arbitrary-color picker.
 - `features/calendar/calendar_page.dart` renders an independent navigable personal month containing only user-created schedules. Schedules default to all-day, update interactively, and may store one related class source ID. Landscape Timetable shows upcoming personal schedules and swaps that pane for the shared inline course editor on selection. Landscape Calendar shows only the nearest timetable class in its right pane; classes are never projected into the month. Side-pane entries open the corresponding item.
 - The fourth navigation-rail action launches the fixed PKU Teaching Network HTTPS URL through the platform default browser. The launcher is injectable at the widget boundary so tests verify the exact URI without opening a real browser.
@@ -222,7 +222,7 @@ No schedule data belongs beside the executable, in the repository, in Downloads 
 2. `timetable_controller.dart` requests bytes through `schedule_picker.dart`.
 3. The controller submits bounded bytes to its `ScheduleDecoder` port, implemented by `schedule_xls_parser.dart`, without mutation.
 4. Workbook decoder and selected layout parser create a candidate containing source identities, parsed records, and all issues.
-5. A complete candidate proceeds directly; an incomplete candidate waits for complete user corrections or whole-candidate rejection.
+5. A complete candidate proceeds directly; an incomplete candidate requests only failed parse fields, with direct room selection for multi-room exercise classes, or waits for whole-candidate rejection.
 6. Repository inserts immutable bytes, parsed rows, completion rows, and active selection in one SQLite transaction.
 7. Controller publishes ready schedule state.
 8. `timetable_page.dart` selects the responsive projection and renders it.

@@ -6,7 +6,7 @@ Build an offline-first school life management application for Android, iOS, Linu
 
 ## Current Context
 
-- The Flutter application is at version `0.0.6`; all `0.0.x` builds keep schema version 0 without compatibility code.
+- The Flutter application is at version `0.0.7`; all `0.0.x` builds keep schema version 0 without compatibility code.
 - Android, iOS, Linux, macOS, and Windows Flutter runners exist. Web is unsupported.
 - Domain, SQLite, workbook parsing, responsive timetable, editing, appearance, export, and native packaging layers are implemented.
 - The deployed Week Parity application currently reads `https://parksnoopy-undergraduate.github.io/week/config.toml`.
@@ -43,7 +43,7 @@ Build an offline-first school life management application for Android, iOS, Linu
 
 - `lib/domain/week_frequency.dart`: typed `every`, `odd`, and `even` frequency values plus current-week membership rules; unsupported tokens map to `every`.
 - `lib/domain/semester.dart`: semester start, Beijing calendar date, week number, and parity calculations.
-- `lib/domain/course_meeting.dart`: normalized course name, weekday, period range, room, frequency, note, and exam information.
+- `lib/domain/course.dart`: immutable source name, editable display name, weekday, period range, room, frequency, note, and exam information.
 - `lib/domain/timetable.dart`: ordered meetings, period bounds, day grouping, and consecutive-cell grouping.
 
 Domain objects remain independent of Flutter widgets, filesystems, HTTP, and spreadsheet packages.
@@ -72,7 +72,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - `lib/features/timetable/day_schedule.dart`: compact selected-day presentation for narrow screens.
 - `lib/features/timetable/week_status.dart`: semester week, parity, freshness, and refresh status.
 - `lib/features/schedule_import/schedule_import_action.dart`: import affordance and user-facing validation failures.
-- `lib/features/schedule_import/schedule_import_review.dart`: complete every reported required field or reject the candidate without mutation.
+- `lib/features/schedule_import/schedule_import_review.dart`: request only fields that failed parsing, use direct room choices for ambiguous exercise classes, or reject the candidate without mutation.
 - `lib/features/settings/appearance_controller.dart` and `settings_page.dart`: persistent accent, language, and repeatable timetable color rolls.
 - `lib/features/timetable/course_editor_dialog.dart`: add weekday meetings and edit imported records through separate overlays.
 - `lib/features/timetable/timetable_export.dart`: complete Monday–Friday PNG and XLSX export.
@@ -109,7 +109,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Verify every frequency against odd, even, and unfiltered preview modes.
 - Create `lib/domain/semester.dart` and `test/domain/semester_test.dart`.
 - Verify semester start day, Sunday boundary, next Monday, odd/even transitions, pre-semester dates, and Beijing-date handling.
-- Create `lib/domain/course_meeting.dart` and `lib/domain/timetable.dart`.
+- Create `lib/domain/course.dart` and `lib/domain/timetable.dart`.
 - Verify stable ordering, Monday-through-Friday retention, period bounds, and consecutive meeting grouping.
 - Add stable source-record identity and separate typed completion fields; neither can mutate source workbook bytes.
 - Add validated build configuration for semester length. Default builds use 16 weeks; values outside 1–53 weeks fail startup or build validation.

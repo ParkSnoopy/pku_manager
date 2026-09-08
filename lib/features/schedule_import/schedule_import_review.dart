@@ -6,8 +6,6 @@ import '../../domain/week_frequency.dart';
 import '../../l10n/app_strings.dart';
 import '../timetable/timetable_controller.dart';
 
-enum _Field { name, room, weekday, first, last, frequency, note, exam }
-
 class ScheduleImportReview extends StatefulWidget {
   const ScheduleImportReview({
     super.key,
@@ -25,16 +23,16 @@ class ScheduleImportReview extends StatefulWidget {
 class _ScheduleImportReviewState extends State<ScheduleImportReview> {
   final _form = GlobalKey<FormState>();
   var _index = 0;
-  late final Map<String, Map<_Field, TextEditingController>> _fields = {
+  late final Map<String, Map<ImportField, TextEditingController>> _fields = {
     for (final record in widget.candidate.issues)
       record.meeting.sourceId: {
-        for (final field in _Field.values)
+        for (final field in ImportField.values)
           field: TextEditingController(text: _value(field, record.meeting)),
       },
   };
 
   ImportRecord get _record => widget.candidate.issues[_index];
-  Map<_Field, TextEditingController> get _current =>
+  Map<ImportField, TextEditingController> get _current =>
       _fields[_record.meeting.sourceId]!;
 
   @override
@@ -50,9 +48,16 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    final tutorialRooms = _record.meeting.name.contains('习题课')
-        ? _roomChoices(_current[_Field.room]!.text)
+    final failedFields = _record.failedFields.isEmpty
+        ? ImportField.values.toSet()
+        : _record.failedFields;
+    final tutorialRooms = _record.meeting.sourceId.endsWith('/tutorial')
+        ? _roomChoices(_current[ImportField.room]!.text)
         : const <String>[];
+    final classroomChoice =
+        failedFields.length == 1 &&
+        failedFields.contains(ImportField.room) &&
+        tutorialRooms.length > 1;
     return ColoredBox(
       color: Colors.black26,
       child: Center(
@@ -60,74 +65,93 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
           elevation: 12,
           color: Theme.of(context).colorScheme.surface,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720, maxHeight: 720),
+            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 720),
             child: Form(
               key: _form,
               child: ListView(
                 padding: const EdgeInsets.all(28),
                 children: [
                   Text(
-                    strings.text(AppText.completeInformation),
+                    strings.text(
+                      classroomChoice
+                          ? AppText.chooseTutorialRoom
+                          : AppText.completeInformation,
+                    ),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
-                  Text('${_index + 1} / ${widget.candidate.issues.length}'),
-                  const Divider(height: 32),
-                  SelectableText(_record.raw),
                   const SizedBox(height: 8),
-                  Text(_record.issue!),
-                  const SizedBox(height: 16),
-                  for (final field in _Field.values) ...[
-                    if (field == _Field.room && tutorialRooms.length > 1) ...[
-                      Text(strings.text(AppText.chooseTutorialRoom)),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          for (final room in tutorialRooms)
-                            ChoiceChip(
-                              label: Text(room),
-                              selected: _current[_Field.room]!.text == room,
-                              onSelected: (_) => setState(
-                                () => _current[_Field.room]!.text = room,
-                              ),
-                            ),
-                        ],
+                  if (classroomChoice)
+                    Text(
+                      '${_record.meeting.name} · '
+                      '${strings.weekday(_record.meeting.weekday)} · '
+                      '${strings.periodRange(_record.meeting.firstPeriod, _record.meeting.lastPeriod)}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                    ],
-                    TextFormField(
-                      controller: _current[field],
-                      decoration: InputDecoration(
-                        labelText: _label(strings, field),
-                      ),
-                      validator: (value) => _validate(strings, field, value),
-                    ),
+                    )
+                  else ...[
+                    Text('${_index + 1} / ${widget.candidate.issues.length}'),
+                    const Divider(height: 32),
+                    SelectableText(_record.raw),
                   ],
-                  const SizedBox(height: 24),
-                  Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: 12,
-                    children: [
-                      TextButton(
-                        onPressed: widget.controller.reject,
-                        child: Text(strings.text(AppText.rejectIgnore)),
-                      ),
-                      if (_index > 0)
-                        TextButton(
-                          onPressed: () => setState(() => _index--),
-                          child: Text(strings.text(AppText.back)),
-                        ),
-                      FilledButton(
-                        onPressed: _advance,
-                        child: Text(
-                          strings.text(
-                            _index + 1 == widget.candidate.issues.length
-                                ? AppText.finish
-                                : AppText.next,
+                  const SizedBox(height: 20),
+                  if (classroomChoice) ...[
+                    for (final room in [...tutorialRooms, '暂无'])
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: OutlinedButton(
+                          key: ValueKey('tutorial-room-$room'),
+                          onPressed: () => _chooseTutorialRoom(room),
+                          style: OutlinedButton.styleFrom(
+                            alignment: Alignment.centerLeft,
+                            minimumSize: const Size.fromHeight(44),
+                          ),
+                          child: Text(
+                            room == '暂无'
+                                ? strings.text(AppText.notAvailable)
+                                : room,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                  ] else ...[
+                    for (final field in ImportField.values)
+                      if (failedFields.contains(field))
+                        TextFormField(
+                          key: ValueKey('import-${field.name}'),
+                          controller: _current[field],
+                          decoration: InputDecoration(
+                            labelText: _label(strings, field),
+                          ),
+                          validator: (value) =>
+                              _validate(strings, field, value),
+                        ),
+                    const SizedBox(height: 24),
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: 12,
+                      children: [
+                        TextButton(
+                          onPressed: widget.controller.reject,
+                          child: Text(strings.text(AppText.rejectIgnore)),
+                        ),
+                        if (_index > 0)
+                          TextButton(
+                            onPressed: () => setState(() => _index--),
+                            child: Text(strings.text(AppText.back)),
+                          ),
+                        FilledButton(
+                          onPressed: _advance,
+                          child: Text(
+                            strings.text(
+                              _index + 1 == widget.candidate.issues.length
+                                  ? AppText.finish
+                                  : AppText.next,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -135,6 +159,11 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
         ),
       ),
     );
+  }
+
+  void _chooseTutorialRoom(String room) {
+    _current[ImportField.room]!.text = room;
+    _advance();
   }
 
   void _advance() {
@@ -154,68 +183,74 @@ class _ScheduleImportReviewState extends State<ScheduleImportReview> {
 
   Course _meeting(
     ImportRecord record,
-    Map<_Field, TextEditingController> fields,
+    Map<ImportField, TextEditingController> fields,
   ) {
-    final frequencyText = fields[_Field.frequency]!.text;
+    final frequencyText = fields[ImportField.frequency]!.text;
     return Course(
       sourceId: record.meeting.sourceId,
-      name: fields[_Field.name]!.text.trim(),
-      room: fields[_Field.room]!.text.trim(),
-      weekday: int.parse(fields[_Field.weekday]!.text),
-      firstPeriod: int.parse(fields[_Field.first]!.text),
-      lastPeriod: int.parse(fields[_Field.last]!.text),
+      sourceName: record.meeting.sourceName,
+      name: fields[ImportField.name]!.text.trim(),
+      room: fields[ImportField.room]!.text.trim(),
+      weekday: int.parse(fields[ImportField.weekday]!.text),
+      firstPeriod: int.parse(fields[ImportField.firstPeriod]!.text),
+      lastPeriod: int.parse(fields[ImportField.lastPeriod]!.text),
       frequency: WeekFrequency.parse(frequencyText),
       frequencyText: frequencyText,
-      note: fields[_Field.note]!.text,
-      exam: fields[_Field.exam]!.text,
+      note: fields[ImportField.note]!.text,
+      exam: fields[ImportField.exam]!.text,
     );
   }
 
-  String? _validate(AppStrings strings, _Field field, String? value) {
-    if (field == _Field.name || field == _Field.room) {
+  String? _validate(AppStrings strings, ImportField field, String? value) {
+    if (field == ImportField.name || field == ImportField.room) {
       if (value == null || value.trim().isEmpty) {
         return strings.text(AppText.required);
       }
     }
-    if (field == _Field.weekday ||
-        field == _Field.first ||
-        field == _Field.last) {
+    if (field == ImportField.weekday ||
+        field == ImportField.firstPeriod ||
+        field == ImportField.lastPeriod) {
       final number = int.tryParse(value ?? '');
-      final maximum = field == _Field.weekday
+      final maximum = field == ImportField.weekday
           ? 5
           : widget.candidate.periodCount;
       if (number == null || number < 1 || number > maximum) {
         return '${strings.text(AppText.enterRange)}: 1–$maximum';
       }
-      if (field == _Field.last &&
-          number < (int.tryParse(_current[_Field.first]!.text) ?? 1)) {
+      if (field == ImportField.lastPeriod &&
+          number <
+              (int.tryParse(_current[ImportField.firstPeriod]!.text) ?? 1)) {
         return strings.text(AppText.lastBeforeFirst);
       }
+    }
+    if (field == ImportField.frequency &&
+        !const {'每周', '单周', '双周'}.contains(value?.trim())) {
+      return strings.text(AppText.required);
     }
     return null;
   }
 
-  static String _value(_Field field, Course meeting) => switch (field) {
-    _Field.name => meeting.name,
-    _Field.room => meeting.room,
-    _Field.weekday => '${meeting.weekday}',
-    _Field.first => '${meeting.firstPeriod}',
-    _Field.last => '${meeting.lastPeriod}',
-    _Field.frequency => meeting.frequencyText,
-    _Field.note => meeting.note,
-    _Field.exam => meeting.exam,
+  static String _value(ImportField field, Course meeting) => switch (field) {
+    ImportField.name => meeting.name,
+    ImportField.room => meeting.room,
+    ImportField.weekday => '${meeting.weekday}',
+    ImportField.firstPeriod => '${meeting.firstPeriod}',
+    ImportField.lastPeriod => '${meeting.lastPeriod}',
+    ImportField.frequency => meeting.frequencyText,
+    ImportField.note => meeting.note,
+    ImportField.exam => meeting.exam,
   };
 
-  static String _label(AppStrings strings, _Field field) =>
+  static String _label(AppStrings strings, ImportField field) =>
       strings.text(switch (field) {
-        _Field.name => AppText.course,
-        _Field.room => AppText.room,
-        _Field.weekday => AppText.weekday,
-        _Field.first => AppText.firstPeriod,
-        _Field.last => AppText.lastPeriod,
-        _Field.frequency => AppText.frequency,
-        _Field.note => AppText.notes,
-        _Field.exam => AppText.exam,
+        ImportField.name => AppText.course,
+        ImportField.room => AppText.room,
+        ImportField.weekday => AppText.weekday,
+        ImportField.firstPeriod => AppText.firstPeriod,
+        ImportField.lastPeriod => AppText.lastPeriod,
+        ImportField.frequency => AppText.frequency,
+        ImportField.note => AppText.notes,
+        ImportField.exam => AppText.exam,
       });
 
   static List<String> _roomChoices(String value) => value

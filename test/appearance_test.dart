@@ -58,7 +58,8 @@ void main() {
       expect(controller.fontWeight.value, weight);
     }
     controller.setFontWeight(400);
-    expect(rollPalettes.first, const [
+    expect(rollPalettes.first.name, 'default Colorful');
+    expect(rollPalettes.first.colors, const [
       Color(0xff79adac),
       Color(0xffbeadf2),
       Color(0xffa0c8f2),
@@ -172,10 +173,16 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('custom-accent-color')));
     await tester.pump();
     expect(controller.accent, const Color(0xff234567));
-    await tester.ensureVisible(find.byKey(const ValueKey('roll-palette-2')));
+    expect(find.text('default Colorful'), findsOneWidget);
+    expect(find.text('1'), findsNothing);
+    await tester.ensureVisible(find.byKey(const ValueKey('roll-palette-menu')));
+    await tester.tap(find.byKey(const ValueKey('roll-palette-menu')));
+    await tester.pumpAndSettle();
+    expect(find.text('Golden Summer Fields'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('roll-palette-2')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(controller.rollPaletteIndex, 2);
+    expect(find.text('Golden Summer Fields'), findsOneWidget);
     await tester.ensureVisible(find.byKey(const ValueKey('font-scale')));
     await tester.drag(
       find.byKey(const ValueKey('font-scale')),

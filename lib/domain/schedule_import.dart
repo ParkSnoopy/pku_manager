@@ -3,11 +3,30 @@ import 'dart:typed_data';
 import 'course.dart';
 import 'timetable.dart';
 
+enum ImportField {
+  name,
+  room,
+  weekday,
+  firstPeriod,
+  lastPeriod,
+  frequency,
+  note,
+  exam,
+}
+
 final class ImportRecord {
-  const ImportRecord({required this.meeting, required this.raw, this.issue});
+  const ImportRecord({
+    required this.meeting,
+    required this.raw,
+    this.issue,
+    this.failedFields = const {},
+  });
   final Course meeting;
   final String raw;
   final String? issue;
+  final Set<ImportField> failedFields;
+
+  bool get needsReview => issue != null || failedFields.isNotEmpty;
 }
 
 final class ScheduleCandidate {
@@ -21,7 +40,7 @@ final class ScheduleCandidate {
   final List<ImportRecord> records;
   final int periodCount;
   List<ImportRecord> get issues =>
-      records.where((r) => r.issue != null).toList();
+      records.where((record) => record.needsReview).toList();
 }
 
 abstract interface class ScheduleStore {

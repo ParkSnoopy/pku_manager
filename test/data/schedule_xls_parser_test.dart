@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:excel2003/excel2003.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/data/schedule_xls_parser.dart';
+import 'package:pku_manager/domain/schedule_import.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
 
 const header = ['节数', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
@@ -38,6 +39,7 @@ void main() {
       1,
     );
     expect(r.issue, isNotNull);
+    expect(r.failedFields, {ImportField.note});
     expect(r.raw, contains('unfinished'));
   });
 
@@ -157,14 +159,27 @@ void main() {
     });
   }
 
-  for (final note in [
-    '习题课时间地点待定',
-    '习题课每周四8-9节，教室：Room B、Room C',
-    '习题课每周四54-55节，教室：Room B',
-    '习题课每周四9-8节，教室：Room B',
-    '习题课隔三周四8-9节，教室：Room B',
+  for (final entry in [
+    (
+      '习题课时间地点待定',
+      {
+        ImportField.frequency,
+        ImportField.weekday,
+        ImportField.firstPeriod,
+        ImportField.lastPeriod,
+        ImportField.room,
+      },
+    ),
+    ('习题课每周四8-9节，教室：Room B、Room C', {ImportField.room}),
+    (
+      '习题课每周四54-55节，教室：Room B',
+      {ImportField.firstPeriod, ImportField.lastPeriod},
+    ),
+    ('习题课每周四9-8节，教室：Room B', {ImportField.lastPeriod}),
+    ('习题课隔三周四8-9节，教室：Room B', {ImportField.frequency}),
   ]) {
-    test('ambiguous tutorial creates additional editable issue: $note', () {
+    test('ambiguous tutorial identifies only failed fields: ${entry.$1}', () {
+      final note = entry.$1;
       final raw = 'Synthetic Lab(Room A)(备注：$note)单周';
       final c = parser.parseCells(bytes, [
         header,
@@ -179,6 +194,7 @@ void main() {
       expect(issue.meeting.note, note);
       expect(issue.meeting.name, 'Synthetic Lab 习题课');
       expect(issue.meeting.sourceId, 'sheet:0/row:1/column:1/tutorial');
+      expect(issue.failedFields, entry.$2);
     });
   }
 

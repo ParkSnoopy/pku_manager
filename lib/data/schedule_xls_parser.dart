@@ -207,6 +207,12 @@ class ScheduleXlsParser implements ScheduleDecoder {
     final token = const {'每周', '单周', '双周'}.contains(sourceToken)
         ? sourceToken
         : '每周';
+    final failedFields = <ImportField>{
+      if (malformed) ImportField.note,
+      if (roomGroup == null || room.isEmpty || room.contains('暂无'))
+        ImportField.room,
+      if (name.isEmpty || (malformed && roomGroup == null)) ImportField.name,
+    };
     return ImportRecord(
       meeting: Course(
         sourceId: id,
@@ -221,14 +227,8 @@ class ScheduleXlsParser implements ScheduleDecoder {
         exam: examStart < 0 ? '' : tail.substring(examStart),
       ),
       raw: raw,
-      issue:
-          malformed ||
-              roomGroup == null ||
-              room.isEmpty ||
-              room.contains('暂无') ||
-              name.isEmpty
-          ? 'Enter course name and room.'
-          : null,
+      issue: failedFields.isEmpty ? null : 'Complete the highlighted fields.',
+      failedFields: failedFields,
     );
   }
 
@@ -291,6 +291,7 @@ class ScheduleXlsParser implements ScheduleDecoder {
       ),
       raw: detail.isEmpty ? heading : '$heading\n$detail',
       issue: parsed.issue,
+      failedFields: parsed.failedFields,
     );
   }
 
@@ -299,45 +300,48 @@ class ScheduleXlsParser implements ScheduleDecoder {
     final note = main.note;
     // Match the entire note: alternatives/multiple schedules must be reviewed,
     // not truncated to the first plausible room or time.
-    final match = RegExp(
-      r'^\s*习题课\s*(?:(?:上课)?时间\s*[:：]?\s*)?'
-      r'(每周|单周|双周)\s*(?:星期|周)?([一二三四五六日天])\s*'
-      r'(\d+)\s*[-－–—至~～]\s*(\d+)\s*节?\s*[,，]?\s*'
-      r'(?:上课)?教室\s*[:：]?\s*(.+?)\s*$',
+    final frequencyMatch = RegExp(r'(每周|单周|双周)').firstMatch(note);
+    final placementMatch = RegExp(
+      r'(?:星期|周)([一二三四五六日天])\s*(\d{1,2})'
+      r'(?:\s*[-－–—至~～]\s*(\d{1,2}))?\s*节?',
     ).firstMatch(note);
-    final first = int.tryParse(match?[3] ?? '');
-    final last = int.tryParse(match?[4] ?? '');
-    final room = match?[5] ?? '';
-    final day = match == null ? null : '一二三四五六日天'.indexOf(match[2]!) + 1;
-    final validTime =
-        first != null &&
-        last != null &&
-        first >= 1 &&
-        last >= first &&
-        last <= periodCount;
-    final unambiguousRoom =
-        room.isNotEmpty && !RegExp(r'[、,，;；/\n]|或|待定|另行|习题课').hasMatch(room);
-    final complete =
-        match != null &&
-        day != null &&
-        day <= 5 &&
-        validTime &&
-        unambiguousRoom;
+    final roomMatch = RegExp(r'(?:上课)?教室\s*[:：]\s*([^；;]+)').firstMatch(note);
+    final first = int.tryParse(placementMatch?[2] ?? '');
+    final last = int.tryParse(placementMatch?[3] ?? placementMatch?[2] ?? '');
+    final room =
+        roomMatch?[1]?.replaceAll(RegExp(r'[，,。\s]+$'), '').trim() ?? '';
+    final day = placementMatch == null
+        ? null
+        : '一二三四五六日天'.indexOf(placementMatch[1]!) + 1;
+    final validFirst = first != null && first >= 1 && first <= periodCount;
+    final validLast =
+        last != null && validFirst && last >= first && last <= periodCount;
+    final failedFields = <ImportField>{
+      if (frequencyMatch == null) ImportField.frequency,
+      if (day == null || day > 5) ImportField.weekday,
+      if (!validFirst) ImportField.firstPeriod,
+      if (!validLast) ImportField.lastPeriod,
+      if (room.isEmpty || RegExp(r'[、,，/\n]|或|待定|另行|习题课').hasMatch(room))
+        ImportField.room,
+    };
+    final safeFirst = validFirst ? first : main.firstPeriod;
+    final safeLast = validLast ? last : safeFirst;
     return ImportRecord(
       meeting: Course(
         sourceId: '${main.sourceId}/tutorial',
         name: '${main.name} 习题课',
         // Review placeholders are never published until the issue is completed.
-        weekday: complete ? day : main.weekday,
-        firstPeriod: validTime ? first : main.firstPeriod,
-        lastPeriod: validTime ? last : main.lastPeriod,
+        weekday: day != null && day <= 5 ? day : main.weekday,
+        firstPeriod: safeFirst,
+        lastPeriod: safeLast,
         room: room,
-        frequency: WeekFrequency.parse(match?[1] ?? ''),
-        frequencyText: match?[1] ?? '每周',
+        frequency: WeekFrequency.parse(frequencyMatch?[1] ?? ''),
+        frequencyText: frequencyMatch?[1] ?? '每周',
         note: note,
       ),
       raw: note,
-      issue: complete ? null : 'Confirm tutorial weekday, periods, and room.',
+      issue: failedFields.isEmpty ? null : 'Complete the highlighted fields.',
+      failedFields: failedFields,
     );
   }
 

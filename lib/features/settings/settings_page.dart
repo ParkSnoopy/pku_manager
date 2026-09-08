@@ -95,31 +95,66 @@ class SettingsPage extends StatelessWidget {
           const SizedBox(height: 24),
           Text(AppStrings.of(context).text(AppText.rollPalette)),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: [
-              for (final (index, palette) in rollPalettes.indexed)
-                IconButton(
-                  key: ValueKey('roll-palette-$index'),
-                  tooltip: '${index + 1}',
-                  onPressed: () => controller.setRollPalette(index),
-                  icon: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: PopupMenuButton<int>(
+                key: const ValueKey('roll-palette-menu'),
+                tooltip: rollPalettes[controller.rollPaletteIndex].name,
+                onSelected: controller.setRollPalette,
+                itemBuilder: (context) => [
+                  for (final (index, palette) in rollPalettes.indexed)
+                    PopupMenuItem<int>(
+                      key: ValueKey('roll-palette-$index'),
+                      value: index,
+                      child: Row(
                         children: [
-                          for (final color in palette)
-                            Container(width: 8, height: 28, color: color),
+                          _PaletteSwatches(colors: palette.colors),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              palette.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (controller.rollPaletteIndex == index)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 8),
+                              child: Icon(Icons.check, size: 20),
+                            ),
                         ],
                       ),
-                      if (controller.rollPaletteIndex == index)
-                        const Icon(Icons.check, color: Colors.black),
+                    ),
+                ],
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      _PaletteSwatches(
+                        colors:
+                            rollPalettes[controller.rollPaletteIndex].colors,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          rollPalettes[controller.rollPaletteIndex].name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down),
                     ],
                   ),
                 ),
-            ],
+              ),
+            ),
           ),
           const SizedBox(height: 32),
           Row(
@@ -192,6 +227,21 @@ class SettingsPage extends StatelessWidget {
         ],
       ),
     ),
+  );
+}
+
+class _PaletteSwatches extends StatelessWidget {
+  const _PaletteSwatches({required this.colors});
+
+  final List<Color> colors;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (final color in colors)
+        Container(width: 14, height: 24, color: color),
+    ],
   );
 }
 
