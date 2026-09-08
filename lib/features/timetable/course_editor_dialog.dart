@@ -153,15 +153,14 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
                       ),
                     ),
                   ),
-                  SwitchListTile(
-                    key: const ValueKey('course-color-lock'),
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(strings.text(AppText.keepColorWhenRolling)),
-                    value: _lockColor,
-                    onChanged: _customColor
-                        ? (value) => setState(() => _lockColor = value)
-                        : null,
-                  ),
+                  if (_customColor)
+                    SwitchListTile(
+                      key: const ValueKey('course-color-lock'),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(strings.text(AppText.keepColorWhenRolling)),
+                      value: _lockColor,
+                      onChanged: (value) => setState(() => _lockColor = value),
+                    ),
                   SwitchListTile(
                     key: const ValueKey('course-important-outline'),
                     contentPadding: EdgeInsets.zero,

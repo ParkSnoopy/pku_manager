@@ -369,19 +369,12 @@ class _DayGroups extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final geometry = TimetableGeometry(timetable.periodCount);
-    final groups = _visualGroups(
-      timetable.groupsForDay(
-        day,
-        breakAfter: timetableMealBreaks,
-        currentParity: parity,
-      ),
-    );
-    final lanes = _assignLanes(groups);
-    final laneWidth = courseWidth / lanes;
+    final layout = TimetableDayLayout.from(timetable, day, parity: parity);
+    final laneWidth = courseWidth / layout.laneCount;
     return Stack(
-      clipBehavior: Clip.none,
+      clipBehavior: Clip.hardEdge,
       children: [
-        for (final group in groups)
+        for (final group in layout.spans)
           Positioned(
             left: group.lane * laneWidth,
             top: geometry.periodTop(group.firstPeriod) - timetableHeaderHeight,
@@ -401,46 +394,6 @@ class _DayGroups extends StatelessWidget {
       ],
     );
   }
-}
-
-final class _VisualGroup {
-  _VisualGroup(this.group, this.firstPeriod, this.lastPeriod);
-
-  final CourseMeetingGroup group;
-  final int firstPeriod;
-  final int lastPeriod;
-  int lane = 0;
-}
-
-List<_VisualGroup> _visualGroups(List<CourseMeetingGroup> groups) {
-  final result = <_VisualGroup>[];
-  for (final group in groups) {
-    var first = group.firstPeriod;
-    for (final breakPeriod in timetableMealBreaks) {
-      if (first <= breakPeriod && breakPeriod < group.lastPeriod) {
-        result.add(_VisualGroup(group, first, breakPeriod));
-        first = breakPeriod + 1;
-      }
-    }
-    result.add(_VisualGroup(group, first, group.lastPeriod));
-  }
-  result.sort((a, b) => a.firstPeriod.compareTo(b.firstPeriod));
-  return result;
-}
-
-int _assignLanes(List<_VisualGroup> groups) {
-  final laneEnds = <int>[];
-  for (final group in groups) {
-    var lane = laneEnds.indexWhere((end) => end < group.firstPeriod);
-    if (lane < 0) {
-      lane = laneEnds.length;
-      laneEnds.add(group.lastPeriod);
-    } else {
-      laneEnds[lane] = group.lastPeriod;
-    }
-    group.lane = lane;
-  }
-  return math.max(1, laneEnds.length);
 }
 
 class _MealBreak extends StatelessWidget {
@@ -565,9 +518,10 @@ class _MeetingTileState extends State<_MeetingTile> {
             key: ValueKey('meeting-color-${meeting.sourceId}'),
             color: background,
             child: DecoratedBox(
+              key: ValueKey('meeting-outline-${meeting.sourceId}'),
               decoration: BoxDecoration(
                 border: widget.appearance?.outlined ?? false
-                    ? Border.all(color: foreground, width: 4)
+                    ? Border.all(color: foreground, width: 8)
                     : null,
               ),
               child: Stack(
@@ -581,10 +535,14 @@ class _MeetingTileState extends State<_MeetingTile> {
                     },
                     child: Padding(
                       padding: EdgeInsets.fromLTRB(
-                        4,
-                        2,
-                        widget.appearance?.color == null ? 4 : 24,
-                        2,
+                        widget.appearance?.outlined ?? false ? 12 : 4,
+                        widget.appearance?.outlined ?? false ? 10 : 2,
+                        widget.appearance?.color != null
+                            ? 28
+                            : widget.appearance?.outlined ?? false
+                            ? 12
+                            : 4,
+                        widget.appearance?.outlined ?? false ? 10 : 2,
                       ),
                       child: DefaultTextStyle(
                         style: TextStyle(
@@ -631,13 +589,20 @@ class _MeetingTileState extends State<_MeetingTile> {
                       top: 4,
                       right: 4,
                       child: IgnorePointer(
-                        child: Icon(
-                          widget.appearance!.lockColor
-                              ? Icons.lock_outline
-                              : Icons.palette_outlined,
+                        child: Container(
                           key: ValueKey('manual-color-${meeting.sourceId}'),
-                          size: 16,
-                          color: foreground,
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: foreground,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            widget.appearance!.lockColor
+                                ? Icons.lock
+                                : Icons.palette,
+                            size: 16,
+                            color: background,
+                          ),
                         ),
                       ),
                     ),

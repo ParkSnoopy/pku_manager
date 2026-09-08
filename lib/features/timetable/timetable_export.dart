@@ -241,6 +241,26 @@ final class TimetableExporter {
         );
       }
     }
+    for (var day = 1; day <= 5; day++) {
+      final layout = TimetableDayLayout.from(timetable, day);
+      if (layout.laneCount != 1) continue;
+      for (final span in layout.spans) {
+        final meeting = span.group.primary;
+        final startRow = 1 + (span.firstPeriod - 1) * 4;
+        final endRow = span.lastPeriod * 4;
+        final start = CellIndex.indexByColumnRow(
+          columnIndex: day,
+          rowIndex: startRow,
+        );
+        final style = sheet.cell(start).cellStyle;
+        sheet.merge(
+          start,
+          CellIndex.indexByColumnRow(columnIndex: day, rowIndex: endRow),
+          customValue: TextCellValue('${meeting.name}\n  ${meeting.room}'),
+        );
+        sheet.cell(start).cellStyle = style;
+      }
+    }
     return Uint8List.fromList(excel.encode()!);
   }
 }
@@ -340,80 +360,6 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
         color: timetableInk,
         lineHeight: 1,
       );
-      for (var day = 1; day <= 5; day++) {
-        final rect = ui.Rect.fromLTWH(
-          timetableIndexWidth + (day - 1) * geometry.courseWidth,
-          top,
-          geometry.courseWidth,
-          timetablePeriodHeight,
-        );
-        final meetings = timetable.atPeriod(day, period);
-        if (meetings.isEmpty) continue;
-        final itemHeight = timetablePeriodHeight / meetings.length;
-        for (var index = 0; index < meetings.length; index++) {
-          final meeting = meetings[index];
-          final item = ui.Rect.fromLTWH(
-            rect.left,
-            rect.top + itemHeight * index,
-            rect.width,
-            itemHeight,
-          );
-          final appearance = courseAppearances[meeting.sourceId];
-          canvas.drawRect(
-            item,
-            ui.Paint()
-              ..color = timetableCourseColor(
-                meeting,
-                paletteSeed,
-                appearance: appearance,
-              ),
-          );
-          final foreground =
-              timetableCourseColor(
-                    meeting,
-                    paletteSeed,
-                    appearance: appearance,
-                  ).computeLuminance() >
-                  .5
-              ? const ui.Color(0xff000000)
-              : const ui.Color(0xffffffff);
-          if (appearance?.outlined ?? false) {
-            canvas.drawRect(
-              item.deflate(2),
-              ui.Paint()
-                ..color = foreground
-                ..style = ui.PaintingStyle.stroke
-                ..strokeWidth = 4,
-            );
-          }
-          _drawReferenceText(
-            canvas,
-            meeting.name,
-            ui.Rect.fromLTWH(item.left + 4, item.top + 2, item.width - 8, 24),
-            fontFamily: timetableMonoFont,
-            fontFallback: timetableFontFallback,
-            fontSize: timetableCourseNameFontSize(meeting.name, item.width),
-            bold: true,
-            color: foreground,
-            letterSpacing: -.2,
-          );
-          _drawReferenceText(
-            canvas,
-            '  ${meeting.room}',
-            ui.Rect.fromLTWH(
-              item.left + 4,
-              item.top + 25.4,
-              item.width - 8,
-              20,
-            ),
-            fontFamily: timetableMonoFont,
-            fontFallback: timetableFontFallback,
-            fontSize: 15,
-            weight: ui.FontWeight.w500,
-            color: foreground,
-          );
-        }
-      }
       top += timetablePeriodHeight;
       canvas.drawLine(
         ui.Offset(0, top),
@@ -427,6 +373,75 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           ui.Offset(0, top),
           ui.Offset(geometry.width, top),
           border,
+        );
+      }
+    }
+    for (var day = 1; day <= 5; day++) {
+      final layout = TimetableDayLayout.from(timetable, day);
+      final laneWidth = geometry.courseWidth / layout.laneCount;
+      for (final span in layout.spans) {
+        final meeting = span.group.primary;
+        final appearance = courseAppearances[meeting.sourceId];
+        final item = ui.Rect.fromLTWH(
+          timetableIndexWidth +
+              (day - 1) * geometry.courseWidth +
+              span.lane * laneWidth,
+          geometry.periodTop(span.firstPeriod),
+          laneWidth,
+          (span.lastPeriod - span.firstPeriod + 1) * timetablePeriodHeight,
+        );
+        final background = timetableCourseColor(
+          meeting,
+          paletteSeed,
+          appearance: appearance,
+        );
+        canvas.drawRect(item, ui.Paint()..color = background);
+        final foreground = background.computeLuminance() > .5
+            ? const ui.Color(0xff000000)
+            : const ui.Color(0xffffffff);
+        final inset = appearance?.outlined ?? false ? 12.0 : 4.0;
+        if (appearance?.outlined ?? false) {
+          canvas.drawRect(
+            item.deflate(4),
+            ui.Paint()
+              ..color = foreground
+              ..style = ui.PaintingStyle.stroke
+              ..strokeWidth = 8,
+          );
+        }
+        _drawReferenceText(
+          canvas,
+          meeting.name,
+          ui.Rect.fromLTWH(
+            item.left + inset,
+            item.top + inset - 2,
+            item.width - inset * 2,
+            34,
+          ),
+          fontFamily: timetableMonoFont,
+          fontFallback: timetableFontFallback,
+          fontSize: timetableCourseNameFontSize(
+            meeting.name,
+            item.width - inset * 2 + 8,
+          ),
+          bold: true,
+          color: foreground,
+          letterSpacing: -.2,
+        );
+        _drawReferenceText(
+          canvas,
+          '  ${meeting.room}',
+          ui.Rect.fromLTWH(
+            item.left + inset,
+            item.top + inset + 31,
+            item.width - inset * 2,
+            22,
+          ),
+          fontFamily: timetableMonoFont,
+          fontFallback: timetableFontFallback,
+          fontSize: 15,
+          weight: ui.FontWeight.w500,
+          color: foreground,
         );
       }
     }

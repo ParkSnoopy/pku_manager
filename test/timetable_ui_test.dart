@@ -323,10 +323,7 @@ void main() {
       );
       expect(find.byKey(const ValueKey('manual-color-first')), findsOneWidget);
       final decoration = tester.widget<DecoratedBox>(
-        find.descendant(
-          of: find.byKey(const ValueKey('meeting-color-first')),
-          matching: find.byType(DecoratedBox),
-        ),
+        find.byKey(const ValueKey('meeting-outline-first')),
       );
       expect((decoration.decoration as BoxDecoration).border, isNotNull);
 

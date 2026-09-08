@@ -183,7 +183,7 @@ Incomplete-import review is separate from schedule state. It holds a transient c
 - The same `timetable_grid.dart` renders one fixed period-index column and one day on narrow layouts. Page-level horizontal gestures and previous/next buttons select Monday through Friday.
 - Import feedback stays in `timetable_page.dart`; `schedule_import_review.dart` owns the completion form.
 - `course_editor_dialog.dart` creates user meetings and writes imported-record corrections without changing source bytes.
-- `timetable_export.dart` generates complete five-weekday PNG and XLSX files from the same reference geometry. PNG adds 12 logical units of canvas padding and renders the complete table at 4× resolution; XLSX represents each period with four role rows and matching dimensions, fonts, and alignment.
+- `timetable_export.dart` generates complete five-weekday PNG and XLSX files from the same grouped-span geometry as the screen. PNG adds 12 logical units of canvas padding and renders the complete table at 4× resolution; XLSX retains four role rows per period underneath merged course blocks with matching dimensions, fonts, and alignment.
 - `features/settings/appearance_controller.dart` owns persistent accent, language, and timetable-palette state; `settings_page.dart` edits accent and advances language through one cyclic button rather than exposing all language entries simultaneously.
 - `course_appearance` stores optional manual color, roll lock, and importance-outline values by active-source meeting identity. Locked manual colors are invariant under palette rolls; rolling clears only unlocked manual colors. The same typed appearance map feeds screen, PNG, and XLSX output. Settings can persistently hide the rail's Roll colors action, and both theme and course colors use the shared arbitrary-color palette picker.
 - Landscape timetable layouts reserve a right-side pane for each course's next start and live remaining time. Selecting a course replaces the list with the shared editor inline; portrait layouts use the same editor inside a dialog.
@@ -193,7 +193,7 @@ Widgets consume domain projections supplied by the controller. They do not filte
 
 Version `0.1.0` is the first persistence compatibility boundary. Its canonical database uses `PRAGMA user_version = 100`; databases from pre-`0.1.0` development builds are deliberately rejected rather than migrated.
 
-Course colors are deterministic presentation values derived from course identity plus a persisted roll seed and are the deliberate exception to reference visual parity. They fill cells containing only course and room. Shape, size, fonts, alignment, row timing labels, meal breaks, fitting, and export resolution follow the reference. Foreground contrast is calculated from the chosen background. Repeated adjacent cells show identical content without continuation labels. After 1000 ms hover, a pointer-following overlay shows full course details including frequency. Rolling repeatedly changes the combination without persisting per-course colors.
+Course colors default to deterministic presentation values derived from course identity plus a persisted roll seed and are the deliberate exception to reference visual parity. Optional manual colors and importance outlines are persisted by active-source identity; locked colors survive rolls, while unlocked manual colors return to generated colors on the next roll. Vertically touching identical meetings render as one block. Shape, size, fonts, alignment, row timing labels, meal breaks, fitting, and export resolution follow the reference. Foreground contrast is calculated from the chosen background. After 1000 ms hover, a pointer-following overlay shows full course details including frequency.
 
 ## Durable Storage
 
@@ -205,10 +205,10 @@ Production storage uses one SQLite database in application support:
 | Parsed timetable | Normalized typed rows keyed to source identities | Parser plus accepted completion fields | Publish with source and active selection in one transaction. |
 | Import issues and completions | Typed rows keyed to source identities | Parser issues and explicit user input | Require complete resolution before publication. |
 | Week configuration | Validated TOML text and fetched-at timestamp; typed dates derived on load | Last valid public source response | Replace in one transaction after complete validation. |
-| Appearance | One typed SQLite row containing accent color, language, and palette-roll seed | Explicit Settings and roll actions | Update transactionally; derive theme, labels, and per-course colors at display time. |
+| Appearance | Typed global settings plus source-bound course color/lock/outline rows | Explicit Settings, editor, and roll actions | Update transactionally; reject styles outside the active schedule. |
 | User meetings | Typed weekday rows linked to the active immutable source | Empty-cell additions | Insert, edit, or delete independently from source and parsed rows. |
 
-SQLite transactions provide publication and rollback. Database migrations are ordered and transactional. Startup integrity failure is surfaced; the app does not silently rebuild or discard source evidence.
+SQLite transactions provide publication and rollback. Version `0.1.0` establishes schema version 100; earlier development schemas are unsupported and are not migrated. Startup integrity failure is surfaced; the app does not silently rebuild or discard source evidence.
 
 No schedule data belongs beside the executable, in the repository, in Downloads after import, or inside installer-owned directories. The user-selected external workbook remains untouched.
 

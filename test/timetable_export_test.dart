@@ -56,7 +56,7 @@ void main() {
   const strings = AppStrings(ui.Locale('en'));
 
   test(
-    'XLSX export contains five localized weekdays and repeated cells',
+    'XLSX export contains five localized weekdays and grouped cells',
     () async {
       final writer = _Writer();
       await TimetableExporter(writer).export(
@@ -90,16 +90,10 @@ void main() {
       );
       expect(
         sheet.cell(CellIndex.indexByString('B2')).value.toString(),
-        'Algorithms',
+        'Algorithms\n  Room 101',
       );
-      expect(
-        sheet.cell(CellIndex.indexByString('B3')).value.toString(),
-        '  Room 101',
-      );
-      expect(
-        sheet.cell(CellIndex.indexByString('B6')).value.toString(),
-        'Algorithms',
-      );
+      expect(sheet.cell(CellIndex.indexByString('B3')).value, isNull);
+      expect(sheet.cell(CellIndex.indexByString('B6')).value, isNull);
       final styled = sheet.cell(CellIndex.indexByString('B2')).cellStyle!;
       expect(styled.backgroundColor.colorHex, 'FF123456');
       expect(styled.leftBorder.borderStyle, BorderStyle.Medium);

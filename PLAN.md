@@ -6,10 +6,9 @@ Build an offline-first school life management application for Android, iOS, Linu
 
 ## Current Context
 
-- Repository is a clean Flutter 3.47.2 starter project on `main` at version `0.0.1`.
-- `lib/main.dart` and `test/widget_test.dart` still contain Flutter counter-template code.
-- Android, iOS, Linux, macOS, and Windows Flutter runners exist. The generated Web runner has been removed because Web is unsupported.
-- No application architecture, persistence layer, parser, packaging definitions, or relevant tests exist.
+- The Flutter application is at version `0.1.0`; this is its first supported persistence contract.
+- Android, iOS, Linux, macOS, and Windows Flutter runners exist. Web is unsupported.
+- Domain, SQLite, workbook parsing, responsive timetable, editing, appearance, export, and native packaging layers are implemented.
 - The deployed Week Parity application currently reads `https://parksnoopy-undergraduate.github.io/week/config.toml`.
 - The supplied Week Parity repository URL currently resolves inconsistently and must not be treated as a stable runtime dependency.
 - The elective prettifier supports legacy one-row and newer paired-row timetable layouts, but its source is AGPL-3.0.

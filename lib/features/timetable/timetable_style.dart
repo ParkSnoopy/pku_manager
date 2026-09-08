@@ -2,6 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/timetable.dart';
+import '../../domain/week_frequency.dart';
+
 const timetableCanvas = Color(0xfffaf9f5);
 const timetableIndexSurface = Color(0xffe8e0d2);
 const timetableInk = Color(0xff141413);
@@ -87,4 +90,71 @@ double timetableCourseNameFontSize(String text, double availableWidth) {
   );
   final fitted = (availableWidth - 8) / math.max(8, units);
   return fitted.clamp(14, 28).toDouble();
+}
+
+final class TimetableVisualSpan {
+  const TimetableVisualSpan({
+    required this.group,
+    required this.firstPeriod,
+    required this.lastPeriod,
+    required this.lane,
+  });
+
+  final CourseMeetingGroup group;
+  final int firstPeriod;
+  final int lastPeriod;
+  final int lane;
+}
+
+final class TimetableDayLayout {
+  TimetableDayLayout._(this.spans, this.laneCount);
+
+  final List<TimetableVisualSpan> spans;
+  final int laneCount;
+
+  factory TimetableDayLayout.from(
+    Timetable timetable,
+    int day, {
+    WeekParity? parity,
+  }) {
+    final pending = <({CourseMeetingGroup group, int first, int last})>[];
+    for (final group in timetable.groupsForDay(
+      day,
+      breakAfter: timetableMealBreaks,
+      currentParity: parity,
+    )) {
+      var first = group.firstPeriod;
+      for (final breakPeriod in timetableMealBreaks) {
+        if (first <= breakPeriod && breakPeriod < group.lastPeriod) {
+          pending.add((group: group, first: first, last: breakPeriod));
+          first = breakPeriod + 1;
+        }
+      }
+      pending.add((group: group, first: first, last: group.lastPeriod));
+    }
+    pending.sort((a, b) => a.first.compareTo(b.first));
+    final laneEnds = <int>[];
+    final spans = <TimetableVisualSpan>[];
+    for (final item in pending) {
+      var lane = laneEnds.indexWhere((end) => end < item.first);
+      if (lane < 0) {
+        lane = laneEnds.length;
+        laneEnds.add(item.last);
+      } else {
+        laneEnds[lane] = item.last;
+      }
+      spans.add(
+        TimetableVisualSpan(
+          group: item.group,
+          firstPeriod: item.first,
+          lastPeriod: item.last,
+          lane: lane,
+        ),
+      );
+    }
+    return TimetableDayLayout._(
+      List.unmodifiable(spans),
+      math.max(1, laneEnds.length),
+    );
+  }
 }
