@@ -7,6 +7,7 @@ import '../../domain/course.dart';
 import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
 import '../../l10n/app_strings.dart';
+import '../../ui/colored_text.dart';
 import '../../ui/flashing_outline.dart';
 import '../../ui/following_hover_card.dart';
 import 'timetable_color.dart';
@@ -540,11 +541,11 @@ class _MeetingTileState extends State<_MeetingTile> {
         customPalette: widget.customPalette,
       ),
     );
-    final foreground =
-        Theme.of(context).brightness == Brightness.dark ||
-            widget.autoTextColor && background.computeLuminance() <= .5
-        ? Colors.white
-        : Colors.black;
+    final foreground = coloredTextForeground(
+      context,
+      background,
+      autoTextColor: widget.autoTextColor,
+    );
     final outline = widget.appearance?.outlined ?? false
         ? Border.all(
             color: widget.appearance!.outlineColor,

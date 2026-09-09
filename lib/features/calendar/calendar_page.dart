@@ -17,6 +17,7 @@ class CalendarPage extends StatefulWidget {
     this.timetable,
     this.focusedScheduleId,
     this.onScheduleSelected,
+    this.autoTextColor = false,
     this.colorPicker = showAppColorPicker,
   });
 
@@ -25,6 +26,7 @@ class CalendarPage extends StatefulWidget {
   final Timetable? timetable;
   final int? focusedScheduleId;
   final ValueChanged<CalendarSchedule>? onScheduleSelected;
+  final bool autoTextColor;
   final ColorPickerLauncher colorPicker;
 
   @override
@@ -316,6 +318,7 @@ class _CalendarPageState extends State<CalendarPage> {
                                   today: today,
                                   schedules: schedules,
                                   focusedScheduleId: widget.focusedScheduleId,
+                                  autoTextColor: widget.autoTextColor,
                                   onAdd: () => _editSchedule(date),
                                   onSelect: widget.onScheduleSelected,
                                   onEdit: (schedule) =>
@@ -343,6 +346,7 @@ class _CalendarDay extends StatelessWidget {
     required this.today,
     required this.schedules,
     required this.focusedScheduleId,
+    required this.autoTextColor,
     required this.onAdd,
     required this.onSelect,
     required this.onEdit,
@@ -352,6 +356,7 @@ class _CalendarDay extends StatelessWidget {
   final DateTime today;
   final List<CalendarSchedule> schedules;
   final int? focusedScheduleId;
+  final bool autoTextColor;
   final VoidCallback onAdd;
   final ValueChanged<CalendarSchedule>? onSelect;
   final ValueChanged<CalendarSchedule> onEdit;
@@ -449,7 +454,11 @@ class _CalendarDay extends StatelessWidget {
                     final schedule = schedules[index];
                     final starts = _beijingDateTime(schedule.startsAt);
                     final background = scheduleColor(context, schedule);
-                    final foreground = scheduleForeground(background);
+                    final foreground = scheduleForeground(
+                      context,
+                      background,
+                      autoTextColor: autoTextColor,
+                    );
                     final focused = schedule.id == focusedScheduleId;
                     final canSelect =
                         onSelect != null &&
@@ -480,6 +489,9 @@ class _CalendarDay extends StatelessWidget {
                                   vertical: 3,
                                 ),
                                 child: Text(
+                                  key: ValueKey(
+                                    'calendar-schedule-text-${schedule.id}',
+                                  ),
                                   '${schedule.allDay ? '' : '${_two(starts.hour)}:${_two(starts.minute)} '}'
                                   '${schedule.title}',
                                   maxLines: 1,
