@@ -64,16 +64,14 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('TODAY'), findsOneWidget);
-    expect(
-      (tester
-                  .widget<DecoratedBox>(
-                    find.byKey(const ValueKey('calendar-day-2026-8-31')),
-                  )
-                  .decoration
-              as BoxDecoration)
-          .color,
-      Colors.transparent,
-    );
+    final augustLastDecoration =
+        tester
+                .widget<DecoratedBox>(
+                  find.byKey(const ValueKey('calendar-day-2026-8-31')),
+                )
+                .decoration
+            as BoxDecoration;
+    expect(augustLastDecoration.color, Colors.transparent);
     expect(
       (tester
                   .widget<DecoratedBox>(
@@ -94,7 +92,19 @@ void main() {
                 .border!
             as Border;
     expect(septemberFirstBorder.left.width, 2);
-    expect(septemberFirstBorder.top.width, .5);
+    expect(septemberFirstBorder.top.width, 2);
+    expect((augustLastDecoration.border! as Border).bottom.width, 2);
+    final septemberSeventhBorder =
+        (tester
+                        .widget<DecoratedBox>(
+                          find.byKey(const ValueKey('calendar-day-2026-9-7')),
+                        )
+                        .decoration
+                    as BoxDecoration)
+                .border!
+            as Border;
+    expect(septemberSeventhBorder.top.width, .5);
+    expect(septemberSeventhBorder.bottom.width, .5);
     expect(
       find.byKey(const ValueKey('calendar-add-2026-8-31')),
       findsOneWidget,

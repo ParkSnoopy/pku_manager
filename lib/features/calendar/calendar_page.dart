@@ -363,8 +363,14 @@ class _CalendarDay extends StatelessWidget {
     final isToday = date == today;
     final ordinaryBorder = BorderSide(color: colors.outlineVariant, width: .5);
     final monthBorder = BorderSide(color: colors.outline, width: 2);
-    final weekStartsMonth =
-        date.subtract(Duration(days: date.weekday - 1)).day == 1;
+    final weekStart = date.subtract(Duration(days: date.weekday - 1));
+    final weekEnd = date.add(Duration(days: DateTime.sunday - date.weekday));
+    final separatesAbove =
+        weekStart.day == 1 ||
+        weekStart.year != date.year ||
+        weekStart.month != date.month;
+    final separatesBelow =
+        weekEnd.year != date.year || weekEnd.month != date.month;
     return Semantics(
       label: '${date.year}-${date.month}-${date.day}',
       child: DecoratedBox(
@@ -376,9 +382,9 @@ class _CalendarDay extends StatelessWidget {
             left: date.day == 1 && date.weekday != DateTime.monday
                 ? monthBorder
                 : ordinaryBorder,
-            top: weekStartsMonth ? monthBorder : ordinaryBorder,
+            top: separatesAbove ? monthBorder : ordinaryBorder,
             right: ordinaryBorder,
-            bottom: ordinaryBorder,
+            bottom: separatesBelow ? monthBorder : ordinaryBorder,
           ),
         ),
         child: ClipRect(
