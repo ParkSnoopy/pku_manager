@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 
 import '../../domain/calendar_schedule.dart';
 import '../../domain/timetable.dart';
@@ -34,10 +35,15 @@ class _CalendarPageState extends State<CalendarPage> {
   late DateTime _month = _beijingDate(widget.now);
   late DateTime _baseWeek;
   late final PageController _weekController;
+  double _pointerScrollAccumulator = 0;
+  int? _pointerScrollTarget;
+  int _scrollRevision = 0;
 
   static const _initialWeek = 1200;
   static const _weekCount = 2401;
   static const _visibleRows = 5;
+  static const _dragSensitivity = .5;
+  static const _pointerScrollThresholdInWeeks = 1.25;
 
   @override
   void initState() {
@@ -122,6 +128,67 @@ class _CalendarPageState extends State<CalendarPage> {
     if (month != _month) {
       setState(() => _month = month);
     }
+  }
+
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent || !_weekController.hasClients) return;
+    final delta = event.scrollDelta.dy;
+    if (delta == 0) return;
+    event.respond(allowPlatformDefault: false);
+    final pageThreshold =
+        _weekController.position.viewportDimension /
+        _visibleRows *
+        _pointerScrollThresholdInWeeks;
+    _pointerScrollAccumulator += delta;
+    final weeks = (_pointerScrollAccumulator / pageThreshold).truncate();
+    if (weeks == 0) return;
+    _pointerScrollAccumulator -= weeks * pageThreshold;
+    _animateByWeeks(weeks);
+  }
+
+  void _animateByWeeks(int weeks) {
+    final current =
+        _pointerScrollTarget ?? _weekController.page?.round() ?? _initialWeek;
+    _animateToWeek(current + weeks);
+  }
+
+  void _animateToWeek(int week) {
+    _pointerScrollTarget = week.clamp(0, _weekCount - 1);
+    final revision = ++_scrollRevision;
+    _weekController
+        .animateToPage(
+          _pointerScrollTarget!,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+        )
+        .whenComplete(() {
+          if (mounted && revision == _scrollRevision) {
+            _pointerScrollTarget = null;
+          }
+        });
+  }
+
+  void _handleVerticalDragStart(DragStartDetails _) {
+    _pointerScrollAccumulator = 0;
+    _pointerScrollTarget = null;
+    _scrollRevision++;
+  }
+
+  void _handleVerticalDragUpdate(DragUpdateDetails details) {
+    if (!_weekController.hasClients) return;
+    final position = _weekController.position;
+    final target =
+        (position.pixels - (details.primaryDelta ?? 0) * _dragSensitivity)
+            .clamp(position.minScrollExtent, position.maxScrollExtent)
+            .toDouble();
+    _weekController.jumpTo(target);
+  }
+
+  void _handleVerticalDragEnd(DragEndDetails _) {
+    if (!_weekController.hasClients) return;
+    final page = _weekController.page;
+    if (page == null) return;
+    _animateToWeek(page.round());
   }
 
   Future<void> _editSchedule(
@@ -214,43 +281,53 @@ class _CalendarPageState extends State<CalendarPage> {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: PageView.builder(
-                key: const ValueKey('calendar-month-grid'),
-                controller: _weekController,
-                scrollDirection: Axis.vertical,
-                itemCount: _weekCount,
-                onPageChanged: _updateSuperiorMonth,
-                itemBuilder: (context, weekIndex) => Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var day = 0; day < 7; day++)
-                      Expanded(
-                        child: Builder(
-                          builder: (context) {
-                            final date = _baseWeek.add(
-                              Duration(days: weekIndex * 7 + day),
-                            );
-                            final schedules = widget.controller.schedules
-                                .where(
-                                  (schedule) =>
-                                      _sameBeijingDate(schedule, date),
-                                )
-                                .toList(growable: false);
-                            return _CalendarDay(
-                              date: date,
-                              today: today,
-                              inMonth: date.month == _month.month,
-                              schedules: schedules,
-                              focusedScheduleId: widget.focusedScheduleId,
-                              onAdd: () => _editSchedule(date),
-                              onSelect: widget.onScheduleSelected,
-                              onEdit: (schedule) =>
-                                  _editSchedule(date, schedule),
-                            );
-                          },
-                        ),
-                      ),
-                  ],
+              child: Listener(
+                onPointerSignal: _handlePointerSignal,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onVerticalDragStart: _handleVerticalDragStart,
+                  onVerticalDragUpdate: _handleVerticalDragUpdate,
+                  onVerticalDragEnd: _handleVerticalDragEnd,
+                  child: PageView.builder(
+                    key: const ValueKey('calendar-month-grid'),
+                    controller: _weekController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    scrollDirection: Axis.vertical,
+                    itemCount: _weekCount,
+                    onPageChanged: _updateSuperiorMonth,
+                    itemBuilder: (context, weekIndex) => Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var day = 0; day < 7; day++)
+                          Expanded(
+                            child: Builder(
+                              builder: (context) {
+                                final date = _baseWeek.add(
+                                  Duration(days: weekIndex * 7 + day),
+                                );
+                                final schedules = widget.controller.schedules
+                                    .where(
+                                      (schedule) =>
+                                          _sameBeijingDate(schedule, date),
+                                    )
+                                    .toList(growable: false);
+                                return _CalendarDay(
+                                  date: date,
+                                  today: today,
+                                  inMonth: date.month == _month.month,
+                                  schedules: schedules,
+                                  focusedScheduleId: widget.focusedScheduleId,
+                                  onAdd: () => _editSchedule(date),
+                                  onSelect: widget.onScheduleSelected,
+                                  onEdit: (schedule) =>
+                                      _editSchedule(date, schedule),
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

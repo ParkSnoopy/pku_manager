@@ -176,6 +176,15 @@ void main() {
         find.byKey(const ValueKey('meeting-content-first')),
       );
       expect(
+        tester
+            .widget<DefaultTextStyle>(
+              find.byKey(const ValueKey('meeting-text-style-first')),
+            )
+            .style
+            .fontFamily,
+        'PKU Noto Serif CJK SC',
+      );
+      expect(
         MediaQuery.textScalerOf(meetingTextContext).scale(10),
         moreOrLessEquals(10),
       );
@@ -200,6 +209,15 @@ void main() {
             .textTheme
             .bodyMedium
             ?.fontFamily,
+        'PKU Noto Sans CJK SC',
+      );
+      expect(
+        tester
+            .widget<DefaultTextStyle>(
+              find.byKey(const ValueKey('meeting-text-style-first')),
+            )
+            .style
+            .fontFamily,
         'PKU Noto Sans CJK SC',
       );
       appearance.cycleFontFamily();

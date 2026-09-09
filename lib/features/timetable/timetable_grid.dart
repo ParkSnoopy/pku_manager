@@ -593,8 +593,10 @@ class _MeetingTileState extends State<_MeetingTile> {
                                 ),
                                 style: TextStyle(
                                   color: foreground,
-                                  fontFamily: timetableMonoFont,
-                                  fontFamilyFallback: timetableFontFallback,
+                                  fontFamily: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.fontFamily,
                                 ),
                                 child: SingleChildScrollView(
                                   physics: const NeverScrollableScrollPhysics(),

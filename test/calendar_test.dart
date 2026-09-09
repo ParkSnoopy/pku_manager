@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/timetable.dart';
@@ -169,5 +170,51 @@ void main() {
         tester.element(find.byKey(const ValueKey('calendar-schedule-color-1'))),
       ).colorScheme.primary,
     );
+  });
+
+  testWidgets('calendar wheel input accumulates before scrolling a week', (
+    tester,
+  ) async {
+    final controller = CalendarScheduleController(
+      MemoryCalendarScheduleStore(),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppStrings.supportedLocales,
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        home: CalendarPage(
+          now: DateTime.utc(2026, 9, 7),
+          controller: controller,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final grid = find.byKey(const ValueKey('calendar-month-grid'));
+    final pageController = tester.widget<PageView>(grid).controller!;
+    final initialPage = pageController.page;
+    await tester.sendEventToBinding(
+      PointerScrollEvent(
+        position: tester.getCenter(grid),
+        scrollDelta: const Offset(0, 100),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(pageController.page, initialPage);
+    expect(find.text('September 2026'), findsOneWidget);
+
+    for (var event = 0; event < 2; event++) {
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: tester.getCenter(grid),
+          scrollDelta: const Offset(0, 100),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+    expect(pageController.page, initialPage! + 2);
+    expect(find.text('October 2026'), findsOneWidget);
   });
 }
