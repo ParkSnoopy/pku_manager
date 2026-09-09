@@ -15,6 +15,7 @@ class CalendarPage extends StatefulWidget {
     required this.controller,
     this.timetable,
     this.focusedScheduleId,
+    this.onScheduleSelected,
     this.colorPicker = showAppColorPicker,
   });
 
@@ -22,6 +23,7 @@ class CalendarPage extends StatefulWidget {
   final CalendarScheduleController controller;
   final Timetable? timetable;
   final int? focusedScheduleId;
+  final ValueChanged<CalendarSchedule>? onScheduleSelected;
   final ColorPickerLauncher colorPicker;
 
   @override
@@ -91,7 +93,7 @@ class _CalendarPageState extends State<CalendarPage> {
           );
       final result = await showDialog<CalendarSchedule>(
         context: context,
-        builder: (_) => _ScheduleEditor(
+        builder: (_) => ScheduleEditorDialog(
           schedule: target,
           timetable: widget.timetable,
           colorPicker: widget.colorPicker,
@@ -201,6 +203,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         schedules: schedules,
                         focusedScheduleId: widget.focusedScheduleId,
                         onAdd: () => _editSchedule(date),
+                        onSelect: widget.onScheduleSelected,
                         onEdit: (schedule) => _editSchedule(date, schedule),
                       );
                     },
@@ -223,6 +226,7 @@ class _CalendarDay extends StatelessWidget {
     required this.schedules,
     required this.focusedScheduleId,
     required this.onAdd,
+    required this.onSelect,
     required this.onEdit,
   });
 
@@ -232,6 +236,7 @@ class _CalendarDay extends StatelessWidget {
   final List<CalendarSchedule> schedules;
   final int? focusedScheduleId;
   final VoidCallback onAdd;
+  final ValueChanged<CalendarSchedule>? onSelect;
   final ValueChanged<CalendarSchedule> onEdit;
 
   @override
@@ -249,10 +254,7 @@ class _CalendarDay extends StatelessWidget {
               : colors.brightness == Brightness.dark
               ? colors.surfaceContainerHighest
               : const Color(0xffd3d3d3),
-          border: Border.all(
-            color: isToday ? colors.primary : colors.outlineVariant,
-            width: isToday ? 2 : .5,
-          ),
+          border: Border.all(color: colors.outlineVariant, width: .5),
         ),
         child: ClipRect(
           child: Padding(
@@ -262,18 +264,25 @@ class _CalendarDay extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        '${date.day}',
-                        style: TextStyle(
-                          color: inMonth ? colors.onSurface : colors.outline,
-                          fontSize: 14,
-                          fontWeight: isToday
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                        ),
+                    Text(
+                      '${date.day}',
+                      style: TextStyle(
+                        color: inMonth ? colors.onSurface : colors.outline,
+                        fontSize: 14,
+                        fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
                       ),
                     ),
+                    if (isToday)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Icon(
+                          Icons.today,
+                          key: const ValueKey('calendar-today-icon'),
+                          size: 16,
+                          color: colors.primary,
+                        ),
+                      ),
+                    const Spacer(),
                     if (inMonth)
                       IconButton(
                         key: ValueKey(
@@ -302,6 +311,9 @@ class _CalendarDay extends StatelessWidget {
                       final background = scheduleColor(context, schedule);
                       final foreground = scheduleForeground(background);
                       final focused = schedule.id == focusedScheduleId;
+                      final canSelect =
+                          onSelect != null &&
+                          schedule.relatedClassSourceId != null;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 2),
                         child: FlashingOutline(
@@ -314,23 +326,33 @@ class _CalendarDay extends StatelessWidget {
                               'calendar-schedule-color-${schedule.id}',
                             ),
                             color: background,
-                            child: InkWell(
-                              key: ValueKey('calendar-schedule-${schedule.id}'),
-                              onTap: () => onEdit(schedule),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                  vertical: 3,
+                            child: MouseRegion(
+                              cursor: canSelect
+                                  ? SystemMouseCursors.click
+                                  : MouseCursor.defer,
+                              child: InkWell(
+                                key: ValueKey(
+                                  'calendar-schedule-${schedule.id}',
                                 ),
-                                child: Text(
-                                  '${schedule.allDay ? '' : '${_two(starts.hour)}:${_two(starts.minute)} '}'
-                                  '${schedule.title}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: foreground,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
+                                onTap: !canSelect
+                                    ? null
+                                    : () => onSelect!(schedule),
+                                onLongPress: () => onEdit(schedule),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 3,
+                                  ),
+                                  child: Text(
+                                    '${schedule.allDay ? '' : '${_two(starts.hour)}:${_two(starts.minute)} '}'
+                                    '${schedule.title}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: foreground,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -350,10 +372,11 @@ class _CalendarDay extends StatelessWidget {
   }
 }
 
-class _ScheduleEditor extends StatefulWidget {
-  const _ScheduleEditor({
+class ScheduleEditorDialog extends StatefulWidget {
+  const ScheduleEditorDialog({
+    super.key,
     required this.schedule,
-    required this.colorPicker,
+    this.colorPicker = showAppColorPicker,
     this.timetable,
   });
 
@@ -362,10 +385,10 @@ class _ScheduleEditor extends StatefulWidget {
   final ColorPickerLauncher colorPicker;
 
   @override
-  State<_ScheduleEditor> createState() => _ScheduleEditorState();
+  State<ScheduleEditorDialog> createState() => _ScheduleEditorDialogState();
 }
 
-class _ScheduleEditorState extends State<_ScheduleEditor> {
+class _ScheduleEditorDialogState extends State<ScheduleEditorDialog> {
   late final TextEditingController _title = TextEditingController(
     text: widget.schedule.title,
   );

@@ -6,7 +6,7 @@ Build an offline-first school life management application for Android, iOS, Linu
 
 ## Current Context
 
-- The Flutter application is at version `0.0.11`; all `0.0.x` builds keep schema version 0 without compatibility code.
+- The Flutter application is at version `0.0.12`; all `0.0.x` builds keep schema version 0 without compatibility code.
 - Android, iOS, Linux, macOS, and Windows Flutter runners exist. Web is unsupported.
 - Domain, SQLite, workbook parsing, responsive timetable, editing, appearance, export, and native packaging layers are implemented.
 - The deployed Week Parity application currently reads `https://parksnoopy-undergraduate.github.io/week/config.toml`.
@@ -196,7 +196,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Group vertically touching identical weekday meetings into one block and atomically edit all retained source identities without mutating imported source bytes; export the complete timetable as PNG or XLSX.
 - Persist arbitrary manual colors, explicit manual-color markers, roll locks, and configurable importance-outline colors and thicknesses by source identity. Apply them consistently to the timetable and exports; clear only unlocked manual colors during a palette roll.
 - Let Settings choose an arbitrary theme accent and hide the Roll colors rail action. Use fixed padded one-line course typography with truncation.
-- Add an independent user-controlled, color-coded month Calendar with light-grey adjacent-month cells. In landscape, Timetable appends related classes beneath upcoming schedules and opens schedule details before an explicit Calendar jump; Calendar lists every class scheduled tomorrow, each class's schedules, and unassociated schedules last. Side-pane navigation uses a transient flashing target outline without opening editors. Never project timetable classes into the month. Keep dialog editing for portrait timetable layouts.
+- Add an independent user-controlled, color-coded month Calendar with light-grey adjacent-month cells and a today icon. In landscape, Timetable appends related classes beneath upcoming schedules, separates schedule groups, exposes pointer-following hover details, navigates on primary activation, and edits on secondary-click or press-and-hold; Calendar lists every class scheduled tomorrow, each class's schedules, and unassociated schedules last. Show DDL on every pane entry. Primary activation of a Calendar schedule reveals its related timetable class, while press-and-hold edits. Side-pane navigation uses a transient flashing target outline without opening editors. Escape restores transient page presentation without reverting data or settings. Never project timetable classes into the month. Keep dialog editing for portrait timetable layouts.
 - Add a **教学网** rail action that opens the exact PKU Teaching Network URL in the platform default browser.
 - Use flat visual hierarchy, no gradients, bounded labels, accessible semantics, and keyboard navigation on desktop.
 - Add widget tests for empty, loading, populated, current-week opacity, stale-data, narrow, wide, left navigation and exact external URL dispatch, grouped inline editing, exact upcoming-schedule times, tomorrow-class lists, reference timetable geometry/typography, course-and-room full-cell color, repeated color rolls, cyclic language selection, persistent theme editing, 100 ms pointer-following details, foreground refresh, and reference export dimensions.

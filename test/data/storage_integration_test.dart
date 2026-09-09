@@ -37,6 +37,12 @@ void main() {
       later.id,
     ]);
     expect(repository.load().first.colorValue, isNull);
+    expect(
+      db.database.select('SELECT color FROM calendar_schedules WHERE id = ?', [
+        earlier.id,
+      ]).single['color'],
+      0,
+    );
     expect(earlier.startsAt, DateTime.utc(2026, 9, 7, 15, 59));
     expect(repository.load().last.title, 'Homework deadline');
     expect(repository.load().last.allDay, isTrue);
@@ -44,6 +50,15 @@ void main() {
     expect(repository.load().last.note, 'Bring notes');
     expect(repository.load().last.colorValue, 0xff123456);
     expect(later.startsAt, DateTime.utc(2026, 9, 8, 15, 59));
+
+    repository.update(later.copyWith(colorValue: null));
+    expect(repository.load().last.colorValue, isNull);
+    expect(
+      db.database.select('SELECT color FROM calendar_schedules WHERE id = ?', [
+        later.id,
+      ]).single['color'],
+      0,
+    );
 
     repository.update(
       later.copyWith(

@@ -4,6 +4,7 @@ import '../../domain/calendar_schedule.dart';
 import '../../domain/semester.dart';
 import '../../domain/timetable.dart';
 import '../../l10n/app_strings.dart';
+import '../../ui/following_hover_card.dart';
 import '../timetable/upcoming_course.dart';
 import 'calendar_schedule_controller.dart';
 import 'schedule_color.dart';
@@ -14,6 +15,7 @@ class UpcomingSchedulesPane extends StatelessWidget {
     required this.controller,
     required this.now,
     required this.onSelected,
+    required this.onEdit,
     required this.onClassSelected,
     this.timetable,
     this.calendar,
@@ -22,6 +24,7 @@ class UpcomingSchedulesPane extends StatelessWidget {
   final CalendarScheduleController controller;
   final DateTime now;
   final ValueChanged<CalendarSchedule> onSelected;
+  final ValueChanged<CalendarSchedule> onEdit;
   final ValueChanged<UpcomingCourse> onClassSelected;
   final Timetable? timetable;
   final SemesterCalendar? calendar;
@@ -57,12 +60,19 @@ class UpcomingSchedulesPane extends StatelessWidget {
                       padding: const EdgeInsets.all(20),
                       child: Text(strings.text(AppText.noUpcomingSchedule)),
                     )
-                  : ListView.separated(
+                  : ListView.builder(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: schedules.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemCount: schedules.length * 2 - 1,
                       itemBuilder: (context, index) {
-                        final schedule = schedules[index];
+                        if (index.isOdd) {
+                          return SizedBox(
+                            key: ValueKey(
+                              'upcoming-schedule-gap-${index ~/ 2}',
+                            ),
+                            height: 12,
+                          );
+                        }
+                        final schedule = schedules[index ~/ 2];
                         final background = scheduleColor(context, schedule);
                         final foreground = scheduleForeground(background);
                         final relatedClass = courses
@@ -81,6 +91,7 @@ class UpcomingSchedulesPane extends StatelessWidget {
                           foreground: foreground,
                           relatedClass: relatedClass,
                           onScheduleTap: () => onSelected(schedule),
+                          onScheduleEdit: () => onEdit(schedule),
                           onClassTap: relatedClass == null
                               ? null
                               : () => onClassSelected(relatedClass),
@@ -103,6 +114,7 @@ class _ScheduleWithClassEntry extends StatelessWidget {
     required this.foreground,
     required this.relatedClass,
     required this.onScheduleTap,
+    required this.onScheduleEdit,
     required this.onClassTap,
   });
 
@@ -112,6 +124,7 @@ class _ScheduleWithClassEntry extends StatelessWidget {
   final Color foreground;
   final UpcomingCourse? relatedClass;
   final VoidCallback onScheduleTap;
+  final VoidCallback onScheduleEdit;
   final VoidCallback? onClassTap;
 
   @override
@@ -124,36 +137,46 @@ class _ScheduleWithClassEntry extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Material(
-            key: ValueKey('upcoming-schedule-color-${schedule.id}'),
-            color: background,
-            child: ListTile(
-              key: ValueKey('upcoming-schedule-${schedule.id}'),
+          FollowingHoverCard(
+            cardKey: ValueKey('upcoming-schedule-hover-card-${schedule.id}'),
+            cursor: SystemMouseCursors.click,
+            card: _ScheduleHoverDetails(schedule: schedule),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: onScheduleTap,
-              textColor: foreground,
-              title: Text(
-                schedule.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 15),
+              onSecondaryTap: onScheduleEdit,
+              onLongPress: onScheduleEdit,
+              child: Material(
+                key: ValueKey('upcoming-schedule-color-${schedule.id}'),
+                color: background,
+                child: ListTile(
+                  key: ValueKey('upcoming-schedule-${schedule.id}'),
+                  textColor: foreground,
+                  title: Text(
+                    schedule.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 15),
+                  ),
+                  subtitle: Text(
+                    '${scheduleDateLabel(schedule)}\n'
+                    '${strings.deadline(scheduleDeadline(schedule).difference(now))}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  trailing: schedule.allDay
+                      ? null
+                      : Text(
+                          scheduleTimeLabel(schedule),
+                          textAlign: TextAlign.end,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
               ),
-              subtitle: Text(
-                '${scheduleDateLabel(schedule)}\n'
-                '${strings.deadline(scheduleDeadline(schedule).difference(now))}',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14),
-              ),
-              trailing: schedule.allDay
-                  ? null
-                  : Text(
-                      scheduleTimeLabel(schedule),
-                      textAlign: TextAlign.end,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
             ),
           ),
           if (course != null)
@@ -162,28 +185,60 @@ class _ScheduleWithClassEntry extends StatelessWidget {
               child: Material(
                 key: ValueKey('upcoming-related-class-${schedule.id}'),
                 color: colors.secondaryContainer,
-                child: ListTile(
-                  onTap: onClassTap,
-                  textColor: colors.onSecondaryContainer,
-                  dense: true,
-                  leading: const Icon(Icons.school_outlined),
-                  title: Text(
-                    course.group.primary.displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    '${beijingDateLabel(course.startsAt)} '
-                    '${beijingTimeLabel(course.startsAt)}\n'
-                    '${strings.deadline(course.startsAt.difference(now))}',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: ListTile(
+                    onTap: onClassTap,
+                    textColor: colors.onSecondaryContainer,
+                    dense: true,
+                    leading: const Icon(Icons.school_outlined),
+                    title: Text(
+                      course.group.primary.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${beijingDateLabel(course.startsAt)} '
+                      '${beijingTimeLabel(course.startsAt)}\n'
+                      '${strings.deadline(course.startsAt.difference(now))}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ),
             ),
         ],
       ),
+    );
+  }
+}
+
+class _ScheduleHoverDetails extends StatelessWidget {
+  const _ScheduleHoverDetails({required this.schedule});
+
+  final CalendarSchedule schedule;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <Widget>[
+      Text(schedule.title, style: Theme.of(context).textTheme.titleMedium),
+      Text(
+        schedule.allDay
+            ? scheduleDateLabel(schedule)
+            : '${scheduleDateLabel(schedule)} ${scheduleTimeLabel(schedule)}',
+      ),
+      if (schedule.note.isNotEmpty) Text(schedule.note),
+    ];
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (index, item) in items.indexed) ...[
+          if (index > 0) const Divider(height: 17),
+          item,
+        ],
+      ],
     );
   }
 }

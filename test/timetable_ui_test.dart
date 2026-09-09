@@ -1,7 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/app/app.dart';
 import 'package:pku_manager/domain/course.dart';
@@ -293,6 +292,19 @@ void main() {
       expect(find.text('Export failed'), findsOneWidget);
 
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      expect(
+        tester
+            .widget<MouseRegion>(
+              find
+                  .ancestor(
+                    of: find.byKey(const ValueKey('meeting-cell-first')),
+                    matching: find.byType(MouseRegion),
+                  )
+                  .first,
+            )
+            .cursor,
+        SystemMouseCursors.click,
+      );
       await mouse.addPointer(
         location: tester.getCenter(
           find.byKey(const ValueKey('meeting-cell-first')),
@@ -339,6 +351,14 @@ void main() {
       await tester.tap(find.text('Settings'));
       await tester.pump();
       expect(find.text('Theme'), findsOneWidget);
+      appearance.setDarkMode(true);
+      appearance.setAccent(const Color(0xffad1457));
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('dark-mode')), findsOneWidget);
+      expect(appearance.darkMode, isTrue);
+      expect(appearance.accent, const Color(0xffad1457));
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('show-roll-navbar')),
         300,
@@ -346,9 +366,19 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('show-roll-navbar')));
       await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(find.text('Theme'), findsOneWidget);
+      expect(appearance.showRollInNavbar, isFalse);
       await tester.tap(find.text('Timetable'));
       await tester.pump();
       expect(find.byTooltip('Roll colors'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('meeting-cell-first')));
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsNothing);
       await tester.pumpWidget(const SizedBox());
       controller.dispose();
     },
@@ -429,6 +459,14 @@ void main() {
       expect(find.text('Upcoming schedule'), findsOneWidget);
       expect(find.text('Homework deadline'), findsOneWidget);
       expect(find.text('All-day deadline'), findsOneWidget);
+      expect(
+        tester
+            .widget<SizedBox>(
+              find.byKey(const ValueKey('upcoming-schedule-gap-0')),
+            )
+            .height,
+        12,
+      );
       expect(find.textContaining('2026-09-07'), findsNWidgets(3));
       expect(find.text('09:00'), findsOneWidget);
       expect(find.text('All day'), findsNothing);
@@ -470,6 +508,39 @@ void main() {
         ),
         findsOneWidget,
       );
+      final scheduleMouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+      );
+      await scheduleMouse.addPointer(
+        location: tester.getCenter(
+          find.byKey(const ValueKey('upcoming-schedule-1')),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      final scheduleHover = find.byKey(
+        const ValueKey('upcoming-schedule-hover-card-1'),
+      );
+      expect(scheduleHover, findsOneWidget);
+      expect(find.textContaining('Submit online'), findsOneWidget);
+      final scheduleHoverBefore = tester.getTopLeft(scheduleHover);
+      await scheduleMouse.moveBy(const Offset(24, 16));
+      await tester.pump();
+      expect(tester.getTopLeft(scheduleHover), isNot(scheduleHoverBefore));
+      expect(
+        tester
+            .widget<MouseRegion>(
+              find
+                  .ancestor(
+                    of: find.byKey(const ValueKey('upcoming-schedule-1')),
+                    matching: find.byType(MouseRegion),
+                  )
+                  .first,
+            )
+            .cursor,
+        SystemMouseCursors.click,
+      );
+      await scheduleMouse.removePointer();
+      await tester.pump();
       final relatedMouse = await tester.createGesture(
         kind: PointerDeviceKind.mouse,
       );
@@ -489,14 +560,9 @@ void main() {
       await relatedMouse.removePointer();
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('upcoming-schedule-1')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('schedule-details-1')), findsOneWidget);
-      expect(find.text('Submit online'), findsOneWidget);
-      expect(find.byKey(const ValueKey('calendar-page')), findsNothing);
-      expect(find.byKey(const ValueKey('schedule-editor')), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('schedule-details-calendar')));
       await tester.pump();
       expect(find.byKey(const ValueKey('calendar-page')), findsOneWidget);
+      expect(find.byKey(const ValueKey('schedule-editor')), findsNothing);
       expect(
         tester
             .widget<FlashingOutline>(
@@ -516,6 +582,29 @@ void main() {
       );
       await tester.tap(find.text('Timetable'));
       await tester.pump();
+      final editMouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kSecondaryMouseButton,
+      );
+      await editMouse.down(
+        tester.getCenter(find.byKey(const ValueKey('upcoming-schedule-1'))),
+      );
+      await editMouse.up();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('schedule-editor')), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('schedule-title')),
+        'Updated deadline',
+      );
+      await tester.tap(find.byKey(const ValueKey('save-schedule-editor')));
+      await tester.pumpAndSettle();
+      expect(calendar.schedules.first.title, 'Updated deadline');
+      expect(find.text('Schedule could not be updated'), findsNothing);
+      await tester.longPress(find.byKey(const ValueKey('upcoming-schedule-1')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('schedule-editor')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('cancel-schedule-editor')));
+      await tester.pumpAndSettle();
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('upcoming-schedule-pane')),
@@ -580,10 +669,39 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('calendar-page')),
-          matching: find.textContaining('Homework deadline'),
+          matching: find.textContaining('Updated deadline'),
         ),
         findsOneWidget,
       );
+      await tester.tap(find.byKey(const ValueKey('calendar-next-month')));
+      await tester.pump();
+      expect(find.text('October 2026'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(find.text('September 2026'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('calendar-schedule-1')));
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey('upcoming-schedule-pane')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('schedule-editor')), findsNothing);
+      expect(
+        tester
+            .widget<FlashingOutline>(
+              find.byKey(const ValueKey('meeting-flash-first')),
+            )
+            .active,
+        isTrue,
+      );
+      await tester.pump(const Duration(milliseconds: 1500));
+      await tester.tap(find.text('Calendar'));
+      await tester.pump();
+      await tester.longPress(find.byKey(const ValueKey('calendar-schedule-1')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('schedule-editor')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('cancel-schedule-editor')));
+      await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('upcoming-class-pane')), findsOneWidget);
       expect(find.text("Tomorrow's classes"), findsOneWidget);
       expect(find.text('Algebra'), findsOneWidget);
@@ -605,7 +723,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('upcoming-class-pane')),
-          matching: find.textContaining('Homework deadline'),
+          matching: find.textContaining('Updated deadline'),
         ),
         findsOneWidget,
       );

@@ -38,7 +38,7 @@ VALUES (?, ?, ?, ?, ?, ?)''',
         allDay ? 1 : 0,
         relatedClassSourceId,
         note,
-        colorValue,
+        colorValue ?? 0,
       ],
     );
     return CalendarSchedule(
@@ -67,7 +67,7 @@ related_class_source_id = ?, note = ?, color = ? WHERE id = ?''',
         schedule.allDay ? 1 : 0,
         schedule.relatedClassSourceId,
         schedule.note,
-        schedule.colorValue,
+        schedule.colorValue ?? 0,
         schedule.id,
       ],
     );
@@ -84,18 +84,21 @@ related_class_source_id = ?, note = ?, color = ? WHERE id = ?''',
     }
   }
 
-  CalendarSchedule _fromRow(dynamic row) => CalendarSchedule(
-    id: row['id'] as int,
-    title: row['title'] as String,
-    startsAt: DateTime.fromMillisecondsSinceEpoch(
-      row['starts_at'] as int,
-      isUtc: true,
-    ),
-    allDay: (row['all_day'] as int) != 0,
-    relatedClassSourceId: row['related_class_source_id'] as String?,
-    note: row['note'] as String,
-    colorValue: row['color'] as int?,
-  );
+  CalendarSchedule _fromRow(dynamic row) {
+    final color = row['color'] as int?;
+    return CalendarSchedule(
+      id: row['id'] as int,
+      title: row['title'] as String,
+      startsAt: DateTime.fromMillisecondsSinceEpoch(
+        row['starts_at'] as int,
+        isUtc: true,
+      ),
+      allDay: (row['all_day'] as int) != 0,
+      relatedClassSourceId: row['related_class_source_id'] as String?,
+      note: row['note'] as String,
+      colorValue: color == null || color == 0 ? null : color,
+    );
+  }
 
   String _validTitle(String value) {
     final normalized = value.trim();

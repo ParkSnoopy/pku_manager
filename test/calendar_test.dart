@@ -42,6 +42,13 @@ void main() {
     expect(find.byKey(const ValueKey('calendar-month-grid')), findsOneWidget);
     expect(find.byKey(const ValueKey('calendar-day-2026-9-7')), findsOneWidget);
     expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('calendar-day-2026-9-7')),
+        matching: find.byKey(const ValueKey('calendar-today-icon')),
+      ),
+      findsOneWidget,
+    );
+    expect(
       (tester
                   .widget<DecoratedBox>(
                     find.byKey(const ValueKey('calendar-day-2026-8-31')),
@@ -111,7 +118,7 @@ void main() {
     expect(controller.schedules.single.relatedClassSourceId, 'original-class');
     expect(find.textContaining('Homework deadline'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('calendar-schedule-1')));
+    await tester.longPress(find.byKey(const ValueKey('calendar-schedule-1')));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('schedule-title')),
@@ -121,7 +128,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.schedules.single.title, 'Homework deadline');
 
-    await tester.tap(find.byKey(const ValueKey('calendar-schedule-1')));
+    await tester.longPress(find.byKey(const ValueKey('calendar-schedule-1')));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('schedule-title')),

@@ -1,7 +1,5 @@
-import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/calendar_schedule.dart';
@@ -10,6 +8,7 @@ import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
 import '../../l10n/app_strings.dart';
 import '../../ui/flashing_outline.dart';
+import '../../ui/following_hover_card.dart';
 import 'timetable_color.dart';
 import 'timetable_style.dart';
 
@@ -509,79 +508,6 @@ class _MeetingTile extends StatefulWidget {
 }
 
 class _MeetingTileState extends State<_MeetingTile> {
-  Timer? _hoverTimer;
-  OverlayEntry? _details;
-  Offset _pointer = Offset.zero;
-
-  void _move(PointerEvent event) {
-    _pointer = event.position;
-    _details?.markNeedsBuild();
-  }
-
-  void _enter(PointerEnterEvent event) {
-    _move(event);
-    _hoverTimer = Timer(const Duration(milliseconds: 100), _showDetails);
-  }
-
-  void _exit(PointerExitEvent event) {
-    _hoverTimer?.cancel();
-    _removeDetails();
-  }
-
-  void _showDetails() {
-    if (!mounted || _details != null) return;
-    _details = OverlayEntry(
-      builder: (context) {
-        final size = MediaQuery.sizeOf(context);
-        final width = math.min(320.0, size.width - 16);
-        final maxHeight = math.min(420.0, size.height - 16);
-        final left = (_pointer.dx + 14).clamp(8.0, size.width - width - 8);
-        final top = (_pointer.dy + 14)
-            .clamp(8.0, math.max(8.0, size.height - maxHeight - 8))
-            .toDouble();
-        return Positioned(
-          key: ValueKey('meeting-hover-${widget.meeting.sourceId}'),
-          left: left,
-          top: top,
-          width: width,
-          child: IgnorePointer(
-            child: Material(
-              elevation: 8,
-              color: Theme.of(context).colorScheme.surface,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxHeight),
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: _Details(
-                      meeting: widget.meeting,
-                      firstPeriod: widget.firstPeriod,
-                      lastPeriod: widget.lastPeriod,
-                      schedules: widget.schedules,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-    Overlay.of(context).insert(_details!);
-  }
-
-  void _removeDetails() {
-    _details?.remove();
-    _details = null;
-  }
-
-  @override
-  void dispose() {
-    _hoverTimer?.cancel();
-    _removeDetails();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final meeting = widget.meeting;
@@ -605,10 +531,15 @@ class _MeetingTileState extends State<_MeetingTile> {
             width: widget.appearance!.outlineWidth,
           )
         : null;
-    return MouseRegion(
-      onEnter: _enter,
-      onHover: _move,
-      onExit: _exit,
+    return FollowingHoverCard(
+      cardKey: ValueKey('meeting-hover-${widget.meeting.sourceId}'),
+      cursor: SystemMouseCursors.click,
+      card: _Details(
+        meeting: widget.meeting,
+        firstPeriod: widget.firstPeriod,
+        lastPeriod: widget.lastPeriod,
+        schedules: widget.schedules,
+      ),
       child: Opacity(
         opacity: widget.isCurrent ? 1 : .5,
         child: SizedBox(
@@ -627,11 +558,7 @@ class _MeetingTileState extends State<_MeetingTile> {
                   fit: StackFit.expand,
                   children: [
                     InkWell(
-                      onTap: () {
-                        _hoverTimer?.cancel();
-                        _removeDetails();
-                        widget.onEdit();
-                      },
+                      onTap: widget.onEdit,
                       child: widget.isCurrent
                           ? Padding(
                               key: ValueKey(
