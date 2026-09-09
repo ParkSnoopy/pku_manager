@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/data/app_database.dart';
+import 'package:pku_manager/data/calendar_schedule_repository.dart';
 import 'package:pku_manager/data/schedule_repository.dart';
 import 'package:pku_manager/data/schedule_xls_parser.dart';
 import 'package:pku_manager/domain/course.dart';
@@ -57,11 +58,45 @@ void main() {
     expect(restored.meetings.first.shortName, 'Short');
     expect(restored.meetings.first.displayName, 'Short');
     expect(database.activeSource, [1, 2, 3]);
-    repository.removeUserMeeting('user:fixed');
+    repository.removeMeeting('user:fixed');
     expect(repository.load()!.meetings.map((meeting) => meeting.name), [
       'Edited',
     ]);
     expect(database.activeSource, [1, 2, 3]);
+
+    final scheduleRepository = CalendarScheduleRepository(database);
+    scheduleRepository.create(
+      title: 'Related deadline',
+      startsAt: DateTime.utc(2026, 9, 8),
+      relatedClassSourceId: sourceId,
+    );
+    final source =
+        database.database
+                .select('SELECT source FROM active_schedule WHERE id = 1')
+                .single['source']
+            as int;
+    database.database.execute(
+      'INSERT INTO course_appearance VALUES (?, ?, NULL, 0, 1, ?, 1.5)',
+      [source, sourceId, 0xff123456],
+    );
+    repository.removeMeeting(sourceId);
+    expect(repository.load()!.meetings, isEmpty);
+    expect(database.activeSource, [1, 2, 3]);
+    expect(
+      database.database.select(
+        'SELECT 1 FROM completions WHERE source = ? AND identity = ?',
+        [source, sourceId],
+      ),
+      isEmpty,
+    );
+    expect(
+      database.database.select(
+        'SELECT 1 FROM course_appearance WHERE source = ? AND identity = ?',
+        [source, sourceId],
+      ),
+      isEmpty,
+    );
+    expect(scheduleRepository.load().single.relatedClassSourceId, isNull);
   });
 
   test('group edits commit atomically and preserve immutable source bytes', () {
@@ -118,5 +153,19 @@ void main() {
       repository.load()!.meetings.map((meeting) => meeting.name),
       everyElement('Edited together'),
     );
+
+    expect(
+      () => repository.removeMeetings([
+        group.meetings.first.sourceId,
+        'not-active',
+      ]),
+      throwsArgumentError,
+    );
+    expect(repository.load()!.meetings, hasLength(2));
+    repository.removeMeetings(
+      group.meetings.map((meeting) => meeting.sourceId),
+    );
+    expect(repository.load()!.meetings, isEmpty);
+    expect(database.activeSource, [7, 8, 9]);
   });
 }

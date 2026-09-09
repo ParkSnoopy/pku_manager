@@ -119,18 +119,21 @@ class TimetableController extends ChangeNotifier {
     _notify();
   }
 
-  void removeUserMeeting(String sourceId) {
-    removeUserMeetings([sourceId]);
+  bool removeMeeting(String sourceId) {
+    return removeMeetings([sourceId]);
   }
 
-  void removeUserMeetings(Iterable<String> sourceIds) {
+  bool removeMeetings(Iterable<String> sourceIds) {
     try {
-      timetable = schedules.removeUserMeetings(sourceIds);
+      timetable = schedules.removeMeetings(sourceIds);
       error = null;
+      _notify();
+      return true;
     } catch (_) {
       error = 'Course could not be removed.';
+      _notify();
+      return false;
     }
-    _notify();
   }
 
   void _notify() {

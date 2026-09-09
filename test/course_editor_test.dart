@@ -69,8 +69,11 @@ void main() {
     expect(find.byKey(const ValueKey('course-color-unfix')), findsNothing);
     expect(result!.appearance.color, isNull);
     expect(result!.appearance.lockColor, isFalse);
-    await tester.drag(find.byType(ListView), const Offset(0, -300));
-    await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('course-important-outline')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.byKey(const ValueKey('course-important-outline')));
     await tester.pump();
     final initialSlider = tester.widget<Slider>(
@@ -96,5 +99,43 @@ void main() {
     expect(result!.appearance.outlined, isTrue);
     expect(result!.appearance.outlineColor, const Color(0xff246813));
     expect(result!.appearance.outlineWidth, 3.5);
+
+    expect(find.text('Close'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('course-delete')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.ancestor(
+        of: find.byKey(const ValueKey('course-delete')),
+        matching: find.byType(ListView),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(
+        of: find.byKey(const ValueKey('course-delete')),
+        matching: find.byType(Wrap),
+      ),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const ValueKey('course-delete')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'This class will be permanently deleted. Related schedules will be kept without a class association.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(result!.remove, isFalse);
+
+    await tester.tap(find.byKey(const ValueKey('course-delete')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirm-course-delete')));
+    await tester.pumpAndSettle();
+    expect(result!.remove, isTrue);
   });
 }

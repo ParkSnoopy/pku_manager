@@ -236,21 +236,49 @@ note=excluded.note, exam=excluded.exam''',
   }
 
   @override
-  Timetable removeUserMeeting(String sourceId) =>
-      removeUserMeetings([sourceId]);
+  Timetable removeMeeting(String sourceId) => removeMeetings([sourceId]);
 
   @override
-  Timetable removeUserMeetings(Iterable<String> sourceIds) {
-    final identities = sourceIds.toList(growable: false);
-    if (identities.isEmpty ||
-        identities.any((sourceId) => !sourceId.startsWith('user:'))) {
-      throw ArgumentError('Only user-created meetings can be removed');
+  Timetable removeMeetings(Iterable<String> sourceIds) {
+    final identities = sourceIds.toSet().toList(growable: false);
+    if (identities.isEmpty) {
+      throw ArgumentError('Meeting group must not be empty');
     }
     return store.transaction(() {
       final source = _activeSourceId();
       for (final sourceId in identities) {
+        final exists = store.database.select(
+          '''SELECT identity FROM meetings WHERE source = ? AND identity = ?
+UNION SELECT identity FROM user_meetings WHERE source = ? AND identity = ?''',
+          [source, sourceId, source, sourceId],
+        );
+        if (exists.isEmpty) {
+          throw ArgumentError('Meeting does not belong to active schedule');
+        }
+      }
+      for (final sourceId in identities) {
+        store.database.execute(
+          'UPDATE calendar_schedules SET related_class_source_id = NULL WHERE related_class_source_id = ?',
+          [sourceId],
+        );
+        store.database.execute(
+          'DELETE FROM course_appearance WHERE source = ? AND identity = ?',
+          [source, sourceId],
+        );
         store.database.execute(
           'DELETE FROM user_meetings WHERE source = ? AND identity = ?',
+          [source, sourceId],
+        );
+        store.database.execute(
+          'DELETE FROM completions WHERE source = ? AND identity = ?',
+          [source, sourceId],
+        );
+        store.database.execute(
+          'DELETE FROM issues WHERE source = ? AND identity = ?',
+          [source, sourceId],
+        );
+        store.database.execute(
+          'DELETE FROM meetings WHERE source = ? AND identity = ?',
           [source, sourceId],
         );
       }

@@ -265,11 +265,11 @@ class _TimetablePageState extends State<TimetablePage>
 
   void _applyEdit(CourseEditResult result, List<Course> original) {
     if (result.remove) {
-      widget.controller.removeUserMeetings(
-        original.map((meeting) => meeting.sourceId),
-      );
+      final sourceIds = original.map((meeting) => meeting.sourceId);
+      if (!widget.controller.removeMeetings(sourceIds)) return;
+      widget.calendar.reload();
       widget.appearance.setCourseAppearance(
-        original.map((meeting) => meeting.sourceId),
+        sourceIds,
         const CourseAppearance(),
       );
       setState(() => _editor = null);

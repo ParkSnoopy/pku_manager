@@ -44,14 +44,14 @@ final class _Store implements ScheduleStore {
   }
 
   @override
-  Timetable removeUserMeeting(String sourceId) => value = Timetable(
+  Timetable removeMeeting(String sourceId) => value = Timetable(
     value.meetings.where((meeting) => meeting.sourceId != sourceId),
     periodCount: value.periodCount,
   );
   @override
-  Timetable removeUserMeetings(Iterable<String> sourceIds) {
+  Timetable removeMeetings(Iterable<String> sourceIds) {
     for (final sourceId in sourceIds) {
-      removeUserMeeting(sourceId);
+      removeMeeting(sourceId);
     }
     return value;
   }

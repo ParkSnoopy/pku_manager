@@ -31,10 +31,10 @@ final class _Store implements ScheduleStore {
   }
 
   @override
-  Timetable removeUserMeeting(String sourceId) => throw UnimplementedError();
+  Timetable removeMeeting(String sourceId) => throw UnimplementedError();
 
   @override
-  Timetable removeUserMeetings(Iterable<String> sourceIds) =>
+  Timetable removeMeetings(Iterable<String> sourceIds) =>
       throw UnimplementedError();
 
   @override

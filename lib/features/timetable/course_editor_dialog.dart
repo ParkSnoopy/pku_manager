@@ -284,6 +284,23 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
                     ),
                     onChanged: (_) => _publish(),
                   ),
+                  if (_meetings.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        key: const ValueKey('course-delete'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Theme.of(context).colorScheme.error,
+                        ),
+                        onPressed: _confirmDelete,
+                        icon: const Icon(Icons.delete_outline),
+                        label: Text(strings.text(AppText.deleteCourse)),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                 ],
               ),
@@ -295,17 +312,6 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
                 alignment: WrapAlignment.end,
                 spacing: 12,
                 children: [
-                  if (_meetings.isNotEmpty &&
-                      _meetings.every(
-                        (meeting) => meeting.sourceId.startsWith('user:'),
-                      ))
-                    TextButton(
-                      onPressed: () {
-                        _finish(const CourseEditResult.remove());
-                        _cancel();
-                      },
-                      child: Text(strings.text(AppText.remove)),
-                    ),
                   TextButton(
                     onPressed: _cancel,
                     child: Text(strings.text(AppText.close)),
@@ -429,6 +435,34 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
       _customColor = false;
     });
     _publish();
+  }
+
+  Future<void> _confirmDelete() async {
+    final strings = AppStrings.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.text(AppText.deleteCourse)),
+        content: Text(strings.text(AppText.deleteCourseWarning)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(strings.text(AppText.cancel)),
+          ),
+          TextButton(
+            key: const ValueKey('confirm-course-delete'),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(strings.text(AppText.deleteCourse)),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    _finish(const CourseEditResult.remove());
+    _cancel();
   }
 
   Future<void> _chooseOutlineColor() async {

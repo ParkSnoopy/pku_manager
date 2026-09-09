@@ -51,8 +51,8 @@ abstract interface class ScheduleStore {
   );
   Timetable saveMeeting(Course meeting);
   Timetable saveMeetings(Iterable<Course> meetings);
-  Timetable removeUserMeeting(String sourceId);
-  Timetable removeUserMeetings(Iterable<String> sourceIds);
+  Timetable removeMeeting(String sourceId);
+  Timetable removeMeetings(Iterable<String> sourceIds);
 }
 
 abstract interface class ScheduleDecoder {
