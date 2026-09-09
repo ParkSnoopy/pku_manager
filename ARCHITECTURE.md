@@ -14,7 +14,7 @@ The application is one Flutter process with four internal layers and thin platfo
 
 | Layer | Path | Status | Responsibility |
 |---|---|---|---|
-| Entry | `lib/main.dart` | Current | Start Flutter and construct the application root. |
+| Entry | `lib/main.dart` | Current | Initialize desktop window management, start Flutter, and construct the application root. |
 | Application | `lib/app/` | Current | Build dependencies, theme, navigation shell, and feature ownership. |
 | Features | `lib/features/` | Current | Coordinate user actions and render application state. |
 | Domain | `lib/domain/` | Current | Define timetable, semester, parity, and visibility rules without infrastructure dependencies. |
@@ -24,6 +24,7 @@ The application is one Flutter process with four internal layers and thin platfo
 | Linux runner | `linux/` | Current | Host the Flutter GTK application and produce the desktop release bundle. |
 | macOS runner | `macos/` | Current | Host Flutter and produce the macOS application bundle. |
 | Windows runner | `windows/` | Current | Host the Flutter Win32 application and produce the desktop release bundle. |
+| Window adapter | `lib/ui/app_window_controller.dart` | Current | Configure the desktop launch window and expose synchronized full-screen state without leaking plugin calls into features. |
 | Linux packaging | `packaging/linux/` | Current | Turn the complete Linux release bundle into an AppImage. |
 | Windows packaging | `packaging/windows/` | Current | Turn the complete Windows release bundle into an NSIS installer. |
 | Tests | `test/` | Current | Exercise domain, adapters, controller, and widget behavior. |

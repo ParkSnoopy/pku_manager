@@ -9,6 +9,7 @@ import '../../domain/course.dart';
 import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
 import '../../l10n/app_strings.dart';
+import '../../ui/app_window_controller.dart';
 import '../calendar/calendar_page.dart';
 import '../calendar/calendar_schedule_controller.dart';
 import '../calendar/upcoming_schedules_pane.dart';
@@ -48,12 +49,14 @@ class TimetablePage extends StatefulWidget {
     required this.appearance,
     required this.exporter,
     this.browserLauncher = launchInDefaultBrowser,
+    required this.windowController,
   });
   final TimetableController controller;
   final CalendarScheduleController calendar;
   final AppearanceController appearance;
   final TimetableExporter exporter;
   final BrowserLauncher browserLauncher;
+  final AppWindowController windowController;
   @override
   State<TimetablePage> createState() => _TimetablePageState();
 }
@@ -380,6 +383,26 @@ class _TimetablePageState extends State<TimetablePage>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        if (widget.windowController.supported)
+                          ListenableBuilder(
+                            listenable: widget.windowController,
+                            builder: (context, _) => IconButton(
+                              key: const ValueKey('fullscreen-toggle'),
+                              onPressed: () => unawaited(
+                                widget.windowController.toggleFullScreen(),
+                              ),
+                              tooltip: strings.text(
+                                widget.windowController.isFullScreen
+                                    ? AppText.exitFullScreen
+                                    : AppText.fullScreen,
+                              ),
+                              icon: Icon(
+                                widget.windowController.isFullScreen
+                                    ? Icons.fullscreen_exit
+                                    : Icons.fullscreen,
+                              ),
+                            ),
+                          ),
                         if (widget.appearance.showRollInNavbar)
                           IconButton(
                             onPressed: c.timetable == null

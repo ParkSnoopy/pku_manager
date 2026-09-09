@@ -78,6 +78,7 @@
 - The complete Monday–Friday timetable exports locally as PNG or XLSX with the displayed theme, colors, typography, outlines, and class content. Export deliberately renders every class fully opaque instead of reproducing non-current-week transparency.
 - Product identity must be consistent across Flutter, Android, iOS, Linux, macOS, Windows, AppImage, and NSIS metadata.
 - Platform support means packaged-runtime verification, not compilation alone.
+- Desktop windows launch at the configured desktop size, remain resizable, and support full-screen entry and exit from both the application control and keyboard.
 - Product behavior stays in Dart. Flutter plugins or narrow Dart wrappers may bridge native platform or SQLite facilities, but native code does not own timetable or parity rules.
 - Application-owned schema-like interchange uses Protobuf or XML instead of JSON. External source formats remain unchanged at their boundaries.
 - AGPL-licensed source, tests, and fixtures are not copied until licensing obligations are explicitly accepted or permission is obtained. Every relevant reference behavior and test scenario is independently represented in Dart tests.

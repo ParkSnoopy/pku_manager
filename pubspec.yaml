@@ -44,6 +44,7 @@ dependencies:
   flex_color_picker: ^4.0.0
   flutter_localizations:
     sdk: flutter
+  window_manager: ^0.5.2
 
 dev_dependencies:
   flutter_test:

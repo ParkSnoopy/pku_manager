@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/app/app.dart';
 import 'package:pku_manager/data/app_database.dart';
@@ -14,10 +13,25 @@ import 'package:pku_manager/features/timetable/timetable_controller.dart';
 import 'package:pku_manager/features/timetable/timetable_grid.dart';
 import 'package:pku_manager/features/settings/appearance_controller.dart';
 import 'package:pku_manager/l10n/app_strings.dart';
+import 'package:pku_manager/ui/app_window_controller.dart';
 
 class Picker implements SchedulePicker {
   @override
   Future<Uint8List?> pick() async => null;
+}
+
+class TestWindowController extends AppWindowController {
+  @override
+  bool get supported => true;
+
+  @override
+  bool isFullScreen = false;
+
+  @override
+  Future<void> toggleFullScreen() async {
+    isFullScreen = !isFullScreen;
+    notifyListeners();
+  }
 }
 
 void main() {
@@ -43,10 +57,24 @@ void main() {
       });
       final appearance = AppearanceController(MemoryAppearanceStore())
         ..setLanguage(AppLanguage.en);
+      final windowController = TestWindowController();
+      addTearDown(windowController.dispose);
       await tester.pumpWidget(
-        PkuManagerApp(controller: controller, appearance: appearance),
+        PkuManagerApp(
+          controller: controller,
+          appearance: appearance,
+          windowController: windowController,
+        ),
       );
       await tester.pump();
+      expect(desktopWindowOptions.size, desktopLaunchSize);
+      await tester.tap(find.byTooltip('Full screen'));
+      await tester.pump();
+      expect(windowController.isFullScreen, isTrue);
+      expect(find.byTooltip('Exit full screen'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.f11);
+      await tester.pump();
+      expect(windowController.isFullScreen, isFalse);
       expect(find.textContaining('Import your exported'), findsOneWidget);
       await tester.tap(find.byTooltip('Import'));
       await tester.pumpAndSettle();

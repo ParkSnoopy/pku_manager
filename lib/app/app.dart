@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../data/app_database.dart';
@@ -16,6 +19,7 @@ import '../features/timetable/timetable_export.dart';
 import '../features/timetable/timetable_page.dart';
 import '../features/settings/appearance_controller.dart';
 import '../l10n/app_strings.dart';
+import '../ui/app_window_controller.dart';
 import '../ui/super_otc_font.dart';
 
 class PkuManagerApp extends StatefulWidget {
@@ -26,12 +30,14 @@ class PkuManagerApp extends StatefulWidget {
     this.exporter,
     this.browserLauncher,
     this.calendar,
+    this.windowController,
   });
   final TimetableController? controller;
   final AppearanceController? appearance;
   final TimetableExporter? exporter;
   final BrowserLauncher? browserLauncher;
   final CalendarScheduleController? calendar;
+  final AppWindowController? windowController;
   @override
   State<PkuManagerApp> createState() => _PkuManagerAppState();
 }
@@ -42,6 +48,7 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
   CalendarScheduleController? _calendar;
   late AppearanceController _appearance;
   late final TimetableExporter _exporter;
+  late final AppWindowController _windowController;
   String? _failure;
   @override
   void initState() {
@@ -49,6 +56,8 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
     _appearance =
         widget.appearance ?? AppearanceController(MemoryAppearanceStore());
     _exporter = widget.exporter ?? TimetableExporter(NativeExportFileWriter());
+    _windowController =
+        widget.windowController ?? UnsupportedWindowController();
     if (widget.controller != null) {
       _controller = widget.controller;
       _calendar =
@@ -91,6 +100,7 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
   void dispose() {
     if (widget.controller == null) _controller?.dispose();
     if (widget.calendar == null) _calendar?.dispose();
+    if (widget.windowController == null) _windowController.dispose();
     _database?.close();
     super.dispose();
   }
@@ -116,7 +126,15 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
               platformScale * _appearance.fontScale,
             ),
           ),
-          child: child!,
+          child: CallbackShortcuts(
+            bindings: _windowController.supported
+                ? {
+                    const SingleActivator(LogicalKeyboardKey.f11): () =>
+                        unawaited(_windowController.toggleFullScreen()),
+                  }
+                : const {},
+            child: Focus(autofocus: true, child: child!),
+          ),
         );
       },
       home: _controller != null && _calendar != null
@@ -126,6 +144,7 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
               appearance: _appearance,
               exporter: _exporter,
               browserLauncher: widget.browserLauncher ?? launchInDefaultBrowser,
+              windowController: _windowController,
             )
           : Scaffold(
               body: Center(
