@@ -28,8 +28,9 @@ final class _Store implements ScheduleStore {
   @override
   Timetable publish(
     ScheduleCandidate candidate,
-    Map<String, Course> completions,
-  ) => value;
+    Map<String, Course> completions, {
+    String finalExamTitle = 'Final exam',
+  }) => value;
   @override
   Timetable saveMeeting(Course meeting) => value = Timetable([
     ...value.meetings.where((item) => item.sourceId != meeting.sourceId),

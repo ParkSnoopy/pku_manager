@@ -6,6 +6,8 @@ import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
 import '../../ui/super_otc_font.dart';
 
+export '../../domain/class_period_time.dart';
+
 const timetableCanvas = Color(0xfffaf9f5);
 const timetableIndexSurface = Color(0xffe8e0d2);
 const timetableInk = Color(0xff141413);
@@ -56,21 +58,6 @@ Color timetableCourseForeground(
     ? Colors.white
     : Colors.black;
 
-const timetableClassStarts = <int, String>{
-  1: '08:00',
-  2: '09:00',
-  3: '10:10',
-  4: '11:10',
-  5: '13:00',
-  6: '14:00',
-  7: '15:10',
-  8: '16:10',
-  9: '17:10',
-  10: '18:40',
-  11: '19:40',
-  12: '20:40',
-};
-
 final class TimetableGeometry {
   const TimetableGeometry(this.periodCount);
 
@@ -103,13 +90,6 @@ final class TimetableGeometry {
       ((width + timetableExportPadding * 2) * timetableExportScale).round();
   int get exportHeight =>
       ((height + timetableExportPadding * 2) * timetableExportScale).round();
-}
-
-String timetableClassEnd(String start) {
-  final parts = start.split(':').map(int.parse).toList(growable: false);
-  final end = parts[0] * 60 + parts[1] + 50;
-  return '${(end ~/ 60).toString().padLeft(2, '0')}:'
-      '${(end % 60).toString().padLeft(2, '0')}';
 }
 
 final class TimetableVisualSpan {

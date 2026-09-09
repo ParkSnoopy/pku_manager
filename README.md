@@ -8,6 +8,8 @@ An offline-first weekday timetable for PKU students, with semester week numbers 
 2. Select your workbook. All filenames are selectable; the app checks its actual contents. Supported input is an Excel 97–2003 workbook containing a recognized PKU timetable layout, not arbitrary spreadsheets.
 3. If information is incomplete, the app asks only for values it could not parse. One correction applies to every matching occurrence of the same class. Tutorial-room alternatives appear as a direct classroom choice with the class day and periods. **Reject and ignore** cancels the whole import and keeps your existing timetable.
 
+Dated final-exam details are added to Calendar automatically. `上午`, `下午`, and `晚上` begin at the first, fifth, and tenth class start times respectively; the schedule title is **Final exam**, **기말고사**, or **期末考试** in the selected language.
+
 Your workbook stays on your device and is not modified. An unreadable file does not replace your current timetable. Files must not exceed 8 MiB.
 
 ## View classes

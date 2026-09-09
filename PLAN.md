@@ -142,6 +142,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Create `lib/data/schedule_xls_parser.dart` around one spreadsheet-reader adapter.
 - Detect supported layout from workbook structure rather than filename.
 - Parse course name, room, frequency, note, exam information, weekday, and period.
+- During atomic timetable publication, create one related localized final-exam Calendar schedule from each complete dated exam; map `上午`, `下午`, and `晚上` to the first, fifth, and tenth class start times.
 - Preserve unrecognized nonempty cells as explicit import issues instead of dropping them.
 - Normalize only structural punctuation and whitespace needed by the source format; preserve user-visible text.
 - Support repeated and consecutive meetings without duplicating durable course identity fields.

@@ -1,4 +1,5 @@
 import '../domain/course.dart';
+import '../domain/imported_exam.dart';
 import '../domain/schedule_import.dart';
 import '../domain/timetable.dart';
 import '../domain/week_frequency.dart';
@@ -73,8 +74,9 @@ ORDER BY u.rowid''');
   @override
   Timetable publish(
     ScheduleCandidate candidate,
-    Map<String, Course> completions,
-  ) {
+    Map<String, Course> completions, {
+    String finalExamTitle = 'Final exam',
+  }) {
     final identities = candidate.issues.map((r) => r.meeting.sourceId).toSet();
     if (completions.keys.any((k) => !identities.contains(k))) {
       throw ArgumentError('Completion does not belong to this candidate');
@@ -154,8 +156,35 @@ ORDER BY u.rowid''');
         'INSERT INTO active_schedule VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET source=excluded.source',
         [source],
       );
+      _publishFinalExams(
+        candidate.records.map(
+          (record) => completions[record.meeting.sourceId] ?? record.meeting,
+        ),
+        finalExamTitle,
+      );
       return load()!;
     });
+  }
+
+  void _publishFinalExams(Iterable<Course> meetings, String title) {
+    final seen = <(String, DateTime)>{};
+    for (final meeting in meetings) {
+      final exam = parseImportedExam(meeting.exam);
+      if (exam == null || !seen.add((meeting.name, exam.startsAt))) continue;
+      final startsAt = exam.startsAt.millisecondsSinceEpoch;
+      final existing = store.database.select(
+        '''SELECT 1 FROM calendar_schedules
+WHERE starts_at = ? AND related_class_source_id = ? AND note = ? LIMIT 1''',
+        [startsAt, meeting.sourceId, exam.sourceText],
+      );
+      if (existing.isNotEmpty) continue;
+      store.database.execute(
+        '''INSERT INTO calendar_schedules(
+title, starts_at, all_day, related_class_source_id, note, color)
+VALUES (?, ?, 0, ?, ?, 0)''',
+        [title, startsAt, meeting.sourceId, exam.sourceText],
+      );
+    }
   }
 
   @override

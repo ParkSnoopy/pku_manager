@@ -15,12 +15,17 @@ class TimetableController extends ChangeNotifier {
     required this.picker,
     required this.weeks,
     DateTime Function()? clock,
-  }) : clock = clock ?? DateTime.now;
+    String Function()? finalExamTitle,
+    this.onPublished,
+  }) : clock = clock ?? DateTime.now,
+       finalExamTitle = finalExamTitle ?? (() => 'Final exam');
   final ScheduleStore schedules;
   final ScheduleDecoder decoder;
   final SchedulePicker picker;
   final WeekSource weeks;
   final DateTime Function() clock;
+  final String Function() finalExamTitle;
+  final VoidCallback? onPublished;
   Timetable? timetable;
   ScheduleCandidate? candidate;
   WeekStatus week = const WeekStatus(null, WeekFreshness.unavailable);
@@ -89,9 +94,14 @@ class TimetableController extends ChangeNotifier {
     final current = candidate;
     if (current == null || _disposed) return;
     try {
-      timetable = schedules.publish(current, values);
+      timetable = schedules.publish(
+        current,
+        values,
+        finalExamTitle: finalExamTitle(),
+      );
       candidate = null;
       error = null;
+      onPublished?.call();
     } catch (_) {
       error =
           'Import could not be applied. Check required fields and try again.';

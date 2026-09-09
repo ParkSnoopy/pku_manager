@@ -31,6 +31,7 @@
 - Timetable visibility: every meeting block is shown by default. Current-week meetings remain opaque; meetings outside the current week render at quarter opacity without cell text.
 - Timetable conflict: two class records conflict when their weekday and period ranges overlap and their weekly frequencies can occur together. Every conflicting class block uses a red outline; odd/even-only alternation is valid.
 - Schedule repository: sole authority for importing immutable workbook bytes and publishing parsed timetable records through one SQLite transaction.
+- Imported final exam: a dated exam with `上午`, `下午`, or `晚上` creates one related Calendar schedule during timetable publication at the first, fifth, or tenth class start time respectively. Its title follows the selected application language.
 - Spreadsheet parser: infrastructure adapter that converts supported PKU workbook layouts into domain meetings while reporting every unsupported nonempty record.
 - Source record identity: stable workbook location identity used to associate parsed records and user completion fields without changing source bytes.
 - Application database: one SQLite database in private platform-managed application-support storage containing source BLOBs, parsed records, completion fields, issues, week configuration, and freshness metadata.

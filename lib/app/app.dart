@@ -86,6 +86,9 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
         decoder: ScheduleXlsParser(),
         picker: NativeSchedulePicker(),
         weeks: WeekConfigRepository(database, WeekConfigParser(config)),
+        finalExamTitle: () =>
+            AppStrings(_appearance.language.locale).text(AppText.finalExam),
+        onPublished: _calendar!.reload,
       );
       setState(() => _controller = controller);
       controller.start();

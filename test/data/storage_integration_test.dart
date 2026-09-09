@@ -114,6 +114,43 @@ void main() {
     },
   );
 
+  test('publication creates localized final-exam schedules once', () {
+    final db = AppDatabase(':memory:');
+    addTearDown(db.close);
+    final repository = ScheduleRepository(db);
+    final candidate = ScheduleXlsParser().parseCells(
+      Uint8List.fromList([4, 5, 6]),
+      [
+        ['节数', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'],
+        [
+          '第一节',
+          'Course(Room)每周考试：2027年1月10日上午',
+          'Lab(Room)每周考试：2027年1月10日下午',
+          'Seminar(Room)每周考试：2027年1月10日晚上',
+          '',
+          '',
+          '',
+          '',
+        ],
+        ['第二节', 'Course(Room)每周考试：2027年1月10日上午', '', '', '', '', '', ''],
+      ],
+    );
+
+    repository.publish(candidate, {}, finalExamTitle: '期末考试');
+    repository.publish(candidate, {}, finalExamTitle: '期末考试');
+    final exams = CalendarScheduleRepository(db).load();
+    expect(exams, hasLength(3));
+    expect(exams.map((exam) => exam.title).toSet(), {'期末考试'});
+    expect(exams.map((exam) => exam.startsAt), [
+      DateTime.utc(2027, 1, 10),
+      DateTime.utc(2027, 1, 10, 5),
+      DateTime.utc(2027, 1, 10, 10, 40),
+    ]);
+    expect(exams.every((exam) => !exam.allDay), isTrue);
+    expect(exams.every((exam) => exam.relatedClassSourceId != null), isTrue);
+    expect(exams.first.note, '考试：2027年1月10日上午');
+  });
+
   test(
     'week configuration validates dates and keeps last valid cache',
     () async {

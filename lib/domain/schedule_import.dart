@@ -47,8 +47,9 @@ abstract interface class ScheduleStore {
   Timetable? load();
   Timetable publish(
     ScheduleCandidate candidate,
-    Map<String, Course> completions,
-  );
+    Map<String, Course> completions, {
+    String finalExamTitle = 'Final exam',
+  });
   Timetable saveMeeting(Course meeting);
   Timetable saveMeetings(Iterable<Course> meetings);
   Timetable removeMeeting(String sourceId);

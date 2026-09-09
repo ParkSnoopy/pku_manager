@@ -19,8 +19,9 @@ final class _Store implements ScheduleStore {
   @override
   Timetable publish(
     ScheduleCandidate candidate,
-    Map<String, Course> completions,
-  ) {
+    Map<String, Course> completions, {
+    String finalExamTitle = 'Final exam',
+  }) {
     this.completions = Map.unmodifiable(completions);
     return Timetable(
       candidate.records.map(

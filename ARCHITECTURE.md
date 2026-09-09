@@ -82,6 +82,7 @@ The navigation shell owns Timetable, Calendar, and Settings destinations. Import
 ### Course Meetings
 
 - `course.dart` represents one normalized occurrence of a course.
+- `imported_exam.dart` converts complete dated exam details into Beijing instants using the shared class-period clock without guessing incomplete exam text.
 - A meeting owns stable source-record identity, course name, weekday, first and last periods, room, frequency, note, and exam information.
 - Weekday covers Monday through Friday. Source weekend columns are intentionally excluded from the application timetable.
 - Period ranges are positive, ordered, and bounded by the imported timetable structure.
