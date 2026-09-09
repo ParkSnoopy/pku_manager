@@ -52,7 +52,12 @@ class TimetableGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final geometry = TimetableGeometry(timetable.periodCount);
-    final effectiveIndexColor = _themedTimetableColor(context, indexColor);
+    final theme = Theme.of(context);
+    final effectiveIndexColor = themedTimetableColor(
+      indexColor,
+      brightness: theme.brightness,
+      surface: theme.colorScheme.surface,
+    );
     final inheritedScale = MediaQuery.textScalerOf(context).scale(1);
     return MediaQuery(
       data: MediaQuery.of(context)
@@ -236,7 +241,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = _foregroundFor(color);
+    final foreground = timetableContrastForeground(color);
     return Container(
       key: const ValueKey('timetable-weekday-row'),
       height: timetableHeaderHeight,
@@ -335,7 +340,7 @@ class _PeriodRow extends StatelessWidget {
             child: _TimeLabel(
               period: period,
               fontWeight: fontWeight,
-              color: _foregroundFor(indexColor),
+              color: timetableContrastForeground(indexColor),
             ),
           ),
         ),
@@ -534,8 +539,8 @@ class _MeetingTileState extends State<_MeetingTile> {
   @override
   Widget build(BuildContext context) {
     final meeting = widget.meeting;
-    final background = _themedTimetableColor(
-      context,
+    final theme = Theme.of(context);
+    final background = themedTimetableColor(
       timetableCourseColor(
         meeting,
         widget.paletteSeed,
@@ -543,12 +548,14 @@ class _MeetingTileState extends State<_MeetingTile> {
         paletteIndex: widget.paletteIndex,
         customPalette: widget.customPalette,
       ),
+      brightness: theme.brightness,
+      surface: theme.colorScheme.surface,
     );
-    final foreground =
-        Theme.of(context).brightness == Brightness.dark ||
-            widget.autoTextColor && background.computeLuminance() <= .5
-        ? Colors.white
-        : Colors.black;
+    final foreground = timetableCourseForeground(
+      background,
+      brightness: theme.brightness,
+      autoTextColor: widget.autoTextColor,
+    );
     final outline = widget.appearance?.outlined ?? false
         ? Border.all(
             color: widget.appearance!.outlineColor,
@@ -687,18 +694,6 @@ class _MeetingTileState extends State<_MeetingTile> {
     );
   }
 }
-
-Color _themedTimetableColor(BuildContext context, Color color) {
-  final theme = Theme.of(context);
-  if (theme.brightness != Brightness.dark) return color;
-  return Color.alphaBlend(
-    theme.colorScheme.surface.withValues(alpha: .65),
-    color,
-  );
-}
-
-Color _foregroundFor(Color background) =>
-    background.computeLuminance() > .5 ? Colors.black : Colors.white;
 
 class _Details extends StatelessWidget {
   const _Details({

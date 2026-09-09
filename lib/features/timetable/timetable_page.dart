@@ -21,6 +21,7 @@ import 'timetable_color.dart';
 import 'timetable_export.dart';
 import 'timetable_grid.dart';
 import 'timetable_side_pane.dart';
+import 'timetable_style.dart';
 import 'upcoming_course.dart';
 
 const teachingPortalUrl =
@@ -303,6 +304,7 @@ class _TimetablePageState extends State<TimetablePage>
     if (timetable == null || _exporting) return;
     setState(() => _exporting = true);
     try {
+      final theme = Theme.of(context);
       await widget.exporter.export(
         format,
         timetable,
@@ -310,7 +312,15 @@ class _TimetablePageState extends State<TimetablePage>
         paletteSeed: widget.appearance.paletteSeed,
         paletteIndex: widget.appearance.rollPaletteIndex,
         customPalette: widget.appearance.customPalette,
-        timetableFontScale: widget.appearance.timetableFontScale,
+        timetableFontScale:
+            MediaQuery.textScalerOf(context).scale(1) *
+            widget.appearance.timetableFontScale,
+        fontFamily: theme.textTheme.bodyMedium?.fontFamily ?? timetableSansFont,
+        fontWeight: widget.appearance.fontWeight,
+        indexColor: widget.appearance.timetableIndexColor,
+        autoTextColor: widget.appearance.autoTextColor,
+        brightness: theme.brightness,
+        surfaceColor: theme.colorScheme.surface,
         courseAppearances: widget.appearance.courseAppearances,
       );
     } catch (_) {

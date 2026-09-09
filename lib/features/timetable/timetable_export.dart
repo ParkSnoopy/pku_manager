@@ -40,6 +40,12 @@ abstract interface class TimetablePngEncoder {
     int paletteIndex = 0,
     List<ui.Color> customPalette = defaultCustomPalette,
     double fontScale = 1,
+    String fontFamily = timetableSansFont,
+    ui.FontWeight fontWeight = ui.FontWeight.w400,
+    ui.Color indexColor = timetableIndexSurface,
+    bool autoTextColor = false,
+    ui.Brightness brightness = ui.Brightness.light,
+    ui.Color surfaceColor = timetableCanvas,
   });
 }
 
@@ -96,6 +102,12 @@ final class TimetableExporter {
     int paletteIndex = 0,
     List<ui.Color> customPalette = defaultCustomPalette,
     double timetableFontScale = 1,
+    String fontFamily = timetableSansFont,
+    ui.FontWeight fontWeight = ui.FontWeight.w400,
+    ui.Color indexColor = timetableIndexSurface,
+    bool autoTextColor = false,
+    ui.Brightness brightness = ui.Brightness.light,
+    ui.Color surfaceColor = timetableCanvas,
   }) async {
     final bytes = switch (format) {
       TimetableExportFormat.xlsx => _xlsx(
@@ -106,6 +118,12 @@ final class TimetableExporter {
         paletteIndex,
         customPalette,
         timetableFontScale,
+        fontFamily,
+        fontWeight,
+        indexColor,
+        autoTextColor,
+        brightness,
+        surfaceColor,
       ),
       TimetableExportFormat.png => await pngEncoder.encode(
         timetable,
@@ -115,6 +133,12 @@ final class TimetableExporter {
         paletteIndex: paletteIndex,
         customPalette: customPalette,
         fontScale: timetableFontScale,
+        fontFamily: fontFamily,
+        fontWeight: fontWeight,
+        indexColor: indexColor,
+        autoTextColor: autoTextColor,
+        brightness: brightness,
+        surfaceColor: surfaceColor,
       ),
     };
     await writer.save(
@@ -139,10 +163,21 @@ final class TimetableExporter {
     int paletteIndex,
     List<ui.Color> customPalette,
     double fontScale,
+    String fontFamily,
+    ui.FontWeight fontWeight,
+    ui.Color indexColor,
+    bool autoTextColor,
+    ui.Brightness brightness,
+    ui.Color surfaceColor,
   ) {
     final excel = Excel.createExcel();
     excel.rename(excel.getDefaultSheet()!, 'Timetable');
     final sheet = excel['Timetable'];
+    final effectiveIndexColor = themedTimetableColor(
+      indexColor,
+      brightness: brightness,
+      surface: surfaceColor,
+    );
     sheet.appendRow([
       TextCellValue(''),
       for (var day = 1; day <= 5; day++) TextCellValue(strings.weekday(day)),
@@ -192,16 +227,35 @@ final class TimetableExporter {
           courseAppearance?.outlineWidth ?? defaultCourseOutlineWidth,
         );
         final index = row == 0 || column == 0;
+        final courseColor = meetings.isEmpty
+            ? null
+            : themedTimetableColor(
+                timetableCourseColor(
+                  meetings.first,
+                  paletteSeed,
+                  appearance: courseAppearance,
+                  paletteIndex: paletteIndex,
+                  customPalette: customPalette,
+                ),
+                brightness: brightness,
+                surface: surfaceColor,
+              );
+        final foreground = index
+            ? timetableContrastForeground(effectiveIndexColor)
+            : courseColor == null
+            ? brightness == ui.Brightness.dark
+                  ? const ui.Color(0xffffffff)
+                  : const ui.Color(0xff000000)
+            : timetableCourseForeground(
+                courseColor,
+                brightness: brightness,
+                autoTextColor: autoTextColor,
+              );
         final outer = ExcelColor.fromHexString('#FF92918D');
         final thin = ExcelColor.fromHexString('#FFE6DFD8');
         cell.cellStyle = CellStyle(
-          bold:
-              row == 0 ||
-              (column == 0 && role == 1) ||
-              (column > 0 && role == 0),
-          fontFamily: column == 0 && row > 0 && role == 1
-              ? 'Noto Sans CJK SC'
-              : 'Roboto Mono',
+          bold: fontWeight.value >= ui.FontWeight.w600.value,
+          fontFamily: _xlsxFontFamily(fontFamily),
           fontSize:
               ((row == 0
                           ? 15
@@ -210,9 +264,7 @@ final class TimetableExporter {
                           : (role <= 1 ? 14 : 11)) *
                       fontScale)
                   .round(),
-          fontColorHex: ExcelColor.fromHexString(
-            column == 0 && row > 0 && role != 1 ? '#FF6C6A64' : '#FF141413',
-          ),
+          fontColorHex: ExcelColor.fromHexString(_hex(foreground)),
           textWrapping: TextWrapping.WrapText,
           verticalAlign: VerticalAlign.Center,
           horizontalAlign: index
@@ -220,19 +272,9 @@ final class TimetableExporter {
               : HorizontalAlign.Left,
           backgroundColorHex: meetings.isEmpty
               ? (index
-                    ? ExcelColor.fromHexString('#FFE8E0D2')
-                    : ExcelColor.fromHexString('#FFFAF9F5'))
-              : ExcelColor.fromHexString(
-                  _hex(
-                    timetableCourseColor(
-                      meetings.first,
-                      paletteSeed,
-                      appearance: courseAppearance,
-                      paletteIndex: paletteIndex,
-                      customPalette: customPalette,
-                    ),
-                  ),
-                ),
+                    ? ExcelColor.fromHexString(_hex(effectiveIndexColor))
+                    : ExcelColor.fromHexString(_hex(surfaceColor)))
+              : ExcelColor.fromHexString(_hex(courseColor!)),
           leftBorder: Border(
             borderStyle: column == 0 || important
                 ? (important ? importantStyle : BorderStyle.Medium)
@@ -291,9 +333,7 @@ final class TimetableExporter {
         sheet.merge(
           start,
           CellIndex.indexByColumnRow(columnIndex: day, rowIndex: endRow),
-          customValue: TextCellValue(
-            '${meeting.displayName}\n  ${meeting.room}',
-          ),
+          customValue: TextCellValue(_courseText(meeting)),
         );
         sheet.cell(start).cellStyle = style;
       }
@@ -314,16 +354,28 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
     int paletteIndex = 0,
     List<ui.Color> customPalette = defaultCustomPalette,
     double fontScale = 1,
+    String fontFamily = timetableSansFont,
+    ui.FontWeight fontWeight = ui.FontWeight.w400,
+    ui.Color indexColor = timetableIndexSurface,
+    bool autoTextColor = false,
+    ui.Brightness brightness = ui.Brightness.light,
+    ui.Color surfaceColor = timetableCanvas,
   }) async {
     final geometry = TimetableGeometry(timetable.periodCount);
     final logicalWidth = geometry.width + timetableExportPadding * 2;
     final logicalHeight = geometry.height + timetableExportPadding * 2;
+    final effectiveIndexColor = themedTimetableColor(
+      indexColor,
+      brightness: brightness,
+      surface: surfaceColor,
+    );
+    final indexForeground = timetableContrastForeground(effectiveIndexColor);
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
     canvas.scale(timetableExportScale);
     canvas.drawRect(
       ui.Rect.fromLTWH(0, 0, logicalWidth, logicalHeight),
-      ui.Paint()..color = timetableCanvas,
+      ui.Paint()..color = surfaceColor,
     );
     canvas.translate(timetableExportPadding, timetableExportPadding);
     final border = ui.Paint()
@@ -332,7 +384,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
       ..strokeWidth = timetableDividerWidth;
     canvas.drawRect(
       ui.Rect.fromLTWH(0, 0, geometry.width, timetableHeaderHeight),
-      ui.Paint()..color = timetableIndexSurface,
+      ui.Paint()..color = effectiveIndexColor,
     );
     for (var day = 1; day <= 5; day++) {
       _drawReferenceText(
@@ -345,11 +397,11 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           timetableHeaderHeight,
         ),
         center: true,
-        fontFamily: timetableMonoFont,
+        fontFamily: fontFamily,
         fontFallback: timetableFontFallback,
         fontSize: 20 * fontScale,
-        bold: true,
-        color: timetableInk,
+        weight: fontWeight,
+        color: indexForeground,
       );
     }
     var top = timetableHeaderHeight;
@@ -357,17 +409,17 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
     for (var period = 1; period <= timetable.periodCount; period++) {
       canvas.drawRect(
         ui.Rect.fromLTWH(0, top, timetableIndexWidth, timetablePeriodHeight),
-        ui.Paint()..color = timetableIndexSurface,
+        ui.Paint()..color = effectiveIndexColor,
       );
       _drawReferenceText(
         canvas,
         '$period',
         ui.Rect.fromLTWH(0, top, timetableIndexWidth, timetablePeriodHeight),
         center: true,
-        fontFamily: timetablePeriodFont,
+        fontFamily: fontFamily,
         fontSize: 30 * fontScale,
-        bold: true,
-        color: timetableInk,
+        weight: fontWeight,
+        color: indexForeground,
         lineHeight: 1,
       );
       top += timetablePeriodHeight;
@@ -400,18 +452,26 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           laneWidth,
           (span.lastPeriod - span.firstPeriod + 1) * timetablePeriodHeight,
         );
-        final background = timetableCourseColor(
-          meeting,
-          paletteSeed,
-          appearance: appearance,
-          paletteIndex: paletteIndex,
-          customPalette: customPalette,
+        final background = themedTimetableColor(
+          timetableCourseColor(
+            meeting,
+            paletteSeed,
+            appearance: appearance,
+            paletteIndex: paletteIndex,
+            customPalette: customPalette,
+          ),
+          brightness: brightness,
+          surface: surfaceColor,
         );
         canvas.drawRect(item, ui.Paint()..color = background);
-        final foreground = background.computeLuminance() > .5
-            ? const ui.Color(0xff000000)
-            : const ui.Color(0xffffffff);
+        final foreground = timetableCourseForeground(
+          background,
+          brightness: brightness,
+          autoTextColor: autoTextColor,
+        );
         const inset = timetableCourseContentPadding;
+        final nameHeight = timetableCourseNameFontSize * fontScale * 1.5;
+        final roomHeight = timetableClassroomFontSize * fontScale * 1.5;
         if (appearance?.outlined ?? false) {
           canvas.drawRect(
             item.deflate(appearance!.outlineWidth / 2),
@@ -426,32 +486,65 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           meeting.displayName,
           ui.Rect.fromLTWH(
             item.left + inset,
-            item.top + 8,
+            item.top + inset,
             item.width - inset * 2,
-            34,
+            nameHeight,
           ),
-          fontFamily: timetableMonoFont,
+          fontFamily: fontFamily,
           fontFallback: timetableFontFallback,
           fontSize: timetableCourseNameFontSize * fontScale,
-          bold: true,
+          weight: fontWeight,
           color: foreground,
           letterSpacing: -.2,
+          lineHeight: 1.5,
         );
-        _drawReferenceText(
-          canvas,
-          meeting.room.isEmpty ? '' : '  ${meeting.room}',
-          ui.Rect.fromLTWH(
-            item.left + inset,
-            item.top + 42,
-            item.width - inset * 2,
-            34,
-          ),
-          fontFamily: timetableMonoFont,
-          fontFallback: timetableFontFallback,
-          fontSize: timetableClassroomFontSize * fontScale,
-          weight: ui.FontWeight.w500,
-          color: foreground,
-        );
+        var contentTop = item.top + inset + nameHeight;
+        if (meeting.room.isNotEmpty) {
+          _drawReferenceText(
+            canvas,
+            '  ${meeting.room}',
+            ui.Rect.fromLTWH(
+              item.left + inset,
+              contentTop,
+              item.width - inset * 2,
+              roomHeight,
+            ),
+            fontFamily: fontFamily,
+            fontFallback: timetableFontFallback,
+            fontSize: timetableClassroomFontSize * fontScale,
+            weight: fontWeight,
+            color: foreground,
+            lineHeight: 1.5,
+          );
+          contentTop += roomHeight;
+        }
+        if (meeting.note.isNotEmpty) {
+          contentTop += timetableClassroomFontSize * 1.5;
+          final availableHeight = item.bottom - inset - contentTop;
+          final noteLines =
+              (availableHeight /
+                      (timetableCourseNoteFontSize * fontScale * 1.5))
+                  .floor();
+          if (noteLines > 0) {
+            _drawReferenceText(
+              canvas,
+              meeting.note,
+              ui.Rect.fromLTWH(
+                item.left + inset,
+                contentTop,
+                item.width - inset * 2,
+                availableHeight,
+              ),
+              fontFamily: fontFamily,
+              fontFallback: timetableFontFallback,
+              fontSize: timetableCourseNoteFontSize * fontScale,
+              weight: fontWeight,
+              color: foreground,
+              lineHeight: 1.5,
+              maxLines: noteLines,
+            );
+          }
+        }
       }
     }
     canvas.drawRect(
@@ -474,9 +567,23 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
 
 String _xlsxCourseValue(List<Course> meetings, int role) => switch (role) {
   0 => meetings.map((meeting) => meeting.displayName).join('\n'),
-  1 => meetings.map((meeting) => '  ${meeting.room}').join('\n'),
+  1 =>
+    meetings
+        .map((meeting) => meeting.room.isEmpty ? '' : '  ${meeting.room}')
+        .join('\n'),
+  3 => meetings.map((meeting) => meeting.note).join('\n'),
   _ => '',
 };
+
+String _courseText(Course meeting) => [
+  meeting.displayName,
+  if (meeting.room.isNotEmpty) '  ${meeting.room}',
+  if (meeting.note.isNotEmpty) '',
+  if (meeting.note.isNotEmpty) meeting.note,
+].join('\n');
+
+String _xlsxFontFamily(String family) =>
+    family.startsWith('PKU ') ? family.substring(4) : family;
 
 String _hex(ui.Color color) =>
     '#${color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
@@ -492,7 +599,6 @@ void _drawReferenceText(
   String text,
   ui.Rect rect, {
   bool center = false,
-  bool bold = false,
   required String fontFamily,
   List<String>? fontFallback,
   required double fontSize,
@@ -500,11 +606,12 @@ void _drawReferenceText(
   required ui.Color color,
   double? letterSpacing,
   double lineHeight = 1.3,
+  int maxLines = 1,
 }) {
   final builder =
       ui.ParagraphBuilder(
         ui.ParagraphStyle(
-          maxLines: 1,
+          maxLines: maxLines,
           textAlign: center ? ui.TextAlign.center : ui.TextAlign.left,
           ellipsis: '…',
         ),
@@ -514,7 +621,7 @@ void _drawReferenceText(
           fontFamily: fontFamily,
           fontFamilyFallback: fontFallback,
           fontSize: fontSize,
-          fontWeight: bold ? ui.FontWeight.w700 : weight ?? ui.FontWeight.w400,
+          fontWeight: weight ?? ui.FontWeight.w400,
           height: lineHeight,
           letterSpacing: letterSpacing,
         ),

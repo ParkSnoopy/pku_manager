@@ -6,8 +6,10 @@ import 'package:flutter/material.dart' show Color;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/timetable.dart';
+import 'package:pku_manager/domain/week_frequency.dart';
 import 'package:pku_manager/features/timetable/timetable_export.dart';
 import 'package:pku_manager/features/timetable/timetable_color.dart';
+import 'package:pku_manager/features/timetable/timetable_style.dart';
 import 'package:pku_manager/l10n/app_strings.dart';
 
 final class _Writer implements ExportFileWriter {
@@ -22,6 +24,12 @@ final class _PngEncoder implements TimetablePngEncoder {
   Map<String, CourseAppearance>? courseAppearances;
   List<Color>? customPalette;
   double? fontScale;
+  String? fontFamily;
+  ui.FontWeight? fontWeight;
+  Color? indexColor;
+  bool? autoTextColor;
+  ui.Brightness? brightness;
+  Color? surfaceColor;
 
   @override
   Future<Uint8List> encode(
@@ -32,13 +40,51 @@ final class _PngEncoder implements TimetablePngEncoder {
     int paletteIndex = 0,
     List<Color> customPalette = defaultCustomPalette,
     double fontScale = 1,
+    String fontFamily = 'Noto Sans CJK SC',
+    ui.FontWeight fontWeight = ui.FontWeight.w400,
+    Color indexColor = const Color(0xffe8e0d2),
+    bool autoTextColor = false,
+    ui.Brightness brightness = ui.Brightness.light,
+    Color surfaceColor = const Color(0xfffaf9f5),
   }) async {
     timetable = value;
     this.courseAppearances = courseAppearances;
     this.customPalette = customPalette;
     this.fontScale = fontScale;
+    this.fontFamily = fontFamily;
+    this.fontWeight = fontWeight;
+    this.indexColor = indexColor;
+    this.autoTextColor = autoTextColor;
+    this.brightness = brightness;
+    this.surfaceColor = surfaceColor;
     return Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
   }
+}
+
+Future<Color> _pixel(Uint8List png, int x, int y) async {
+  final codec = await ui.instantiateImageCodec(png);
+  final frame = await codec.getNextFrame();
+  final image = frame.image;
+  try {
+    final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    final offset = (y * image.width + x) * 4;
+    return Color.fromARGB(
+      data!.getUint8(offset + 3),
+      data.getUint8(offset),
+      data.getUint8(offset + 1),
+      data.getUint8(offset + 2),
+    );
+  } finally {
+    image.dispose();
+    codec.dispose();
+  }
+}
+
+void _expectColorNear(Color actual, Color expected) {
+  expect(actual.a, closeTo(expected.a, .001));
+  expect(actual.r, closeTo(expected.r, .01));
+  expect(actual.g, closeTo(expected.g, .01));
+  expect(actual.b, closeTo(expected.b, .01));
 }
 
 void main() {
@@ -51,6 +97,7 @@ void main() {
       firstPeriod: 1,
       lastPeriod: 2,
       room: 'Room 101',
+      note: 'Prepare report',
     ),
     Course(
       sourceId: 'b',
@@ -59,6 +106,8 @@ void main() {
       firstPeriod: 2,
       lastPeriod: 2,
       room: 'Lab',
+      frequency: WeekFrequency.even,
+      frequencyText: '双周',
     ),
   ], periodCount: 3);
   const strings = AppStrings(ui.Locale('en'));
@@ -72,6 +121,10 @@ void main() {
         timetable,
         strings: strings,
         paletteSeed: 4,
+        fontFamily: 'PKU Noto Serif CJK SC',
+        fontWeight: ui.FontWeight.w700,
+        indexColor: const Color(0xfffff0e0),
+        surfaceColor: const Color(0xfffafafa),
         courseAppearances: const {
           'a': CourseAppearance(
             color: Color(0xff123456),
@@ -79,6 +132,7 @@ void main() {
             outlineColor: Color(0xffabcdef),
             outlineWidth: 3.5,
           ),
+          'b': CourseAppearance(color: Color(0xff123456)),
         },
       );
 
@@ -103,12 +157,33 @@ void main() {
       );
       expect(
         sheet.cell(CellIndex.indexByString('B2')).value.toString(),
-        'Algo\n  Room 101',
+        'Algo\n  Room 101\n\nPrepare report',
       );
       expect(sheet.cell(CellIndex.indexByString('B3')).value, isNull);
       expect(sheet.cell(CellIndex.indexByString('B6')).value, isNull);
+      expect(
+        sheet.cell(CellIndex.indexByString('F6')).value.toString(),
+        'Physics\n  Lab',
+      );
+      expect(
+        sheet
+            .cell(CellIndex.indexByString('F6'))
+            .cellStyle!
+            .backgroundColor
+            .colorHex,
+        'FF123456',
+      );
       final styled = sheet.cell(CellIndex.indexByString('B2')).cellStyle!;
       expect(styled.backgroundColor.colorHex, 'FF123456');
+      expect(styled.fontFamily, 'Noto Serif CJK SC');
+      expect(
+        sheet
+            .cell(CellIndex.indexByString('B1'))
+            .cellStyle!
+            .backgroundColor
+            .colorHex,
+        'FFFFF0E0',
+      );
       expect(styled.leftBorder.borderStyle, BorderStyle.Thick);
       expect(styled.leftBorder.borderColorHex, 'FFABCDEF');
     },
@@ -130,6 +205,12 @@ void main() {
         Color(0xff555555),
       ],
       timetableFontScale: 1.5,
+      fontFamily: 'PKU Noto Serif CJK SC',
+      fontWeight: ui.FontWeight.w700,
+      indexColor: const Color(0xff123123),
+      autoTextColor: true,
+      brightness: ui.Brightness.dark,
+      surfaceColor: const Color(0xff101010),
       courseAppearances: const {
         'a': CourseAppearance(color: Color(0xff123456)),
       },
@@ -143,5 +224,76 @@ void main() {
     expect(encoder.courseAppearances!['a']!.color, const Color(0xff123456));
     expect(encoder.customPalette!.first, const Color(0xff111111));
     expect(encoder.fontScale, 1.5);
+    expect(encoder.fontFamily, 'PKU Noto Serif CJK SC');
+    expect(encoder.fontWeight, ui.FontWeight.w700);
+    expect(encoder.indexColor, const Color(0xff123123));
+    expect(encoder.autoTextColor, isTrue);
+    expect(encoder.brightness, ui.Brightness.dark);
+    expect(encoder.surfaceColor, const Color(0xff101010));
+  });
+
+  test('PNG uses page colors without fading non-current classes', () async {
+    const surface = Color(0xff101010);
+    const index = Color(0xfff0d0b0);
+    const course = Color(0xff123456);
+    final png = await const CanvasTimetablePngEncoder().encode(
+      timetable,
+      strings,
+      4,
+      courseAppearances: const {
+        'a': CourseAppearance(color: course),
+        'b': CourseAppearance(color: course),
+      },
+      indexColor: index,
+      brightness: ui.Brightness.dark,
+      surfaceColor: surface,
+    );
+    final effectiveIndex = themedTimetableColor(
+      index,
+      brightness: ui.Brightness.dark,
+      surface: surface,
+    );
+    final effectiveCourse = themedTimetableColor(
+      course,
+      brightness: ui.Brightness.dark,
+      surface: surface,
+    );
+    int pixel(double logical) => (logical * timetableExportScale).round();
+
+    _expectColorNear(await _pixel(png, pixel(2), pixel(2)), surface);
+    _expectColorNear(
+      await _pixel(
+        png,
+        pixel(timetableExportPadding + 5),
+        pixel(timetableExportPadding + 5),
+      ),
+      effectiveIndex,
+    );
+    _expectColorNear(
+      await _pixel(
+        png,
+        pixel(timetableExportPadding + timetableIndexWidth + 5),
+        pixel(timetableExportPadding + timetableHeaderHeight + 5),
+      ),
+      effectiveCourse,
+    );
+    _expectColorNear(
+      await _pixel(
+        png,
+        pixel(
+          timetableExportPadding +
+              timetableIndexWidth +
+              TimetableGeometry(timetable.periodCount).courseWidth * 4 +
+              5,
+        ),
+        pixel(
+          timetableExportPadding +
+              TimetableGeometry(timetable.periodCount).periodTop(2) +
+              5,
+        ),
+      ),
+      effectiveCourse,
+    );
+    expect(effectiveCourse.a, 1);
   });
 }

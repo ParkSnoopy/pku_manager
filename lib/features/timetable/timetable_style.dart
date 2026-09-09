@@ -32,6 +32,28 @@ const timetableClassroomFontSize = 22.5;
 const timetableCourseNoteFontSize = 16.0;
 const timetableCourseContentPadding = 10.0;
 
+Color themedTimetableColor(
+  Color color, {
+  required Brightness brightness,
+  required Color surface,
+}) {
+  if (brightness != Brightness.dark) return color;
+  return Color.alphaBlend(surface.withValues(alpha: .65), color);
+}
+
+Color timetableContrastForeground(Color background) =>
+    background.computeLuminance() > .5 ? Colors.black : Colors.white;
+
+Color timetableCourseForeground(
+  Color background, {
+  required Brightness brightness,
+  required bool autoTextColor,
+}) =>
+    brightness == Brightness.dark ||
+        autoTextColor && background.computeLuminance() <= .5
+    ? Colors.white
+    : Colors.black;
+
 const timetableClassStarts = <int, String>{
   1: '08:00',
   2: '09:00',

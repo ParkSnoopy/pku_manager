@@ -74,7 +74,7 @@
 - Flutter packages one Sans and one Serif Static Super OTC CJK collection, each containing Korean, Japanese, Chinese, and every static weight. Separate regional and weight-specific CJK font assets are forbidden. Both families are active user-selectable application fonts.
 - Imported meetings can be edited and empty weekday cells can create user meetings. These overlays are stored separately from immutable workbook bytes.
 - A persistent color-roll seed lets users generate another deterministic timetable color combination repeatedly after import.
-- The complete Monday–Friday timetable exports locally as PNG or XLSX.
+- The complete Monday–Friday timetable exports locally as PNG or XLSX with the displayed theme, colors, typography, outlines, and class content. Export deliberately renders every class fully opaque instead of reproducing non-current-week transparency.
 - Product identity must be consistent across Flutter, Android, iOS, Linux, macOS, Windows, AppImage, and NSIS metadata.
 - Platform support means packaged-runtime verification, not compilation alone.
 - Product behavior stays in Dart. Flutter plugins or narrow Dart wrappers may bridge native platform or SQLite facilities, but native code does not own timetable or parity rules.

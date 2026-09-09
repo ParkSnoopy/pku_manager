@@ -92,6 +92,14 @@ final class _ExportWriter implements ExportFileWriter {
 }
 
 final class _PngEncoder implements TimetablePngEncoder {
+  double? fontScale;
+  String? fontFamily;
+  FontWeight? fontWeight;
+  Color? indexColor;
+  bool? autoTextColor;
+  Brightness? brightness;
+  Color? surfaceColor;
+
   @override
   Future<Uint8List> encode(
     Timetable timetable,
@@ -101,7 +109,22 @@ final class _PngEncoder implements TimetablePngEncoder {
     int paletteIndex = 0,
     List<Color> customPalette = defaultCustomPalette,
     double fontScale = 1,
-  }) async => Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
+    String fontFamily = timetableSansFont,
+    FontWeight fontWeight = FontWeight.w400,
+    Color indexColor = timetableIndexSurface,
+    bool autoTextColor = false,
+    Brightness brightness = Brightness.light,
+    Color surfaceColor = timetableCanvas,
+  }) async {
+    this.fontScale = fontScale;
+    this.fontFamily = fontFamily;
+    this.fontWeight = fontWeight;
+    this.indexColor = indexColor;
+    this.autoTextColor = autoTextColor;
+    this.brightness = brightness;
+    this.surfaceColor = surfaceColor;
+    return Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
+  }
 }
 
 Course _meeting(String id, int period, WeekFrequency frequency) => Course(
@@ -154,11 +177,12 @@ void main() {
       final appearance = AppearanceController(MemoryAppearanceStore());
       appearance.setLanguage(AppLanguage.en);
       final writer = _ExportWriter();
+      final pngEncoder = _PngEncoder();
       await tester.pumpWidget(
         PkuManagerApp(
           controller: controller,
           appearance: appearance,
-          exporter: TimetableExporter(writer, pngEncoder: _PngEncoder()),
+          exporter: TimetableExporter(writer, pngEncoder: pngEncoder),
         ),
       );
       await tester.pump();
@@ -378,6 +402,22 @@ void main() {
       await tester.tap(find.text('Export XLSX'));
       await tester.pumpAndSettle();
       expect(writer.file?.extension, 'xlsx');
+
+      final displayedSurface = Theme.of(
+        tester.element(find.byKey(const ValueKey('timetable-grid-background'))),
+      ).colorScheme.surface;
+      await tester.tap(find.byTooltip('Export'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Export PNG'));
+      await tester.pumpAndSettle();
+      expect(writer.file?.extension, 'png');
+      expect(pngEncoder.fontScale, 1);
+      expect(pngEncoder.fontFamily, 'PKU Noto Serif CJK SC');
+      expect(pngEncoder.fontWeight, FontWeight.w400);
+      expect(pngEncoder.indexColor, timetableIndexSurface);
+      expect(pngEncoder.autoTextColor, isFalse);
+      expect(pngEncoder.brightness, Brightness.light);
+      expect(pngEncoder.surfaceColor, displayedSurface);
 
       writer.fail = true;
       await tester.tap(find.byTooltip('Export'));
