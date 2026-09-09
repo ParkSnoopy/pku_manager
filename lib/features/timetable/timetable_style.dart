@@ -12,6 +12,7 @@ const timetableInk = Color(0xff141413);
 const timetableBody = Color(0xff3d3d3a);
 const timetableMuted = Color(0xff6c6a64);
 const timetableDivider = Color(0xff92918d);
+const timetableConflictColor = Color(0xffd32f2f);
 
 const timetableMonoFont = 'Roboto Mono Reference';
 const timetableSansFont = pkuNotoSansScFamily;
@@ -26,6 +27,7 @@ const timetableExportPadding = 12.0;
 const timetableExportScale = 4.0;
 const timetableAspectRatio = 1.15;
 const timetableDividerWidth = 1.0;
+const timetableConflictWidth = 3.0;
 const timetableMealBreaks = <int>{4, 9};
 const timetableCourseNameFontSize = 22.5;
 const timetableClassroomFontSize = 22.5;

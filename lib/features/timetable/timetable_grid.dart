@@ -440,6 +440,7 @@ class _DayGroups extends StatelessWidget {
     final geometry = TimetableGeometry(timetable.periodCount);
     final layout = TimetableDayLayout.from(timetable, day, parity: parity);
     final laneWidth = courseWidth / layout.laneCount;
+    final conflictingSourceIds = timetable.conflictingSourceIds;
     final sourceNames = {
       for (final course in timetable.meetings)
         course.sourceId: course.sourceName,
@@ -460,6 +461,9 @@ class _DayGroups extends StatelessWidget {
               firstPeriod: group.firstPeriod,
               lastPeriod: group.lastPeriod,
               isCurrent: group.group.primary.frequency.isCurrent(parity),
+              conflicting: group.group.meetings.any(
+                (meeting) => conflictingSourceIds.contains(meeting.sourceId),
+              ),
               paletteSeed: paletteSeed,
               paletteIndex: paletteIndex,
               customPalette: customPalette,
@@ -506,6 +510,7 @@ class _MeetingTile extends StatefulWidget {
     required this.firstPeriod,
     required this.lastPeriod,
     required this.isCurrent,
+    required this.conflicting,
     required this.paletteSeed,
     required this.paletteIndex,
     required this.customPalette,
@@ -521,6 +526,7 @@ class _MeetingTile extends StatefulWidget {
   final int firstPeriod;
   final int lastPeriod;
   final bool isCurrent;
+  final bool conflicting;
   final int paletteSeed;
   final int paletteIndex;
   final List<Color> customPalette;
@@ -556,7 +562,12 @@ class _MeetingTileState extends State<_MeetingTile> {
       brightness: theme.brightness,
       autoTextColor: widget.autoTextColor,
     );
-    final outline = widget.appearance?.outlined ?? false
+    final outline = widget.conflicting
+        ? Border.all(
+            color: timetableConflictColor,
+            width: timetableConflictWidth,
+          )
+        : widget.appearance?.outlined ?? false
         ? Border.all(
             color: widget.appearance!.outlineColor,
             width: widget.appearance!.outlineWidth,

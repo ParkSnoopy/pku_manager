@@ -84,6 +84,30 @@ void main() {
     }
   });
 
+  test(
+    'conflicts require overlapping periods in a week both classes can meet',
+    () {
+      final overlapping = Timetable([
+        meeting('every', first: 1, last: 2),
+        meeting('odd', first: 2, last: 3, frequency: WeekFrequency.odd),
+        meeting('even', first: 2, last: 3, frequency: WeekFrequency.even),
+        meeting('later', first: 4, last: 4),
+        meeting('other-day', day: 2, first: 1, last: 2),
+      ]);
+      expect(overlapping.conflictingSourceIds, {'every', 'odd', 'even'});
+
+      final alternating = Timetable([
+        meeting('odd', frequency: WeekFrequency.odd),
+        meeting('even', frequency: WeekFrequency.even),
+      ]);
+      expect(alternating.conflictingSourceIds, isEmpty);
+      expect(
+        () => alternating.conflictingSourceIds.clear(),
+        throwsUnsupportedError,
+      );
+    },
+  );
+
   test('invalid coordinates, empty identities, duplicate identities and bounds reject', () {
     for (final day in [0, 6, 7, 8]) {
       expect(() => meeting('a', day: day), throwsRangeError);

@@ -14,7 +14,7 @@ Your workbook stays on your device and is not modified. An unreadable file does 
 
 - On a phone, swipe left or right between Monday and Friday beside a fixed period column. Previous/next controls also support keyboard navigation.
 - Wide windows show Monday through Friday together using the same timetable proportions, typefaces, row spacing, and alignment as the referenced prettifier.
-- Every class block is shown. Classes outside the current week appear at quarter opacity without cell text.
+- Every class block is shown. Classes outside the current week appear at quarter opacity without cell text. Classes whose periods can overlap in the same week receive a red outline; odd/even alternating classes do not conflict.
 - Vertically touching cells for the same course on one weekday appear as one block. Select the block to edit every session together, or select an empty cell to add a course.
 - The course editor applies valid changes immediately, supports a blank-by-default short name, can choose any class color, and can set an importance-outline color and thickness. The default outline is red. A custom class color remains fixed across **Roll colors** until **Use automatic color** immediately removes the custom color and then disappears. Scroll to the bottom of the editor to permanently delete the class after confirming the warning; related schedules remain without a class association.
 - Course blocks have padding on every side, 1.5× line spacing, and a blank line before parsed remarks. Structured remarks already converted into a separate class, such as an exercise class, are not repeated.

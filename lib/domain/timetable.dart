@@ -27,6 +27,29 @@ final class Timetable {
       _periodCount ??
       meetings.fold(0, (max, m) => m.lastPeriod > max ? m.lastPeriod : max);
 
+  Set<String> get conflictingSourceIds {
+    final result = <String>{};
+    for (var leftIndex = 0; leftIndex < meetings.length; leftIndex++) {
+      final left = meetings[leftIndex];
+      for (
+        var rightIndex = leftIndex + 1;
+        rightIndex < meetings.length;
+        rightIndex++
+      ) {
+        final right = meetings[rightIndex];
+        if (left.weekday == right.weekday &&
+            left.firstPeriod <= right.lastPeriod &&
+            right.firstPeriod <= left.lastPeriod &&
+            _frequenciesCanCoincide(left.frequency, right.frequency)) {
+          result
+            ..add(left.sourceId)
+            ..add(right.sourceId);
+        }
+      }
+    }
+    return Set.unmodifiable(result);
+  }
+
   List<Course> visible({bool showAll = true, WeekParity? currentParity}) =>
       List.unmodifiable(
         meetings.where((m) => showAll || m.frequency.isCurrent(currentParity)),
@@ -127,6 +150,11 @@ final class Timetable {
     return List.unmodifiable(indexed.map((entry) => entry.$2));
   }
 }
+
+bool _frequenciesCanCoincide(WeekFrequency left, WeekFrequency right) =>
+    left == WeekFrequency.every ||
+    right == WeekFrequency.every ||
+    left == right;
 
 final class CourseGroup {
   CourseGroup._(Iterable<Course> meetings)

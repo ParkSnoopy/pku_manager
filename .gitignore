@@ -1,5 +1,8 @@
 # User-generated private files
 /.sample/
+*.xls
+*.png
+*.xlsx
 
 # Miscellaneous
 *.class

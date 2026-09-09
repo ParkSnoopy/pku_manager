@@ -29,6 +29,7 @@
 - Course meeting: one normalized Monday–Friday course occurrence with period range, room, frequency, note, and exam information.
 - Timetable: ordered collection of course meetings derived from the stored spreadsheet.
 - Timetable visibility: every meeting block is shown by default. Current-week meetings remain opaque; meetings outside the current week render at quarter opacity without cell text.
+- Timetable conflict: two class records conflict when their weekday and period ranges overlap and their weekly frequencies can occur together. Every conflicting class block uses a red outline; odd/even-only alternation is valid.
 - Schedule repository: sole authority for importing immutable workbook bytes and publishing parsed timetable records through one SQLite transaction.
 - Spreadsheet parser: infrastructure adapter that converts supported PKU workbook layouts into domain meetings while reporting every unsupported nonempty record.
 - Source record identity: stable workbook location identity used to associate parsed records and user completion fields without changing source bytes.

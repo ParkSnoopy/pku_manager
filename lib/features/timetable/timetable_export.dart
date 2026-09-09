@@ -173,6 +173,7 @@ final class TimetableExporter {
     final excel = Excel.createExcel();
     excel.rename(excel.getDefaultSheet()!, 'Timetable');
     final sheet = excel['Timetable'];
+    final conflictingSourceIds = timetable.conflictingSourceIds;
     final effectiveIndexColor = themedTimetableColor(
       indexColor,
       brightness: brightness,
@@ -219,12 +220,21 @@ final class TimetableExporter {
         final courseAppearance = meetings.isEmpty
             ? null
             : courseAppearances[meetings.first.sourceId];
-        final important = courseAppearance?.outlined ?? false;
+        final conflicting = meetings.any(
+          (meeting) => conflictingSourceIds.contains(meeting.sourceId),
+        );
+        final important = conflicting || (courseAppearance?.outlined ?? false);
         final importantColor = ExcelColor.fromHexString(
-          _hex(courseAppearance?.outlineColor ?? defaultCourseOutlineColor),
+          _hex(
+            conflicting
+                ? timetableConflictColor
+                : courseAppearance?.outlineColor ?? defaultCourseOutlineColor,
+          ),
         );
         final importantStyle = _xlsxOutlineStyle(
-          courseAppearance?.outlineWidth ?? defaultCourseOutlineWidth,
+          conflicting
+              ? timetableConflictWidth
+              : courseAppearance?.outlineWidth ?? defaultCourseOutlineWidth,
         );
         final index = row == 0 || column == 0;
         final courseColor = meetings.isEmpty
@@ -438,6 +448,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
         );
       }
     }
+    final conflictingSourceIds = timetable.conflictingSourceIds;
     for (var day = 1; day <= 5; day++) {
       final layout = TimetableDayLayout.from(timetable, day);
       final laneWidth = geometry.courseWidth / layout.laneCount;
@@ -472,13 +483,21 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
         const inset = timetableCourseContentPadding;
         final nameHeight = timetableCourseNameFontSize * fontScale * 1.5;
         final roomHeight = timetableClassroomFontSize * fontScale * 1.5;
-        if (appearance?.outlined ?? false) {
+        final conflicting = span.group.meetings.any(
+          (meeting) => conflictingSourceIds.contains(meeting.sourceId),
+        );
+        if (conflicting || (appearance?.outlined ?? false)) {
+          final outlineWidth = conflicting
+              ? timetableConflictWidth
+              : appearance!.outlineWidth;
           canvas.drawRect(
-            item.deflate(appearance!.outlineWidth / 2),
+            item.deflate(outlineWidth / 2),
             ui.Paint()
-              ..color = appearance.outlineColor
+              ..color = conflicting
+                  ? timetableConflictColor
+                  : appearance!.outlineColor
               ..style = ui.PaintingStyle.stroke
-              ..strokeWidth = appearance.outlineWidth,
+              ..strokeWidth = outlineWidth,
           );
         }
         _drawReferenceText(

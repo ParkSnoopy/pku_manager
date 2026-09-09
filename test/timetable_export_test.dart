@@ -189,6 +189,54 @@ void main() {
     },
   );
 
+  test('conflicting classes use red outlines in XLSX and PNG', () async {
+    final conflicting = Timetable([
+      Course(
+        sourceId: 'left',
+        name: 'Left',
+        weekday: 1,
+        firstPeriod: 1,
+        lastPeriod: 2,
+      ),
+      Course(
+        sourceId: 'right',
+        name: 'Right',
+        weekday: 1,
+        firstPeriod: 2,
+        lastPeriod: 2,
+      ),
+    ], periodCount: 2);
+    final writer = _Writer();
+    await TimetableExporter(writer).export(
+      TimetableExportFormat.xlsx,
+      conflicting,
+      strings: strings,
+      paletteSeed: 4,
+    );
+    final workbook = Excel.decodeBytes(writer.file!.bytes);
+    final border = workbook['Timetable']
+        .cell(CellIndex.indexByString('B2'))
+        .cellStyle!
+        .leftBorder;
+    expect(border.borderStyle, BorderStyle.Thick);
+    expect(border.borderColorHex, 'FFD32F2F');
+
+    final png = await const CanvasTimetablePngEncoder().encode(
+      conflicting,
+      strings,
+      4,
+    );
+    int pixel(double logical) => (logical * timetableExportScale).round();
+    _expectColorNear(
+      await _pixel(
+        png,
+        pixel(timetableExportPadding + timetableIndexWidth + 1),
+        pixel(timetableExportPadding + timetableHeaderHeight + 10),
+      ),
+      timetableConflictColor,
+    );
+  });
+
   test('PNG export uses the complete timetable encoder', () async {
     final writer = _Writer();
     final encoder = _PngEncoder();

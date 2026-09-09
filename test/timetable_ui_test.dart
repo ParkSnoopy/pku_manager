@@ -165,6 +165,7 @@ void main() {
       final table = Timetable([
         _meeting('first', 1, WeekFrequency.every),
         _meeting('second', 2, WeekFrequency.every),
+        _meeting('chemistry', 1, WeekFrequency.every),
         _meeting('even', 3, WeekFrequency.even),
       ], periodCount: 4);
       final controller = TimetableController(
@@ -380,6 +381,36 @@ void main() {
       );
       expect(opacity.opacity, .25);
       expect(find.byKey(const ValueKey('meeting-content-even')), findsNothing);
+      final conflictOutline =
+          tester
+                  .widget<DecoratedBox>(
+                    find.byKey(const ValueKey('meeting-outline-first')),
+                  )
+                  .decoration
+              as BoxDecoration;
+      final conflictBorder = conflictOutline.border! as Border;
+      expect(conflictBorder.top.color, timetableConflictColor);
+      expect(conflictBorder.top.width, timetableConflictWidth);
+      expect(
+        (tester
+                    .widget<DecoratedBox>(
+                      find.byKey(const ValueKey('meeting-outline-chemistry')),
+                    )
+                    .decoration
+                as BoxDecoration)
+            .border,
+        isNotNull,
+      );
+      expect(
+        (tester
+                    .widget<DecoratedBox>(
+                      find.byKey(const ValueKey('meeting-outline-even')),
+                    )
+                    .decoration
+                as BoxDecoration)
+            .border,
+        isNull,
+      );
       expect(find.byTooltip('Roll colors'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
       final firstColor = tester
