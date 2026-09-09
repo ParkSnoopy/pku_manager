@@ -314,7 +314,6 @@ class _CalendarPageState extends State<CalendarPage> {
                                 return _CalendarDay(
                                   date: date,
                                   today: today,
-                                  inMonth: date.month == _month.month,
                                   schedules: schedules,
                                   focusedScheduleId: widget.focusedScheduleId,
                                   onAdd: () => _editSchedule(date),
@@ -342,7 +341,6 @@ class _CalendarDay extends StatelessWidget {
   const _CalendarDay({
     required this.date,
     required this.today,
-    required this.inMonth,
     required this.schedules,
     required this.focusedScheduleId,
     required this.onAdd,
@@ -352,7 +350,6 @@ class _CalendarDay extends StatelessWidget {
 
   final DateTime date;
   final DateTime today;
-  final bool inMonth;
   final List<CalendarSchedule> schedules;
   final int? focusedScheduleId;
   final VoidCallback onAdd;
@@ -364,30 +361,38 @@ class _CalendarDay extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final strings = AppStrings.of(context);
     final isToday = date == today;
+    final ordinaryBorder = BorderSide(color: colors.outlineVariant, width: .5);
+    final monthBorder = BorderSide(color: colors.outline, width: 2);
+    final weekStartsMonth =
+        date.subtract(Duration(days: date.weekday - 1)).day == 1;
     return Semantics(
       label: '${date.year}-${date.month}-${date.day}',
       child: DecoratedBox(
         key: ValueKey('calendar-day-${date.year}-${date.month}-${date.day}'),
+        position: DecorationPosition.foreground,
         decoration: BoxDecoration(
-          color: inMonth
-              ? Colors.transparent
-              : colors.brightness == Brightness.dark
-              ? colors.surfaceContainerHighest
-              : const Color(0xffd3d3d3),
-          border: Border.all(color: colors.outlineVariant, width: .5),
+          color: Colors.transparent,
+          border: Border(
+            left: date.day == 1 && date.weekday != DateTime.monday
+                ? monthBorder
+                : ordinaryBorder,
+            top: weekStartsMonth ? monthBorder : ordinaryBorder,
+            right: ordinaryBorder,
+            bottom: ordinaryBorder,
+          ),
         ),
         child: ClipRect(
-          child: Padding(
-            padding: const EdgeInsets.all(6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+                child: Row(
                   children: [
                     Text(
                       '${date.day}',
                       style: TextStyle(
-                        color: inMonth ? colors.onSurface : colors.outline,
+                        color: colors.onSurface,
                         fontSize: 14,
                         fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
                       ),
@@ -411,89 +416,84 @@ class _CalendarDay extends StatelessWidget {
                       )
                     else
                       const Spacer(),
-                    if (inMonth)
-                      IconButton(
-                        key: ValueKey(
-                          'calendar-add-${date.year}-${date.month}-${date.day}',
-                        ),
-                        onPressed: onAdd,
-                        tooltip: strings.text(AppText.addSchedule),
-                        icon: const Icon(Icons.add, size: 16),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints.tightFor(
-                          width: 24,
-                          height: 24,
-                        ),
-                        visualDensity: VisualDensity.compact,
+                    IconButton(
+                      key: ValueKey(
+                        'calendar-add-${date.year}-${date.month}-${date.day}',
                       ),
+                      onPressed: onAdd,
+                      tooltip: strings.text(AppText.addSchedule),
+                      icon: const Icon(Icons.add, size: 16),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 24,
+                        height: 24,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Expanded(
-                  child: ListView.builder(
-                    padding: EdgeInsets.zero,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: schedules.length,
-                    itemBuilder: (context, index) {
-                      final schedule = schedules[index];
-                      final starts = _beijingDateTime(schedule.startsAt);
-                      final background = scheduleColor(context, schedule);
-                      final foreground = scheduleForeground(background);
-                      final focused = schedule.id == focusedScheduleId;
-                      final canSelect =
-                          onSelect != null &&
-                          schedule.relatedClassSourceId != null;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: FlashingOutline(
+              ),
+              const SizedBox(height: 2),
+              Expanded(
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: schedules.length,
+                  itemBuilder: (context, index) {
+                    final schedule = schedules[index];
+                    final starts = _beijingDateTime(schedule.startsAt);
+                    final background = scheduleColor(context, schedule);
+                    final foreground = scheduleForeground(background);
+                    final focused = schedule.id == focusedScheduleId;
+                    final canSelect =
+                        onSelect != null &&
+                        schedule.relatedClassSourceId != null;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: FlashingOutline(
+                        key: ValueKey('calendar-schedule-flash-${schedule.id}'),
+                        active: focused,
+                        child: Material(
                           key: ValueKey(
-                            'calendar-schedule-flash-${schedule.id}',
+                            'calendar-schedule-color-${schedule.id}',
                           ),
-                          active: focused,
-                          child: Material(
-                            key: ValueKey(
-                              'calendar-schedule-color-${schedule.id}',
-                            ),
-                            color: background,
-                            child: MouseRegion(
-                              cursor: canSelect
-                                  ? SystemMouseCursors.click
-                                  : MouseCursor.defer,
-                              child: InkWell(
-                                key: ValueKey(
-                                  'calendar-schedule-${schedule.id}',
+                          color: background,
+                          child: MouseRegion(
+                            cursor: canSelect
+                                ? SystemMouseCursors.click
+                                : MouseCursor.defer,
+                            child: InkWell(
+                              key: ValueKey('calendar-schedule-${schedule.id}'),
+                              onTap: !canSelect
+                                  ? null
+                                  : () => onSelect!(schedule),
+                              onLongPress: () => onEdit(schedule),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 3,
                                 ),
-                                onTap: !canSelect
-                                    ? null
-                                    : () => onSelect!(schedule),
-                                onLongPress: () => onEdit(schedule),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                    vertical: 3,
-                                  ),
-                                  child: Text(
-                                    '${schedule.allDay ? '' : '${_two(starts.hour)}:${_two(starts.minute)} '}'
-                                    '${schedule.title}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: foreground,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                child: Text(
+                                  '${schedule.allDay ? '' : '${_two(starts.hour)}:${_two(starts.minute)} '}'
+                                  '${schedule.title}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: foreground,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

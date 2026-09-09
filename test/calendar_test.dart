@@ -72,7 +72,7 @@ void main() {
                   .decoration
               as BoxDecoration)
           .color,
-      const Color(0xffd3d3d3),
+      Colors.transparent,
     );
     expect(
       (tester
@@ -83,6 +83,21 @@ void main() {
               as BoxDecoration)
           .color,
       Colors.transparent,
+    );
+    final septemberFirstBorder =
+        (tester
+                        .widget<DecoratedBox>(
+                          find.byKey(const ValueKey('calendar-day-2026-9-1')),
+                        )
+                        .decoration
+                    as BoxDecoration)
+                .border!
+            as Border;
+    expect(septemberFirstBorder.left.width, 2);
+    expect(septemberFirstBorder.top.width, .5);
+    expect(
+      find.byKey(const ValueKey('calendar-add-2026-8-31')),
+      findsOneWidget,
     );
 
     await tester.tap(find.byKey(const ValueKey('calendar-add-2026-9-7')));
@@ -133,6 +148,14 @@ void main() {
     expect(controller.schedules.single.allDay, isFalse);
     expect(controller.schedules.single.relatedClassSourceId, 'original-class');
     expect(find.textContaining('Homework deadline'), findsOneWidget);
+    final dayRect = tester.getRect(
+      find.byKey(const ValueKey('calendar-day-2026-9-7')),
+    );
+    final scheduleRect = tester.getRect(
+      find.byKey(const ValueKey('calendar-schedule-color-1')),
+    );
+    expect(scheduleRect.left, dayRect.left);
+    expect(scheduleRect.right, dayRect.right);
 
     await tester.longPress(find.byKey(const ValueKey('calendar-schedule-1')));
     await tester.pumpAndSettle();
