@@ -246,13 +246,15 @@ class _TimetablePageState extends State<TimetablePage>
             : widget.appearance.courseAppearanceFor(meetings.first.sourceId) ??
                   const CourseAppearance(),
         suggestedColor: meetings.isEmpty
-            ? courseColorChoices.first
+            ? widget.appearance.customPalette.first
             : timetableCourseColor(
                 meetings.first,
                 widget.appearance.paletteSeed,
                 appearance: widget.appearance.courseAppearanceFor(
                   meetings.first.sourceId,
                 ),
+                paletteIndex: widget.appearance.rollPaletteIndex,
+                customPalette: widget.appearance.customPalette,
               ),
         onCancel: () => Navigator.pop(dialogContext),
         onResult: (result) => _applyEdit(result, meetings),
@@ -307,6 +309,8 @@ class _TimetablePageState extends State<TimetablePage>
         strings: AppStrings.of(context),
         paletteSeed: widget.appearance.paletteSeed,
         paletteIndex: widget.appearance.rollPaletteIndex,
+        customPalette: widget.appearance.customPalette,
+        timetableFontScale: widget.appearance.timetableFontScale,
         courseAppearances: widget.appearance.courseAppearances,
       );
     } catch (_) {
@@ -535,13 +539,15 @@ class _TimetablePageState extends State<TimetablePage>
                                 ) ??
                                 const CourseAppearance(),
                       suggestedColor: _editor!.meetings.isEmpty
-                          ? courseColorChoices.first
+                          ? widget.appearance.customPalette.first
                           : timetableCourseColor(
                               _editor!.meetings.first,
                               widget.appearance.paletteSeed,
                               appearance: widget.appearance.courseAppearanceFor(
                                 _editor!.meetings.first.sourceId,
                               ),
+                              paletteIndex: widget.appearance.rollPaletteIndex,
+                              customPalette: widget.appearance.customPalette,
                             ),
                       onCancel: () => setState(() => _editor = null),
                       onResult: (result) =>
@@ -600,7 +606,9 @@ class _TimetablePageState extends State<TimetablePage>
       nextDay: !allDays && _day < 5 ? () => _changeDay(1) : null,
       paletteSeed: widget.appearance.paletteSeed,
       paletteIndex: widget.appearance.rollPaletteIndex,
+      customPalette: widget.appearance.customPalette,
       fontWeight: widget.appearance.fontWeight,
+      fontScale: widget.appearance.timetableFontScale,
       focusedCourseSourceIds: _focusedCourseSourceIds,
       indexColor: widget.appearance.timetableIndexColor,
       autoTextColor: widget.appearance.autoTextColor,

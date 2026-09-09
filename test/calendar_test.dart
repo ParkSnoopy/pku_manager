@@ -40,14 +40,29 @@ void main() {
 
     expect(find.byKey(const ValueKey('calendar-page')), findsOneWidget);
     expect(find.byKey(const ValueKey('calendar-month-grid')), findsOneWidget);
+    expect(find.byType(PageView), findsOneWidget);
+    expect(
+      tester.widget<PageView>(find.byType(PageView)).scrollDirection,
+      Axis.vertical,
+    );
+    expect(
+      tester
+          .widget<PageView>(find.byType(PageView))
+          .controller!
+          .viewportFraction,
+      .2,
+    );
+    expect(find.byKey(const ValueKey('calendar-previous-month')), findsNothing);
+    expect(find.byKey(const ValueKey('calendar-next-month')), findsNothing);
     expect(find.byKey(const ValueKey('calendar-day-2026-9-7')), findsOneWidget);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('calendar-day-2026-9-7')),
-        matching: find.byKey(const ValueKey('calendar-today-icon')),
+        matching: find.byKey(const ValueKey('calendar-today-label')),
       ),
       findsOneWidget,
     );
+    expect(find.text('TODAY'), findsOneWidget);
     expect(
       (tester
                   .widget<DecoratedBox>(

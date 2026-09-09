@@ -20,6 +20,8 @@ final class _Writer implements ExportFileWriter {
 final class _PngEncoder implements TimetablePngEncoder {
   Timetable? timetable;
   Map<String, CourseAppearance>? courseAppearances;
+  List<Color>? customPalette;
+  double? fontScale;
 
   @override
   Future<Uint8List> encode(
@@ -28,9 +30,13 @@ final class _PngEncoder implements TimetablePngEncoder {
     int paletteSeed, {
     Map<String, CourseAppearance> courseAppearances = const {},
     int paletteIndex = 0,
+    List<Color> customPalette = defaultCustomPalette,
+    double fontScale = 1,
   }) async {
     timetable = value;
     this.courseAppearances = courseAppearances;
+    this.customPalette = customPalette;
+    this.fontScale = fontScale;
     return Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
   }
 }
@@ -116,6 +122,14 @@ void main() {
       timetable,
       strings: strings,
       paletteSeed: 4,
+      customPalette: const [
+        Color(0xff111111),
+        Color(0xff222222),
+        Color(0xff333333),
+        Color(0xff444444),
+        Color(0xff555555),
+      ],
+      timetableFontScale: 1.5,
       courseAppearances: const {
         'a': CourseAppearance(color: Color(0xff123456)),
       },
@@ -127,5 +141,7 @@ void main() {
     expect(file.bytes.take(8), [137, 80, 78, 71, 13, 10, 26, 10]);
     expect(encoder.timetable, same(timetable));
     expect(encoder.courseAppearances!['a']!.color, const Color(0xff123456));
+    expect(encoder.customPalette!.first, const Color(0xff111111));
+    expect(encoder.fontScale, 1.5);
   });
 }

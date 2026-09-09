@@ -138,16 +138,32 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
   );
 
   ThemeData _theme(Brightness brightness) {
-    final scheme = ColorScheme.fromSeed(
+    final accentScheme = ColorScheme.fromSeed(
       seedColor: _appearance.accent,
       brightness: brightness,
     );
+    final neutralScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xff808080),
+      brightness: brightness,
+    );
+    final scheme = _appearance.blendAccentIntoTheme
+        ? accentScheme
+        : neutralScheme.copyWith(
+            primary: accentScheme.primary,
+            onPrimary: accentScheme.onPrimary,
+            primaryContainer: accentScheme.primaryContainer,
+            onPrimaryContainer: accentScheme.onPrimaryContainer,
+            inversePrimary: accentScheme.inversePrimary,
+          );
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      fontFamily: _appearance.language == AppLanguage.ko
-          ? pkuNotoSansKrFamily
-          : pkuNotoSansScFamily,
+      fontFamily: switch ((_appearance.fontFamily, _appearance.language)) {
+        (AppFontFamily.serif, AppLanguage.ko) => pkuNotoSerifKrFamily,
+        (AppFontFamily.serif, _) => pkuNotoSerifScFamily,
+        (AppFontFamily.sans, AppLanguage.ko) => pkuNotoSansKrFamily,
+        (AppFontFamily.sans, _) => pkuNotoSansScFamily,
+      },
       scaffoldBackgroundColor: scheme.surface,
       appBarTheme: AppBarTheme(backgroundColor: scheme.surface, elevation: 0),
     );

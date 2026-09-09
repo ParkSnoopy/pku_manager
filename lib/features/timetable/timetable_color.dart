@@ -50,17 +50,20 @@ final class RollPalette {
   final List<Color> colors;
 }
 
-// Exact usable palettes and names from ParkSnoopy/pku-elective-prettify
-// palette.json at eaacca788e246a18c36ea013ced2bed6b62bd995. The upstream
-// palette whose literal `##ffafcc` entry is invalid is not normalized.
+const defaultCustomPalette = <Color>[
+  Color(0xff79adac),
+  Color(0xffbeadf2),
+  Color(0xffa0c8f2),
+  Color(0xffadf7b6),
+  Color(0xffffea99),
+];
+
+// Custom starts from the first upstream palette. Remaining palettes preserve
+// exact usable names and colors from ParkSnoopy/pku-elective-prettify
+// palette.json at eaacca788e246a18c36ea013ced2bed6b62bd995. The palette with
+// the invalid literal `##ffafcc` is not normalized.
 const rollPalettes = <RollPalette>[
-  RollPalette('default Colorful', [
-    Color(0xff79adac),
-    Color(0xffbeadf2),
-    Color(0xffa0c8f2),
-    Color(0xffadf7b6),
-    Color(0xffffea99),
-  ]),
+  RollPalette('Custom', defaultCustomPalette),
   RollPalette('Pastel Dreams', [
     Color(0xff809bce),
     Color(0xff95b8d1),
@@ -126,19 +129,20 @@ const rollPalettes = <RollPalette>[
   ]),
 ];
 
-List<Color> get courseColorChoices => rollPalettes.first.colors;
-
 Color timetableCourseColor(
   Course meeting,
   int paletteSeed, {
   CourseAppearance? appearance,
   int paletteIndex = 0,
+  List<Color> customPalette = defaultCustomPalette,
 }) {
   if (appearance?.color case final color?) return color;
   final hash = meeting.sourceName.runes.fold(
     0,
     (value, rune) => (value * 31 + rune) & 0x7fffffff,
   );
-  final palette = rollPalettes[paletteIndex].colors;
+  final palette = paletteIndex == 0
+      ? customPalette
+      : rollPalettes[paletteIndex].colors;
   return palette[(hash + paletteSeed) % palette.length];
 }

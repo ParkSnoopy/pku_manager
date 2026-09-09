@@ -38,6 +38,8 @@ abstract interface class TimetablePngEncoder {
     int paletteSeed, {
     Map<String, CourseAppearance> courseAppearances = const {},
     int paletteIndex = 0,
+    List<ui.Color> customPalette = defaultCustomPalette,
+    double fontScale = 1,
   });
 }
 
@@ -92,6 +94,8 @@ final class TimetableExporter {
     required int paletteSeed,
     Map<String, CourseAppearance> courseAppearances = const {},
     int paletteIndex = 0,
+    List<ui.Color> customPalette = defaultCustomPalette,
+    double timetableFontScale = 1,
   }) async {
     final bytes = switch (format) {
       TimetableExportFormat.xlsx => _xlsx(
@@ -100,6 +104,8 @@ final class TimetableExporter {
         paletteSeed,
         courseAppearances,
         paletteIndex,
+        customPalette,
+        timetableFontScale,
       ),
       TimetableExportFormat.png => await pngEncoder.encode(
         timetable,
@@ -107,6 +113,8 @@ final class TimetableExporter {
         paletteSeed,
         courseAppearances: courseAppearances,
         paletteIndex: paletteIndex,
+        customPalette: customPalette,
+        fontScale: timetableFontScale,
       ),
     };
     await writer.save(
@@ -129,6 +137,8 @@ final class TimetableExporter {
     int paletteSeed,
     Map<String, CourseAppearance> courseAppearances,
     int paletteIndex,
+    List<ui.Color> customPalette,
+    double fontScale,
   ) {
     final excel = Excel.createExcel();
     excel.rename(excel.getDefaultSheet()!, 'Timetable');
@@ -192,11 +202,14 @@ final class TimetableExporter {
           fontFamily: column == 0 && row > 0 && role == 1
               ? 'Noto Sans CJK SC'
               : 'Roboto Mono',
-          fontSize: row == 0
-              ? 15
-              : column == 0
-              ? (role == 1 ? 23 : 12)
-              : (role <= 1 ? 14 : 11),
+          fontSize:
+              ((row == 0
+                          ? 15
+                          : column == 0
+                          ? (role == 1 ? 23 : 12)
+                          : (role <= 1 ? 14 : 11)) *
+                      fontScale)
+                  .round(),
           fontColorHex: ExcelColor.fromHexString(
             column == 0 && row > 0 && role != 1 ? '#FF6C6A64' : '#FF141413',
           ),
@@ -216,6 +229,7 @@ final class TimetableExporter {
                       paletteSeed,
                       appearance: courseAppearance,
                       paletteIndex: paletteIndex,
+                      customPalette: customPalette,
                     ),
                   ),
                 ),
@@ -298,6 +312,8 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
     int paletteSeed, {
     Map<String, CourseAppearance> courseAppearances = const {},
     int paletteIndex = 0,
+    List<ui.Color> customPalette = defaultCustomPalette,
+    double fontScale = 1,
   }) async {
     final geometry = TimetableGeometry(timetable.periodCount);
     final logicalWidth = geometry.width + timetableExportPadding * 2;
@@ -331,7 +347,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
         center: true,
         fontFamily: timetableMonoFont,
         fontFallback: timetableFontFallback,
-        fontSize: 20,
+        fontSize: 20 * fontScale,
         bold: true,
         color: timetableInk,
       );
@@ -349,7 +365,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
         ui.Rect.fromLTWH(0, top, timetableIndexWidth, timetablePeriodHeight),
         center: true,
         fontFamily: timetablePeriodFont,
-        fontSize: 30,
+        fontSize: 30 * fontScale,
         bold: true,
         color: timetableInk,
         lineHeight: 1,
@@ -389,6 +405,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           paletteSeed,
           appearance: appearance,
           paletteIndex: paletteIndex,
+          customPalette: customPalette,
         );
         canvas.drawRect(item, ui.Paint()..color = background);
         final foreground = background.computeLuminance() > .5
@@ -415,7 +432,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           ),
           fontFamily: timetableMonoFont,
           fontFallback: timetableFontFallback,
-          fontSize: timetableCourseNameFontSize,
+          fontSize: timetableCourseNameFontSize * fontScale,
           bold: true,
           color: foreground,
           letterSpacing: -.2,
@@ -431,7 +448,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           ),
           fontFamily: timetableMonoFont,
           fontFallback: timetableFontFallback,
-          fontSize: timetableClassroomFontSize,
+          fontSize: timetableClassroomFontSize * fontScale,
           weight: ui.FontWeight.w500,
           color: foreground,
         );

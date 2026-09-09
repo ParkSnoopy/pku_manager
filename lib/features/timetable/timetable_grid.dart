@@ -19,7 +19,9 @@ class TimetableGrid extends StatelessWidget {
     required this.days,
     required this.paletteSeed,
     required this.paletteIndex,
+    required this.customPalette,
     required this.fontWeight,
+    required this.fontScale,
     required this.onEdit,
     this.focusedCourseSourceIds = const {},
     this.indexColor = timetableIndexSurface,
@@ -34,7 +36,9 @@ class TimetableGrid extends StatelessWidget {
   final List<int> days;
   final int paletteSeed;
   final int paletteIndex;
+  final List<Color> customPalette;
   final FontWeight fontWeight;
+  final double fontScale;
   final Set<String> focusedCourseSourceIds;
   final Color indexColor;
   final bool autoTextColor;
@@ -49,19 +53,51 @@ class TimetableGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final geometry = TimetableGeometry(timetable.periodCount);
     final effectiveIndexColor = _themedTimetableColor(context, indexColor);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (days.length == 1) {
-          final width = constraints.maxWidth;
-          return SingleChildScrollView(
+    final inheritedScale = MediaQuery.textScalerOf(context).scale(1);
+    return MediaQuery(
+      data: MediaQuery.of(context)
+          .copyWith(textScaler: TextScaler.linear(inheritedScale * fontScale)),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (days.length == 1) {
+            final width = constraints.maxWidth;
+            return SingleChildScrollView(
+              child: SizedBox(
+                width: width,
+                height: geometry.height,
+                child: _ReferenceTable(
+                  timetable: timetable,
+                  days: days,
+                  paletteSeed: paletteSeed,
+                  paletteIndex: paletteIndex,
+                  customPalette: customPalette,
+                  fontWeight: fontWeight,
+                  focusedCourseSourceIds: focusedCourseSourceIds,
+                  indexColor: effectiveIndexColor,
+                  autoTextColor: autoTextColor,
+                  schedules: schedules,
+                  courseAppearances: courseAppearances,
+                  parity: parity,
+                  onEdit: onEdit,
+                  previousDay: previousDay,
+                  nextDay: nextDay,
+                  courseWidth: math.max(0.0, width - timetableIndexWidth),
+                ),
+              ),
+            );
+          }
+          return FittedBox(
+            fit: BoxFit.contain,
+            alignment: Alignment.topLeft,
             child: SizedBox(
-              width: width,
+              width: geometry.width,
               height: geometry.height,
               child: _ReferenceTable(
                 timetable: timetable,
                 days: days,
                 paletteSeed: paletteSeed,
                 paletteIndex: paletteIndex,
+                customPalette: customPalette,
                 fontWeight: fontWeight,
                 focusedCourseSourceIds: focusedCourseSourceIds,
                 indexColor: effectiveIndexColor,
@@ -72,37 +108,12 @@ class TimetableGrid extends StatelessWidget {
                 onEdit: onEdit,
                 previousDay: previousDay,
                 nextDay: nextDay,
-                courseWidth: math.max(0.0, width - timetableIndexWidth),
+                courseWidth: geometry.courseWidth,
               ),
             ),
           );
-        }
-        return FittedBox(
-          fit: BoxFit.contain,
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: geometry.width,
-            height: geometry.height,
-            child: _ReferenceTable(
-              timetable: timetable,
-              days: days,
-              paletteSeed: paletteSeed,
-              paletteIndex: paletteIndex,
-              fontWeight: fontWeight,
-              focusedCourseSourceIds: focusedCourseSourceIds,
-              indexColor: effectiveIndexColor,
-              autoTextColor: autoTextColor,
-              schedules: schedules,
-              courseAppearances: courseAppearances,
-              parity: parity,
-              onEdit: onEdit,
-              previousDay: previousDay,
-              nextDay: nextDay,
-              courseWidth: geometry.courseWidth,
-            ),
-          ),
-        );
-      },
+        },
+      ),
     );
   }
 }
@@ -113,6 +124,7 @@ class _ReferenceTable extends StatelessWidget {
     required this.days,
     required this.paletteSeed,
     required this.paletteIndex,
+    required this.customPalette,
     required this.fontWeight,
     required this.focusedCourseSourceIds,
     required this.indexColor,
@@ -130,6 +142,7 @@ class _ReferenceTable extends StatelessWidget {
   final List<int> days;
   final int paletteSeed;
   final int paletteIndex;
+  final List<Color> customPalette;
   final FontWeight fontWeight;
   final Set<String> focusedCourseSourceIds;
   final Color indexColor;
@@ -189,6 +202,7 @@ class _ReferenceTable extends StatelessWidget {
               courseWidth: courseWidth,
               paletteSeed: paletteSeed,
               paletteIndex: paletteIndex,
+              customPalette: customPalette,
               fontWeight: fontWeight,
               focusedCourseSourceIds: focusedCourseSourceIds,
               autoTextColor: autoTextColor,
@@ -388,6 +402,7 @@ class _DayGroups extends StatelessWidget {
     required this.courseWidth,
     required this.paletteSeed,
     required this.paletteIndex,
+    required this.customPalette,
     required this.fontWeight,
     required this.focusedCourseSourceIds,
     required this.autoTextColor,
@@ -402,6 +417,7 @@ class _DayGroups extends StatelessWidget {
   final double courseWidth;
   final int paletteSeed;
   final int paletteIndex;
+  final List<Color> customPalette;
   final FontWeight fontWeight;
   final Set<String> focusedCourseSourceIds;
   final bool autoTextColor;
@@ -437,6 +453,7 @@ class _DayGroups extends StatelessWidget {
               isCurrent: group.group.primary.frequency.isCurrent(parity),
               paletteSeed: paletteSeed,
               paletteIndex: paletteIndex,
+              customPalette: customPalette,
               fontWeight: fontWeight,
               autoTextColor: autoTextColor,
               focused: group.group.meetings.any(
@@ -482,6 +499,7 @@ class _MeetingTile extends StatefulWidget {
     required this.isCurrent,
     required this.paletteSeed,
     required this.paletteIndex,
+    required this.customPalette,
     required this.fontWeight,
     required this.autoTextColor,
     required this.focused,
@@ -496,6 +514,7 @@ class _MeetingTile extends StatefulWidget {
   final bool isCurrent;
   final int paletteSeed;
   final int paletteIndex;
+  final List<Color> customPalette;
   final FontWeight fontWeight;
   final bool autoTextColor;
   final bool focused;
@@ -518,6 +537,7 @@ class _MeetingTileState extends State<_MeetingTile> {
         widget.paletteSeed,
         appearance: widget.appearance,
         paletteIndex: widget.paletteIndex,
+        customPalette: widget.customPalette,
       ),
     );
     final foreground =
@@ -612,10 +632,8 @@ class _MeetingTileState extends State<_MeetingTile> {
                                               timetableClassroomFontSize * 1.5,
                                         ),
                                         Text(
-                                          '${AppStrings.of(context).text(AppText.notes)}: '
-                                          '${meeting.note}',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                          meeting.note,
+                                          softWrap: true,
                                           style: TextStyle(
                                             fontSize:
                                                 timetableCourseNoteFontSize,

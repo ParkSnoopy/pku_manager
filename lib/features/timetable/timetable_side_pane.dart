@@ -91,9 +91,8 @@ class UpcomingClassPane extends StatelessWidget {
                             ),
                             subtitle: Text(
                               '${timetableClassStarts[item.group.firstPeriod]}'
-                              '${item.group.primary.room.isEmpty ? '' : ' · ${item.group.primary.room}'}\n'
-                              '${strings.deadline(item.startsAt.difference(now))}',
-                              maxLines: 2,
+                              '${item.group.primary.room.isEmpty ? '' : ' · ${item.group.primary.room}'}',
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 14),
                             ),

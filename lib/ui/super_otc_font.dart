@@ -6,6 +6,8 @@ const notoSansCjkSuperOtcAsset = 'assets/fonts/NotoSansCJK.ttc';
 const notoSerifCjkSuperOtcAsset = 'assets/fonts/NotoSerifCJK.ttc';
 const pkuNotoSansKrFamily = 'PKU Noto Sans CJK KR';
 const pkuNotoSansScFamily = 'PKU Noto Sans CJK SC';
+const pkuNotoSerifKrFamily = 'PKU Noto Serif CJK KR';
+const pkuNotoSerifScFamily = 'PKU Noto Serif CJK SC';
 
 const notoSansCjkKrFaces = <int>[1, 6, 11, 16, 21, 26, 36];
 const notoSansCjkScFaces = <int>[2, 7, 12, 17, 22, 27, 37];
@@ -18,6 +20,8 @@ const notoSerifCjkKrRegularFace = 11;
 const notoSerifCjkScRegularFace = 12;
 const notoSerifCjkKrBoldFace = 26;
 const notoSerifCjkScBoldFace = 27;
+const notoSerifCjkKrFaces = <int>[1, 6, 11, 16, 21, 26, 31];
+const notoSerifCjkScFaces = <int>[2, 7, 12, 17, 22, 27, 32];
 
 final class SuperOtcFontLoader {
   SuperOtcFontLoader._();
@@ -40,6 +44,22 @@ final class SuperOtcFontLoader {
     ]) {
       await loadFontFromList(
         extractSuperOtcFace(collection, face.index),
+        fontFamily: face.family,
+      );
+    }
+    final serifData = await rootBundle.load(notoSerifCjkSuperOtcAsset);
+    final serifCollection = serifData.buffer.asUint8List(
+      serifData.offsetInBytes,
+      serifData.lengthInBytes,
+    );
+    for (final face in [
+      for (final index in notoSerifCjkKrFaces)
+        (index: index, family: pkuNotoSerifKrFamily),
+      for (final index in notoSerifCjkScFaces)
+        (index: index, family: pkuNotoSerifScFamily),
+    ]) {
+      await loadFontFromList(
+        extractSuperOtcFace(serifCollection, face.index),
         fontFamily: face.family,
       );
     }

@@ -20,22 +20,20 @@ void main() {
     expect(lengths.toSet(), hasLength(greaterThan(1)));
   });
 
-  test('Serif Static Super OTC retains future KR and SC faces', () async {
-    final data = await rootBundle.load(notoSerifCjkSuperOtcAsset);
-    final collection = data.buffer.asUint8List(
-      data.offsetInBytes,
-      data.lengthInBytes,
-    );
-    for (final index in const [
-      notoSerifCjkKrRegularFace,
-      notoSerifCjkScRegularFace,
-      notoSerifCjkKrBoldFace,
-      notoSerifCjkScBoldFace,
-    ]) {
-      final face = extractSuperOtcFace(collection, index);
-      expect(ByteData.sublistView(face).getUint32(0), 0x4f54544f);
-    }
-  });
+  test(
+    'Serif Static Super OTC exposes every active KR and SC weight',
+    () async {
+      final data = await rootBundle.load(notoSerifCjkSuperOtcAsset);
+      final collection = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+      for (final index in [...notoSerifCjkKrFaces, ...notoSerifCjkScFaces]) {
+        final face = extractSuperOtcFace(collection, index);
+        expect(ByteData.sublistView(face).getUint32(0), 0x4f54544f);
+      }
+    },
+  );
 
   test('face extraction rejects invalid collections and indices', () {
     expect(() => extractSuperOtcFace(Uint8List(12), 0), throwsFormatException);

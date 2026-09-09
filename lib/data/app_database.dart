@@ -56,11 +56,17 @@ CREATE TABLE appearance(
  roll_palette INTEGER NOT NULL CHECK(roll_palette BETWEEN 0 AND 9),
  language TEXT NOT NULL CHECK(language IN ('ko', 'en', 'zh')),
  show_roll_nav INTEGER NOT NULL CHECK(show_roll_nav IN (0, 1)),
- font_scale REAL NOT NULL CHECK(font_scale BETWEEN 1 AND 2),
+ font_family TEXT NOT NULL CHECK(font_family IN ('serif', 'sans')),
+ font_scale REAL NOT NULL CHECK(font_scale BETWEEN 0.8 AND 1.5),
  font_weight INTEGER NOT NULL CHECK(font_weight IN (100, 200, 300, 400, 500, 600, 700, 800, 900)),
+ timetable_font_scale REAL NOT NULL CHECK(timetable_font_scale BETWEEN 1 AND 2),
  timetable_index_color INTEGER NOT NULL,
  auto_text_color INTEGER NOT NULL CHECK(auto_text_color IN (0, 1)),
- dark_mode INTEGER NOT NULL CHECK(dark_mode IN (0, 1)));
+ dark_mode INTEGER NOT NULL CHECK(dark_mode IN (0, 1)),
+ blend_accent_theme INTEGER NOT NULL CHECK(blend_accent_theme IN (0, 1)),
+ custom_palette_0 INTEGER NOT NULL, custom_palette_1 INTEGER NOT NULL,
+ custom_palette_2 INTEGER NOT NULL, custom_palette_3 INTEGER NOT NULL,
+ custom_palette_4 INTEGER NOT NULL);
 CREATE TABLE user_meetings(
  source INTEGER NOT NULL REFERENCES sources(id),
  identity TEXT NOT NULL, name TEXT NOT NULL, short_name TEXT NOT NULL,

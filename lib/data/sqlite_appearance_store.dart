@@ -14,7 +14,10 @@ final class SqliteAppearanceStore implements AppearanceStore {
   AppearanceSettings load() {
     final rows = database.database.select(
       '''SELECT accent, palette_seed, roll_palette, language, show_roll_nav,
-font_scale, font_weight, timetable_index_color, auto_text_color, dark_mode
+font_family, font_scale, font_weight, timetable_font_scale,
+timetable_index_color, auto_text_color, dark_mode, blend_accent_theme,
+custom_palette_0, custom_palette_1, custom_palette_2, custom_palette_3,
+custom_palette_4
 FROM appearance WHERE id = 1''',
     );
     if (rows.isEmpty) return const AppearanceSettings();
@@ -25,11 +28,18 @@ FROM appearance WHERE id = 1''',
       rollPalette: row['roll_palette'] as int,
       language: AppLanguage.parse(row['language'] as String),
       showRollInNavbar: (row['show_roll_nav'] as int) != 0,
+      fontFamily: AppFontFamily.parse(row['font_family'] as String),
       fontScale: (row['font_scale'] as num).toDouble(),
       fontWeightValue: row['font_weight'] as int,
+      timetableFontScale: (row['timetable_font_scale'] as num).toDouble(),
       timetableIndexColor: Color(row['timetable_index_color'] as int),
       autoTextColor: (row['auto_text_color'] as int) != 0,
       darkMode: (row['dark_mode'] as int) != 0,
+      blendAccentIntoTheme: (row['blend_accent_theme'] as int) != 0,
+      customPalette: List.unmodifiable([
+        for (var index = 0; index < 5; index++)
+          Color(row['custom_palette_$index'] as int),
+      ]),
     );
   }
 
@@ -58,24 +68,41 @@ JOIN active_schedule ON course_appearance.source = active_schedule.source''');
   ) {
     database.transaction(() {
       database.database.execute(
-        '''INSERT INTO appearance VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        '''INSERT INTO appearance (
+id, accent, palette_seed, roll_palette, language, show_roll_nav, font_family,
+font_scale, font_weight, timetable_font_scale, timetable_index_color,
+auto_text_color, dark_mode, blend_accent_theme, custom_palette_0,
+custom_palette_1, custom_palette_2, custom_palette_3, custom_palette_4)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET accent=excluded.accent,
 palette_seed=excluded.palette_seed, roll_palette=excluded.roll_palette,
 language=excluded.language, show_roll_nav=excluded.show_roll_nav,
-font_scale=excluded.font_scale, font_weight=excluded.font_weight,
+font_family=excluded.font_family, font_scale=excluded.font_scale,
+font_weight=excluded.font_weight,
+timetable_font_scale=excluded.timetable_font_scale,
 timetable_index_color=excluded.timetable_index_color,
-auto_text_color=excluded.auto_text_color, dark_mode=excluded.dark_mode''',
+auto_text_color=excluded.auto_text_color, dark_mode=excluded.dark_mode,
+blend_accent_theme=excluded.blend_accent_theme,
+custom_palette_0=excluded.custom_palette_0,
+custom_palette_1=excluded.custom_palette_1,
+custom_palette_2=excluded.custom_palette_2,
+custom_palette_3=excluded.custom_palette_3,
+custom_palette_4=excluded.custom_palette_4''',
         [
           settings.accent.toARGB32(),
           settings.paletteSeed,
           settings.rollPalette,
           settings.language.code,
           settings.showRollInNavbar ? 1 : 0,
+          settings.fontFamily.code,
           settings.fontScale,
           settings.fontWeightValue,
+          settings.timetableFontScale,
           settings.timetableIndexColor.toARGB32(),
           settings.autoTextColor ? 1 : 0,
           settings.darkMode ? 1 : 0,
+          settings.blendAccentIntoTheme ? 1 : 0,
+          ...settings.customPalette.map((color) => color.toARGB32()),
         ],
       );
       final active = database.database.select(

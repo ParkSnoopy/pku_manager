@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../l10n/app_strings.dart';
 import '../timetable/timetable_color.dart';
@@ -6,12 +7,12 @@ import 'appearance_controller.dart';
 import 'color_picker_dialog.dart';
 
 const appearanceAccents = <Color>[
-  Color(0xff171717),
-  Color(0xff00695c),
-  Color(0xff1565c0),
-  Color(0xff6a1b9a),
-  Color(0xffad1457),
-  Color(0xffef6c00),
+  Color(0xffffb3ba),
+  Color(0xffffd3b6),
+  Color(0xfffffacd),
+  Color(0xffbffcc6),
+  Color(0xffbfd7ff),
+  Color(0xffdcc6e0),
 ];
 
 class SettingsPage extends StatelessWidget {
@@ -99,6 +100,15 @@ class SettingsPage extends StatelessWidget {
               ),
             ],
           ),
+          SwitchListTile(
+            key: const ValueKey('blend-accent-theme'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              AppStrings.of(context).text(AppText.blendAccentIntoTheme),
+            ),
+            value: controller.blendAccentIntoTheme,
+            onChanged: controller.setBlendAccentIntoTheme,
+          ),
           const SizedBox(height: 24),
           Text(AppStrings.of(context).text(AppText.rollPalette)),
           const SizedBox(height: 8),
@@ -117,7 +127,11 @@ class SettingsPage extends StatelessWidget {
                       value: index,
                       child: Row(
                         children: [
-                          _PaletteSwatches(colors: palette.colors),
+                          _PaletteSwatches(
+                            colors: index == 0
+                                ? controller.customPalette
+                                : palette.colors,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -144,10 +158,7 @@ class SettingsPage extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      _PaletteSwatches(
-                        colors:
-                            rollPalettes[controller.rollPaletteIndex].colors,
-                      ),
+                      _PaletteSwatches(colors: controller.paletteColors),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -163,6 +174,31 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
           ),
+          if (controller.rollPaletteIndex == 0) ...[
+            const SizedBox(height: 12),
+            Text(AppStrings.of(context).text(AppText.customPalette)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (index, color) in controller.customPalette.indexed)
+                  IconButton(
+                    key: ValueKey('custom-palette-color-$index'),
+                    tooltip: AppStrings.of(context).text(AppText.chooseColor),
+                    onPressed: () async {
+                      final selected = await colorPicker(
+                        context,
+                        color: color,
+                        title: AppStrings.of(context).text(AppText.chooseColor),
+                      );
+                      controller.setCustomPaletteColor(index, selected);
+                    },
+                    icon: Icon(Icons.circle, color: color, size: 32),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 32),
           Text(AppStrings.of(context).text(AppText.timetableIndexColor)),
           const SizedBox(height: 8),
@@ -190,22 +226,36 @@ class SettingsPage extends StatelessWidget {
             value: controller.autoTextColor,
             onChanged: controller.setAutoTextColor,
           ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: Text(AppStrings.of(context).text(AppText.fontScale)),
-              ),
-              Text('${controller.fontScale.toStringAsFixed(2)}×'),
-            ],
+          const SizedBox(height: 32),
+          Text(
+            AppStrings.of(context).text(AppText.font),
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-          Slider(
-            key: const ValueKey('font-scale'),
-            min: 1,
-            max: 2,
-            divisions: 20,
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: const ValueKey('font-family-cycle'),
+              onPressed: controller.cycleFontFamily,
+              icon: const Icon(Icons.text_fields),
+              label: Text(
+                AppStrings.of(context).text(
+                  controller.fontFamily == AppFontFamily.serif
+                      ? AppText.serif
+                      : AppText.sans,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          _PercentSetting(
+            label: AppStrings.of(context).text(AppText.fontScale),
+            fieldKey: const ValueKey('font-scale-input'),
+            sliderKey: const ValueKey('font-scale'),
+            min: .8,
+            max: 1.5,
+            divisions: 14,
             value: controller.fontScale,
-            label: '${controller.fontScale.toStringAsFixed(2)}×',
             onChanged: controller.setFontScale,
           ),
           Row(
@@ -228,6 +278,16 @@ class SettingsPage extends StatelessWidget {
             label: AppStrings.of(context)
                 .text(_fontWeightText(controller.fontWeightValue)),
             onChanged: (value) => controller.setFontWeight(value.round()),
+          ),
+          _PercentSetting(
+            label: AppStrings.of(context).text(AppText.timetableFontScale),
+            fieldKey: const ValueKey('timetable-font-scale-input'),
+            sliderKey: const ValueKey('timetable-font-scale'),
+            min: 1,
+            max: 2,
+            divisions: 20,
+            value: controller.timetableFontScale,
+            onChanged: controller.setTimetableFontScale,
           ),
           const SizedBox(height: 32),
           Text(
@@ -278,6 +338,100 @@ class _PaletteSwatches extends StatelessWidget {
     ],
   );
 }
+
+class _PercentSetting extends StatefulWidget {
+  const _PercentSetting({
+    required this.label,
+    required this.fieldKey,
+    required this.sliderKey,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final Key fieldKey;
+  final Key sliderKey;
+  final double min;
+  final double max;
+  final int divisions;
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  @override
+  State<_PercentSetting> createState() => _PercentSettingState();
+}
+
+class _PercentSettingState extends State<_PercentSetting> {
+  late final TextEditingController _controller = TextEditingController(
+    text: _percent(widget.value),
+  );
+  late final FocusNode _focusNode = FocusNode();
+
+  @override
+  void didUpdateWidget(_PercentSetting oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_focusNode.hasFocus && oldWidget.value != widget.value) {
+      _controller.text = _percent(widget.value);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _parse(String text) {
+    final percent = int.tryParse(text);
+    if (percent == null) return;
+    final value = percent / 100;
+    if (value >= widget.min && value <= widget.max) {
+      widget.onChanged(value);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Row(
+        children: [
+          Expanded(child: Text(widget.label)),
+          SizedBox(
+            width: 88,
+            child: TextField(
+              key: widget.fieldKey,
+              controller: _controller,
+              focusNode: _focusNode,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              textAlign: TextAlign.end,
+              decoration: const InputDecoration(suffixText: '%', isDense: true),
+              onChanged: _parse,
+            ),
+          ),
+        ],
+      ),
+      Slider(
+        key: widget.sliderKey,
+        min: widget.min,
+        max: widget.max,
+        divisions: widget.divisions,
+        value: widget.value,
+        label: '${_percent(widget.value)}%',
+        onChanged: (value) {
+          _controller.text = _percent(value);
+          widget.onChanged(value);
+        },
+      ),
+    ],
+  );
+}
+
+String _percent(double value) => (value * 100).round().toString();
 
 AppText _fontWeightText(int value) => switch (value) {
   100 => AppText.thin,

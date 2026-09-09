@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/data/app_database.dart';
 import 'package:pku_manager/data/sqlite_appearance_store.dart';
+import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/features/settings/appearance_controller.dart';
 import 'package:pku_manager/features/settings/settings_page.dart';
 import 'package:pku_manager/features/timetable/timetable_color.dart';
@@ -51,18 +52,30 @@ void main() {
     expect(controller.language, AppLanguage.ko);
     expect(controller.paletteSeed, 0);
     expect(controller.rollPaletteIndex, 0);
-    expect(controller.fontScale, 1.2);
+    expect(controller.accent, const Color(0xffff5722));
+    expect(controller.fontFamily, AppFontFamily.serif);
+    expect(controller.fontScale, 1);
     expect(controller.fontWeightValue, 400);
+    expect(controller.timetableFontScale, 1);
     expect(controller.timetableIndexColor, const Color(0xffe8e0d2));
     expect(controller.autoTextColor, isFalse);
     expect(controller.darkMode, isFalse);
+    expect(controller.blendAccentIntoTheme, isFalse);
+    expect(appearanceAccents, const [
+      Color(0xffffb3ba),
+      Color(0xffffd3b6),
+      Color(0xfffffacd),
+      Color(0xffbffcc6),
+      Color(0xffbfd7ff),
+      Color(0xffdcc6e0),
+    ]);
     for (var weight = 100; weight <= 900; weight += 100) {
       controller.setFontWeight(weight);
       expect(controller.fontWeight.value, weight);
     }
     controller.setFontWeight(400);
-    expect(rollPalettes.first.name, 'default Colorful');
-    expect(rollPalettes.first.colors, const [
+    expect(rollPalettes.first.name, 'Custom');
+    expect(controller.customPalette, const [
       Color(0xff79adac),
       Color(0xffbeadf2),
       Color(0xffa0c8f2),
@@ -73,12 +86,16 @@ void main() {
     controller.setLanguage(AppLanguage.zhHans);
     controller.setAccent(const Color(0xff00695c));
     controller.setShowRollInNavbar(false);
+    controller.cycleFontFamily();
     controller.setRollPalette(3);
-    controller.setFontScale(1.6);
+    controller.setFontScale(1.4);
     controller.setFontWeight(900);
+    controller.setTimetableFontScale(1.6);
     controller.setTimetableIndexColor(const Color(0xff112233));
     controller.setAutoTextColor(true);
     controller.setDarkMode(true);
+    controller.setBlendAccentIntoTheme(true);
+    controller.setCustomPaletteColor(2, const Color(0xffabcdef));
     controller.setCourseAppearance(
       const ['locked'],
       const CourseAppearance(
@@ -105,11 +122,29 @@ void main() {
     expect(restored.accent, const Color(0xff00695c));
     expect(restored.paletteSeed, 2);
     expect(restored.rollPaletteIndex, 3);
-    expect(restored.fontScale, 1.6);
+    expect(restored.fontFamily, AppFontFamily.sans);
+    expect(restored.fontScale, 1.4);
     expect(restored.fontWeightValue, 900);
+    expect(restored.timetableFontScale, 1.6);
     expect(restored.timetableIndexColor, const Color(0xff112233));
     expect(restored.autoTextColor, isTrue);
     expect(restored.darkMode, isTrue);
+    expect(restored.blendAccentIntoTheme, isTrue);
+    expect(restored.customPalette[2], const Color(0xffabcdef));
+    expect(
+      timetableCourseColor(
+        Course(
+          sourceId: 'sample',
+          name: 'Sample',
+          weekday: 1,
+          firstPeriod: 1,
+          lastPeriod: 1,
+        ),
+        0,
+        customPalette: restored.customPalette,
+      ),
+      isIn(restored.customPalette),
+    );
     expect(restored.showRollInNavbar, isFalse);
     expect(
       restored.courseAppearanceFor('locked'),
@@ -162,9 +197,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('dark-mode')));
     await tester.pump();
     expect(controller.darkMode, isTrue);
+    await tester.tap(find.byKey(const ValueKey('blend-accent-theme')));
+    await tester.pump();
+    expect(controller.blendAccentIntoTheme, isTrue);
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('language-cycle')),
       300,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
     expect(find.text('Language'), findsOneWidget);
@@ -188,18 +227,27 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('custom-accent-color')),
       -300,
+      scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.byKey(const ValueKey('accent-ff00695c')));
+    await tester.tap(find.byKey(const ValueKey('accent-ffbffcc6')));
     await tester.pump();
-    expect(controller.accent, const Color(0xff00695c));
+    expect(controller.accent, const Color(0xffbffcc6));
     await tester.tap(find.byKey(const ValueKey('custom-accent-color')));
     await tester.pump();
     expect(controller.accent, const Color(0xff234567));
-    expect(find.text('default Colorful'), findsOneWidget);
+    expect(find.text('Custom'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('custom-palette-color-0')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('custom-palette-color-0')));
+    await tester.pump();
+    expect(controller.customPalette.first, const Color(0xff234567));
     expect(find.text('1'), findsNothing);
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('roll-palette-menu')),
       300,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.byKey(const ValueKey('roll-palette-menu')));
     await tester.pumpAndSettle();
@@ -211,16 +259,38 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('font-scale')),
       300,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.drag(
       find.byKey(const ValueKey('font-scale')),
       const Offset(80, 0),
     );
     await tester.pump();
-    expect(controller.fontScale, greaterThan(1.2));
+    expect(controller.fontScale, greaterThan(1));
+    await tester.enterText(
+      find.byKey(const ValueKey('font-scale-input')),
+      '80',
+    );
+    await tester.pump();
+    expect(controller.fontScale, .8);
+    await tester.enterText(
+      find.byKey(const ValueKey('font-scale-input')),
+      '79',
+    );
+    await tester.pump();
+    expect(controller.fontScale, .8);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('font-family-cycle')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const ValueKey('font-family-cycle')));
+    await tester.pump();
+    expect(controller.fontFamily, AppFontFamily.sans);
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('font-weight')),
       300,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.drag(
       find.byKey(const ValueKey('font-weight')),
@@ -229,19 +299,51 @@ void main() {
     await tester.pump();
     expect(controller.fontWeightValue, 900);
     await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('timetable-font-scale')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(
+      find.byKey(const ValueKey('timetable-font-scale')),
+      const Offset(250, 0),
+    );
+    await tester.pump();
+    expect(controller.timetableFontScale, greaterThan(1));
+    await tester.enterText(
+      find.byKey(const ValueKey('timetable-font-scale-input')),
+      '200',
+    );
+    await tester.pump();
+    expect(controller.timetableFontScale, 2);
+    await tester.scrollUntilVisible(
       find.byKey(const ValueKey('auto-text-color')),
       -300,
+      scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.byKey(const ValueKey('auto-text-color')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('auto-text-color')));
     await tester.pump();
     expect(controller.autoTextColor, isTrue);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('timetable-index-color')),
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('timetable-index-color')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('timetable-index-color')));
     await tester.pump();
     expect(controller.timetableIndexColor, const Color(0xff234567));
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('show-roll-navbar')),
       300,
+      scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.byKey(const ValueKey('show-roll-navbar')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('show-roll-navbar')));
     await tester.pump();
     expect(controller.showRollInNavbar, isFalse);

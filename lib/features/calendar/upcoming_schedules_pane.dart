@@ -199,9 +199,8 @@ class _ScheduleWithClassEntry extends StatelessWidget {
                     ),
                     subtitle: Text(
                       '${beijingDateLabel(course.startsAt)} '
-                      '${beijingTimeLabel(course.startsAt)}\n'
-                      '${strings.deadline(course.startsAt.difference(now))}',
-                      maxLines: 2,
+                      '${beijingTimeLabel(course.startsAt)}',
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),

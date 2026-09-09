@@ -32,10 +32,25 @@ class CalendarPage extends StatefulWidget {
 
 class _CalendarPageState extends State<CalendarPage> {
   late DateTime _month = _beijingDate(widget.now);
+  late DateTime _baseWeek;
+  late final PageController _weekController;
+
+  static const _initialWeek = 1200;
+  static const _weekCount = 2401;
+  static const _visibleRows = 5;
 
   @override
   void initState() {
     super.initState();
+    final first = DateTime.utc(_month.year, _month.month);
+    final visibleStart = first.subtract(Duration(days: first.weekday - 1));
+    _baseWeek = visibleStart.subtract(
+      const Duration(days: _initialWeek * DateTime.daysPerWeek),
+    );
+    _weekController = PageController(
+      initialPage: _initialWeek + _visibleRows ~/ 2,
+      viewportFraction: 1 / _visibleRows,
+    );
     widget.controller.addListener(_scheduleChanged);
     _focusSchedule();
   }
@@ -55,6 +70,7 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   void dispose() {
     widget.controller.removeListener(_scheduleChanged);
+    _weekController.dispose();
     super.dispose();
   }
 
@@ -69,11 +85,44 @@ class _CalendarPageState extends State<CalendarPage> {
         .where((item) => item.id == id)
         .firstOrNull;
     if (schedule == null) return;
-    _month = _beijingDate(schedule.startsAt);
+    final target = _beijingDate(schedule.startsAt);
+    final first = DateTime.utc(target.year, target.month);
+    final visibleStart = first.subtract(Duration(days: first.weekday - 1));
+    final page =
+        visibleStart.difference(_baseWeek).inDays ~/ 7 + _visibleRows ~/ 2;
+    _month = target;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_weekController.hasClients && page >= 0 && page < _weekCount) {
+        _weekController.jumpToPage(page);
+      }
+    });
   }
 
-  void _changeMonth(int delta) =>
-      setState(() => _month = DateTime.utc(_month.year, _month.month + delta));
+  void _updateSuperiorMonth(int centerVisibleWeek) {
+    final firstVisibleWeek = centerVisibleWeek - _visibleRows ~/ 2;
+    final firstDate = _baseWeek.add(Duration(days: firstVisibleWeek * 7));
+    final counts = <(int, int), int>{};
+    for (var day = 0; day < _visibleRows * 7; day++) {
+      final date = firstDate.add(Duration(days: day));
+      counts.update(
+        (date.year, date.month),
+        (value) => value + 1,
+        ifAbsent: () => 1,
+      );
+    }
+    final center = firstDate.add(const Duration(days: 17));
+    final superior = counts.entries.reduce((left, right) {
+      if (left.value != right.value) {
+        return left.value > right.value ? left : right;
+      }
+      final leftIsCenter = left.key == (center.year, center.month);
+      return leftIsCenter ? left : right;
+    }).key;
+    final month = DateTime.utc(superior.$1, superior.$2);
+    if (month != _month) {
+      setState(() => _month = month);
+    }
+  }
 
   Future<void> _editSchedule(
     DateTime date, [
@@ -129,8 +178,6 @@ class _CalendarPageState extends State<CalendarPage> {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final today = _beijingDate(widget.now);
-    final first = DateTime.utc(_month.year, _month.month);
-    final gridStart = first.subtract(Duration(days: first.weekday - 1));
     return Material(
       key: const ValueKey('calendar-page'),
       color: Theme.of(context).colorScheme.surface,
@@ -140,12 +187,6 @@ class _CalendarPageState extends State<CalendarPage> {
           children: [
             Row(
               children: [
-                IconButton(
-                  key: const ValueKey('calendar-previous-month'),
-                  tooltip: strings.text(AppText.previousMonth),
-                  onPressed: () => _changeMonth(-1),
-                  icon: const Icon(Icons.chevron_left),
-                ),
                 Expanded(
                   child: Text(
                     strings.monthLabel(_month),
@@ -154,12 +195,6 @@ class _CalendarPageState extends State<CalendarPage> {
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                ),
-                IconButton(
-                  key: const ValueKey('calendar-next-month'),
-                  tooltip: strings.text(AppText.nextMonth),
-                  onPressed: () => _changeMonth(1),
-                  icon: const Icon(Icons.chevron_right),
                 ),
               ],
             ),
@@ -179,36 +214,44 @@ class _CalendarPageState extends State<CalendarPage> {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final cellWidth = constraints.maxWidth / 7;
-                  final cellHeight = constraints.maxHeight / 6;
-                  return GridView.builder(
-                    key: const ValueKey('calendar-month-grid'),
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 7,
-                      childAspectRatio: cellWidth / cellHeight,
-                    ),
-                    itemCount: 42,
-                    itemBuilder: (context, index) {
-                      final date = gridStart.add(Duration(days: index));
-                      final schedules = widget.controller.schedules
-                          .where((schedule) => _sameBeijingDate(schedule, date))
-                          .toList(growable: false);
-                      return _CalendarDay(
-                        date: date,
-                        today: today,
-                        inMonth: date.month == _month.month,
-                        schedules: schedules,
-                        focusedScheduleId: widget.focusedScheduleId,
-                        onAdd: () => _editSchedule(date),
-                        onSelect: widget.onScheduleSelected,
-                        onEdit: (schedule) => _editSchedule(date, schedule),
-                      );
-                    },
-                  );
-                },
+              child: PageView.builder(
+                key: const ValueKey('calendar-month-grid'),
+                controller: _weekController,
+                scrollDirection: Axis.vertical,
+                itemCount: _weekCount,
+                onPageChanged: _updateSuperiorMonth,
+                itemBuilder: (context, weekIndex) => Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var day = 0; day < 7; day++)
+                      Expanded(
+                        child: Builder(
+                          builder: (context) {
+                            final date = _baseWeek.add(
+                              Duration(days: weekIndex * 7 + day),
+                            );
+                            final schedules = widget.controller.schedules
+                                .where(
+                                  (schedule) =>
+                                      _sameBeijingDate(schedule, date),
+                                )
+                                .toList(growable: false);
+                            return _CalendarDay(
+                              date: date,
+                              today: today,
+                              inMonth: date.month == _month.month,
+                              schedules: schedules,
+                              focusedScheduleId: widget.focusedScheduleId,
+                              onAdd: () => _editSchedule(date),
+                              onSelect: widget.onScheduleSelected,
+                              onEdit: (schedule) =>
+                                  _editSchedule(date, schedule),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -273,16 +316,24 @@ class _CalendarDay extends StatelessWidget {
                       ),
                     ),
                     if (isToday)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: Icon(
-                          Icons.today,
-                          key: const ValueKey('calendar-today-icon'),
-                          size: 16,
-                          color: colors.primary,
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Text(
+                            'TODAY',
+                            key: const ValueKey('calendar-today-label'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: colors.primary,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
-                      ),
-                    const Spacer(),
+                      )
+                    else
+                      const Spacer(),
                     if (inMonth)
                       IconButton(
                         key: ValueKey(
@@ -304,6 +355,7 @@ class _CalendarDay extends StatelessWidget {
                 Expanded(
                   child: ListView.builder(
                     padding: EdgeInsets.zero,
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: schedules.length,
                     itemBuilder: (context, index) {
                       final schedule = schedules[index];

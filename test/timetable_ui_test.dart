@@ -99,6 +99,8 @@ final class _PngEncoder implements TimetablePngEncoder {
     int paletteSeed, {
     Map<String, CourseAppearance> courseAppearances = const {},
     int paletteIndex = 0,
+    List<Color> customPalette = defaultCustomPalette,
+    double fontScale = 1,
   }) async => Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
 }
 
@@ -164,13 +166,58 @@ void main() {
       final appTextContext = tester.element(find.text('Calendar'));
       expect(
         MediaQuery.textScalerOf(appTextContext).scale(10),
-        moreOrLessEquals(12),
+        moreOrLessEquals(10),
       );
+      expect(
+        Theme.of(appTextContext).textTheme.bodyMedium?.fontFamily,
+        'PKU Noto Serif CJK SC',
+      );
+      final meetingTextContext = tester.element(
+        find.byKey(const ValueKey('meeting-content-first')),
+      );
+      expect(
+        MediaQuery.textScalerOf(meetingTextContext).scale(10),
+        moreOrLessEquals(10),
+      );
+      appearance.setTimetableFontScale(2);
+      await tester.pump();
+      expect(
+        MediaQuery.textScalerOf(
+          tester.element(find.byKey(const ValueKey('meeting-content-first'))),
+        ).scale(10),
+        moreOrLessEquals(20),
+      );
+      expect(
+        MediaQuery.textScalerOf(tester.element(find.text('Calendar')))
+            .scale(10),
+        moreOrLessEquals(10),
+      );
+      appearance.setTimetableFontScale(1);
+      appearance.cycleFontFamily();
+      await tester.pumpAndSettle();
+      expect(
+        Theme.of(tester.element(find.text('Calendar')))
+            .textTheme
+            .bodyMedium
+            ?.fontFamily,
+        'PKU Noto Sans CJK SC',
+      );
+      appearance.cycleFontFamily();
+      await tester.pumpAndSettle();
       expect(
         Theme.of(appTextContext).textTheme.bodyMedium?.fontWeight,
         FontWeight.w400,
       );
       expect(Theme.of(appTextContext).brightness, Brightness.light);
+      final neutralSurface = Theme.of(appTextContext).colorScheme.surface;
+      appearance.setBlendAccentIntoTheme(true);
+      await tester.pumpAndSettle();
+      expect(
+        Theme.of(tester.element(find.text('Calendar'))).colorScheme.surface,
+        isNot(neutralSurface),
+      );
+      appearance.setBlendAccentIntoTheme(false);
+      await tester.pumpAndSettle();
       final lightCourseColor = tester
           .widget<Material>(find.byKey(const ValueKey('meeting-color-first')))
           .color!;
@@ -232,11 +279,13 @@ void main() {
       final note = tester.widget<Text>(
         find.descendant(
           of: find.byKey(const ValueKey('meeting-cell-first')),
-          matching: find.text('Notes: Bring notes'),
+          matching: find.text('Bring notes'),
         ),
       );
       expect(note.style?.fontSize, timetableCourseNoteFontSize);
       expect(note.style?.height, 1.5);
+      expect(note.softWrap, isTrue);
+      expect(note.maxLines, isNull);
       expect(
         tester
             .widgetList<SizedBox>(
@@ -362,6 +411,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('show-roll-navbar')),
         300,
+        scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('show-roll-navbar')));
@@ -506,7 +556,7 @@ void main() {
           of: find.byKey(const ValueKey('upcoming-related-class-1')),
           matching: find.textContaining('DDL:'),
         ),
-        findsOneWidget,
+        findsNothing,
       );
       final scheduleMouse = await tester.createGesture(
         kind: PointerDeviceKind.mouse,
@@ -666,6 +716,7 @@ void main() {
       await tester.pump();
       expect(find.byKey(const ValueKey('calendar-page')), findsOneWidget);
       expect(find.text('September 2026'), findsOneWidget);
+      expect(find.byKey(const ValueKey('calendar-next-month')), findsNothing);
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('calendar-page')),
@@ -673,8 +724,10 @@ void main() {
         ),
         findsOneWidget,
       );
-      await tester.tap(find.byKey(const ValueKey('calendar-next-month')));
-      await tester.pump();
+      for (var week = 0; week < 4; week++) {
+        await tester.drag(find.byType(PageView), const Offset(0, -180));
+        await tester.pumpAndSettle();
+      }
       expect(find.text('October 2026'), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pump();
@@ -711,7 +764,7 @@ void main() {
           of: find.byKey(const ValueKey('upcoming-class-first')),
           matching: find.textContaining('DDL:'),
         ),
-        findsOneWidget,
+        findsNothing,
       );
       expect(
         find.descendant(
