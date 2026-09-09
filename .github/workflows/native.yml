@@ -1,20 +1,69 @@
-name: Native builds
+name: Native release
+
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
+
 permissions:
   contents: read
+
 concurrency:
-  group: native-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: native-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  linux:
+  prepare:
     runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - id: release
+        name: Read release version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=''
+          while IFS= read -r line; do
+            case "$line" in
+              'version: '*)
+                VERSION="${line#version: }"
+                VERSION="${VERSION%%+*}"
+                break
+                ;;
+            esac
+          done < pubspec.yaml
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            printf 'pubspec.yaml version must use X.Y.Z: %s\n' "$VERSION" >&2
+            exit 1
+          fi
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
+          printf 'tag=v%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
+
+  linux:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: Download Noto CJK fonts
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/noto-sans.zip" \
+            https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/00_NotoSansCJK.ttc.zip
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/noto-serif.zip" \
+            https://github.com/notofonts/noto-cjk/releases/download/Serif2.003/01_NotoSerifCJK.ttc.zip
+          unzip -p "$RUNNER_TEMP/noto-sans.zip" NotoSansCJK.ttc > assets/fonts/NotoSansCJK.ttc
+          unzip -p "$RUNNER_TEMP/noto-serif.zip" NotoSerifCJK.ttc > assets/fonts/NotoSerifCJK.ttc
+          test -s assets/fonts/NotoSansCJK.ttc
+          test -s assets/fonts/NotoSerifCJK.ttc
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.2'
           channel: stable
@@ -36,66 +85,132 @@ jobs:
           printf '%s  %s\n' 1cc49bcf1e2ccd593c379adb17c9f85a36d619088296504de95b1d06215aebbf build/tools/runtime-x86_64 | sha256sum --check
           cmake -S packaging/linux -B build/appimage -G Ninja -DAPPIMAGETOOL="$PWD/build/tools/appimagetool" -DRUNTIME="$PWD/build/tools/runtime-x86_64"
           cmake --build build/appimage --target appimage
-          sha256sum build/appimage/pku-manager.AppImage > build/appimage/SHA256SUMS
+          mv build/appimage/pku-manager.AppImage "build/appimage/PKU_Manager-v${VERSION}-linux.AppImage"
       - name: Launch packaged runtime
         shell: bash
         run: |
           set +e
-          GDK_BACKEND=x11 xvfb-run -a timeout 15s build/appimage/pku-manager.AppImage > build/appimage/runtime.log 2>&1
+          GDK_BACKEND=x11 xvfb-run -a timeout 15s "build/appimage/PKU_Manager-v${VERSION}-linux.AppImage" > build/appimage/runtime.log 2>&1
           status=$?
           test "$status" = 124
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@v4
         with:
-          name: linux-appimage
-          path: |
-            build/appimage/pku-manager.AppImage
-            build/appimage/SHA256SUMS
-            build/appimage/runtime.log
+          name: PKU_Manager-v${{ needs.prepare.outputs.version }}-linux.AppImage
+          path: build/appimage/PKU_Manager-v${{ needs.prepare.outputs.version }}-linux.AppImage
           if-no-files-found: error
+
   android:
+    needs: prepare
     runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: Download Noto CJK fonts
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/noto-sans.zip" \
+            https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/00_NotoSansCJK.ttc.zip
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/noto-serif.zip" \
+            https://github.com/notofonts/noto-cjk/releases/download/Serif2.003/01_NotoSerifCJK.ttc.zip
+          unzip -p "$RUNNER_TEMP/noto-sans.zip" NotoSansCJK.ttc > assets/fonts/NotoSansCJK.ttc
+          unzip -p "$RUNNER_TEMP/noto-serif.zip" NotoSerifCJK.ttc > assets/fonts/NotoSerifCJK.ttc
+          test -s assets/fonts/NotoSansCJK.ttc
+          test -s assets/fonts/NotoSerifCJK.ttc
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.2'
+          channel: stable
       - run: flutter build apk --release
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - name: Name Android artifact
+        shell: bash
+        run: mv build/app/outputs/flutter-apk/app-release.apk "build/app/outputs/flutter-apk/PKU_Manager-v${VERSION}-android.apk"
+      - uses: actions/upload-artifact@v4
         with:
-          name: android-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: PKU_Manager-v${{ needs.prepare.outputs.version }}-android.apk
+          path: build/app/outputs/flutter-apk/PKU_Manager-v${{ needs.prepare.outputs.version }}-android.apk
           if-no-files-found: error
+
   apple:
+    needs: prepare
     runs-on: macos-15
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: Download Noto CJK fonts
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/noto-sans.zip" \
+            https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/00_NotoSansCJK.ttc.zip
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/noto-serif.zip" \
+            https://github.com/notofonts/noto-cjk/releases/download/Serif2.003/01_NotoSerifCJK.ttc.zip
+          unzip -p "$RUNNER_TEMP/noto-sans.zip" NotoSansCJK.ttc > assets/fonts/NotoSansCJK.ttc
+          unzip -p "$RUNNER_TEMP/noto-serif.zip" NotoSerifCJK.ttc > assets/fonts/NotoSerifCJK.ttc
+          test -s assets/fonts/NotoSansCJK.ttc
+          test -s assets/fonts/NotoSerifCJK.ttc
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.2'
+          channel: stable
       - run: flutter build macos --release
       - run: flutter test
       - run: flutter build ios --release --no-codesign
       - run: flutter build ios --simulator
       - name: Archive Apple bundles
+        shell: bash
         run: |
-          ditto -c -k --keepParent build/macos/Build/Products/Release/pku_manager.app build/macos-app.zip
-          ditto -c -k --keepParent build/ios/iphoneos/Runner.app build/ios-unsigned.zip
-          ditto -c -k --keepParent build/ios/iphonesimulator/Runner.app build/ios-simulator.zip
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+          set -euo pipefail
+          ditto -c -k --keepParent build/macos/Build/Products/Release/pku_manager.app "build/PKU_Manager-v${VERSION}-macos.zip"
+          ditto -c -k --keepParent build/ios/iphoneos/Runner.app "build/PKU_Manager-v${VERSION}-ios.zip"
+          ditto -c -k --keepParent build/ios/iphonesimulator/Runner.app "build/PKU_Manager-v${VERSION}-ios-simulator.zip"
+      - uses: actions/upload-artifact@v4
         with:
-          name: apple-bundles
-          path: |
-            build/macos-app.zip
-            build/ios-unsigned.zip
-            build/ios-simulator.zip
+          name: PKU_Manager-v${{ needs.prepare.outputs.version }}-macos.zip
+          path: build/PKU_Manager-v${{ needs.prepare.outputs.version }}-macos.zip
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PKU_Manager-v${{ needs.prepare.outputs.version }}-ios.zip
+          path: build/PKU_Manager-v${{ needs.prepare.outputs.version }}-ios.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PKU_Manager-v${{ needs.prepare.outputs.version }}-ios-simulator.zip
+          path: build/PKU_Manager-v${{ needs.prepare.outputs.version }}-ios-simulator.zip
+          if-no-files-found: error
+
   windows:
+    needs: prepare
     runs-on: windows-2022
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: Download Noto CJK fonts
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/noto-sans.zip" \
+            https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/00_NotoSansCJK.ttc.zip
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/noto-serif.zip" \
+            https://github.com/notofonts/noto-cjk/releases/download/Serif2.003/01_NotoSerifCJK.ttc.zip
+          unzip -p "$RUNNER_TEMP/noto-sans.zip" NotoSansCJK.ttc > assets/fonts/NotoSansCJK.ttc
+          unzip -p "$RUNNER_TEMP/noto-serif.zip" NotoSerifCJK.ttc > assets/fonts/NotoSerifCJK.ttc
+          test -s assets/fonts/NotoSansCJK.ttc
+          test -s assets/fonts/NotoSerifCJK.ttc
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.2'
+          channel: stable
       - run: flutter build windows --release
       - run: flutter test
       - run: choco install nsis --version=3.11 -y --no-progress
@@ -104,10 +219,11 @@ jobs:
         run: |
           & 'C:\Program Files (x86)\NSIS\makensis.exe' packaging/windows/installer.nsi
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Move-Item packaging/windows/pku-manager-setup.exe "packaging/windows/PKU_Manager-v${env:VERSION}-windows.exe"
       - name: Install, upgrade, launch, uninstall
         shell: pwsh
         run: |
-          $installer = Resolve-Path packaging/windows/pku-manager-setup.exe
+          $installer = Resolve-Path "packaging/windows/PKU_Manager-v${env:VERSION}-windows.exe"
           $installed = Join-Path $env:LOCALAPPDATA 'Programs\PKU Manager'
           $install = Start-Process $installer -ArgumentList '/S' -Wait -PassThru
           if ($install.ExitCode -ne 0) { throw 'Installation failed' }
@@ -118,8 +234,31 @@ jobs:
           if ($app.HasExited) { throw 'Installed runtime exited early' }
           Stop-Process -Id $app.Id
           Start-Process "$installed\Uninstall.exe" -ArgumentList '/S' -Wait
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@v4
         with:
-          name: windows-installer
-          path: packaging/windows/pku-manager-setup.exe
+          name: PKU_Manager-v${{ needs.prepare.outputs.version }}-windows.exe
+          path: packaging/windows/PKU_Manager-v${{ needs.prepare.outputs.version }}-windows.exe
           if-no-files-found: error
+
+  release:
+    needs: [prepare, linux, android, apple, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: PKU_Manager-v${{ needs.prepare.outputs.version }}-*
+          path: dist
+          merge-multiple: true
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
+            --generate-notes
