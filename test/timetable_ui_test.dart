@@ -185,6 +185,20 @@ void main() {
         'PKU Noto Serif CJK SC',
       );
       expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('timetable-weekday-1')))
+            .style!
+            .fontFamily,
+        'PKU Noto Serif CJK SC',
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('timetable-index-label-1')))
+            .style!
+            .fontFamily,
+        'PKU Noto Serif CJK SC',
+      );
+      expect(
         MediaQuery.textScalerOf(meetingTextContext).scale(10),
         moreOrLessEquals(10),
       );
@@ -217,6 +231,20 @@ void main() {
               find.byKey(const ValueKey('meeting-text-style-first')),
             )
             .style
+            .fontFamily,
+        'PKU Noto Sans CJK SC',
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('timetable-weekday-1')))
+            .style!
+            .fontFamily,
+        'PKU Noto Sans CJK SC',
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('timetable-index-label-1')))
+            .style!
             .fontFamily,
         'PKU Noto Sans CJK SC',
       );

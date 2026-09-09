@@ -254,12 +254,15 @@ class _Header extends StatelessWidget {
                 alignment: Alignment.center,
                 children: [
                   Text(
+                    key: ValueKey('timetable-weekday-$day'),
                     AppStrings.of(context).weekday(day),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontFamily: timetableMonoFont,
-                      fontFamilyFallback: timetableFontFallback,
+                      fontFamily: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.fontFamily,
                       fontSize: 20,
                       fontWeight: fontWeight,
                       color: foreground,
@@ -360,9 +363,10 @@ class _TimeLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Text(
+      key: ValueKey('timetable-index-label-$period'),
       '$period',
       style: TextStyle(
-        fontFamily: timetablePeriodFont,
+        fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
         fontSize: 30,
         fontWeight: fontWeight,
         color: color,
