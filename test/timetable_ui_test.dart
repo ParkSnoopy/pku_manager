@@ -354,7 +354,7 @@ void main() {
           matching: find.byType(Opacity),
         ),
       );
-      expect(opacity.opacity, .5);
+      expect(opacity.opacity, .25);
       expect(find.byKey(const ValueKey('meeting-content-even')), findsNothing);
       expect(find.byTooltip('Roll colors'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);

@@ -176,7 +176,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Model incomplete import review separately from failure and ready state.
 - Serialize imports so concurrent selections cannot replace each other out of order.
 - Keep parity refresh independent from local timetable availability.
-- Show every meeting block by default; non-current meetings render at half opacity without cell text or a visibility toggle.
+- Show every meeting block by default; non-current meetings render at quarter opacity without cell text or a visibility toggle.
 - Test startup combinations of schedule present or absent and parity fresh, cached, or unavailable.
 
 ### 8. Build Responsive Timetable UI

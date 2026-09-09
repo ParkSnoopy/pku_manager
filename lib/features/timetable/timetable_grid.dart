@@ -565,7 +565,7 @@ class _MeetingTileState extends State<_MeetingTile> {
         schedules: widget.schedules,
       ),
       child: Opacity(
-        opacity: widget.isCurrent ? 1 : .5,
+        opacity: widget.isCurrent ? 1 : .25,
         child: SizedBox(
           key: ValueKey('meeting-cell-${meeting.sourceId}'),
           width: double.infinity,
