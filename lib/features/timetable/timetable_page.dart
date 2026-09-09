@@ -518,7 +518,6 @@ class _TimetablePageState extends State<TimetablePage>
                       now: controller.clock(),
                       timetable: timetable,
                       calendar: controller.week.calendar,
-                      autoTextColor: widget.appearance.autoTextColor,
                       onSelected: _navigateToSchedule,
                       onEdit: _editSchedule,
                       onClassSelected: _selectUpcomingClass,
@@ -568,7 +567,6 @@ class _TimetablePageState extends State<TimetablePage>
       controller: widget.calendar,
       timetable: controller.timetable,
       focusedScheduleId: _focusedScheduleId,
-      autoTextColor: widget.appearance.autoTextColor,
       onScheduleSelected: _navigateToRelatedClass,
     );
     final timetable = controller.timetable;
@@ -589,7 +587,6 @@ class _TimetablePageState extends State<TimetablePage>
                 now: controller.clock(),
                 calendar: controller.week.calendar,
                 schedules: widget.calendar.schedules,
-                autoTextColor: widget.appearance.autoTextColor,
                 onSelected: _selectUpcomingClass,
                 onScheduleSelected: _navigateToSchedule,
               ),

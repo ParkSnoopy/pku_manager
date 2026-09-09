@@ -17,7 +17,6 @@ class UpcomingClassPane extends StatelessWidget {
     required this.onSelected,
     required this.schedules,
     required this.onScheduleSelected,
-    this.autoTextColor = false,
     this.calendar,
   });
 
@@ -26,7 +25,6 @@ class UpcomingClassPane extends StatelessWidget {
   final ValueChanged<UpcomingCourse> onSelected;
   final List<CalendarSchedule> schedules;
   final ValueChanged<CalendarSchedule> onScheduleSelected;
-  final bool autoTextColor;
   final SemesterCalendar? calendar;
 
   @override
@@ -104,7 +102,6 @@ class UpcomingClassPane extends StatelessWidget {
                           _ScheduleEntry(
                             schedule: schedule,
                             now: now,
-                            autoTextColor: autoTextColor,
                             onTap: () => onScheduleSelected(schedule),
                           ),
                         const Divider(height: 1),
@@ -122,7 +119,6 @@ class UpcomingClassPane extends StatelessWidget {
                           _ScheduleEntry(
                             schedule: schedule,
                             now: now,
-                            autoTextColor: autoTextColor,
                             onTap: () => onScheduleSelected(schedule),
                           ),
                       ],
@@ -139,23 +135,17 @@ class _ScheduleEntry extends StatelessWidget {
   const _ScheduleEntry({
     required this.schedule,
     required this.now,
-    required this.autoTextColor,
     required this.onTap,
   });
 
   final CalendarSchedule schedule;
   final DateTime now;
-  final bool autoTextColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final background = scheduleColor(context, schedule);
-    final foreground = scheduleForeground(
-      context,
-      background,
-      autoTextColor: autoTextColor,
-    );
+    final foreground = scheduleForeground(background);
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 8, 8),
       child: Material(

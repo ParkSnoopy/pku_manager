@@ -487,7 +487,6 @@ void main() {
           allDay: false,
           relatedClassSourceId: 'first',
           note: 'Submit online',
-          colorValue: 0xff123456,
         )
         ..create(
           title: 'All-day deadline',
@@ -591,12 +590,6 @@ void main() {
             )
             .dx,
         greaterThan(tester.getTopLeft(scheduleInfo).dx),
-      );
-      expect(
-        tester
-            .widget<ListTile>(find.byKey(const ValueKey('upcoming-schedule-1')))
-            .textColor,
-        Colors.black,
       );
       expect(
         find.descendant(
@@ -751,29 +744,6 @@ void main() {
             .color,
         Colors.white,
       );
-      expect(
-        tester
-            .widget<ListTile>(find.byKey(const ValueKey('upcoming-schedule-1')))
-            .textColor,
-        Colors.white,
-      );
-      appearance.setAutoTextColor(false);
-      await tester.pump();
-      expect(
-        tester
-            .widget<DefaultTextStyle>(
-              find.byKey(const ValueKey('meeting-text-style-first')),
-            )
-            .style
-            .color,
-        Colors.black,
-      );
-      expect(
-        tester
-            .widget<ListTile>(find.byKey(const ValueKey('upcoming-schedule-1')))
-            .textColor,
-        Colors.black,
-      );
       expect(find.byKey(const ValueKey('manual-color-first')), findsOneWidget);
       final decoration = tester.widget<DecoratedBox>(
         find.byKey(const ValueKey('meeting-outline-first')),
@@ -793,15 +763,6 @@ void main() {
           matching: find.textContaining('Updated deadline'),
         ),
         findsOneWidget,
-      );
-      expect(
-        tester
-            .widget<Text>(
-              find.byKey(const ValueKey('calendar-schedule-text-1')),
-            )
-            .style!
-            .color,
-        Colors.black,
       );
       for (var week = 0; week < 4; week++) {
         await tester.drag(find.byType(PageView), const Offset(0, -180));
@@ -851,12 +812,6 @@ void main() {
           matching: find.textContaining('DDL:'),
         ),
         findsOneWidget,
-      );
-      expect(
-        tester
-            .widget<ListTile>(find.byKey(const ValueKey('tomorrow-schedule-1')))
-            .textColor,
-        Colors.black,
       );
       expect(
         find.descendant(

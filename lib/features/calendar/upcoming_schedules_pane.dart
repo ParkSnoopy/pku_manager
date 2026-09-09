@@ -17,7 +17,6 @@ class UpcomingSchedulesPane extends StatelessWidget {
     required this.onSelected,
     required this.onEdit,
     required this.onClassSelected,
-    this.autoTextColor = false,
     this.timetable,
     this.calendar,
   });
@@ -27,7 +26,6 @@ class UpcomingSchedulesPane extends StatelessWidget {
   final ValueChanged<CalendarSchedule> onSelected;
   final ValueChanged<CalendarSchedule> onEdit;
   final ValueChanged<UpcomingCourse> onClassSelected;
-  final bool autoTextColor;
   final Timetable? timetable;
   final SemesterCalendar? calendar;
 
@@ -76,11 +74,7 @@ class UpcomingSchedulesPane extends StatelessWidget {
                         }
                         final schedule = schedules[index ~/ 2];
                         final background = scheduleColor(context, schedule);
-                        final foreground = scheduleForeground(
-                          context,
-                          background,
-                          autoTextColor: autoTextColor,
-                        );
+                        final foreground = scheduleForeground(background);
                         final relatedClass = courses
                             .where(
                               (course) => course.group.meetings.any(
