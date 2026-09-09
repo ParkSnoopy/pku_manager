@@ -149,6 +149,10 @@ class AppStrings {
   };
 
   String deadline(Duration duration) {
+    return 'DDL: ${deadlineValue(duration)}';
+  }
+
+  String deadlineValue(Duration duration) {
     final minutes = duration.isNegative
         ? 0
         : (duration.inSeconds + 59) ~/ Duration.secondsPerMinute;
@@ -161,7 +165,7 @@ class AppStrings {
         : hours > 0
         ? '${hours}h ${remainingMinutes}m'
         : '${remainingMinutes}m';
-    return 'DDL: $value';
+    return value;
   }
 
   String monthLabel(DateTime month) => switch (locale.languageCode) {

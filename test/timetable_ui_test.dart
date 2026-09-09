@@ -536,7 +536,7 @@ void main() {
         12,
       );
       expect(find.textContaining('2026-09-07'), findsNWidgets(3));
-      expect(find.text('09:00'), findsOneWidget);
+      expect(find.textContaining('09:00'), findsOneWidget);
       expect(find.text('All day'), findsNothing);
       expect(
         tester
@@ -568,6 +568,28 @@ void main() {
           matching: find.textContaining('DDL:'),
         ),
         findsOneWidget,
+      );
+      final scheduleInfo = find.byKey(
+        const ValueKey('upcoming-schedule-info-1'),
+      );
+      expect(tester.widget<Text>(scheduleInfo).data, '2026-09-07 09:00');
+      final deadlineText = tester.widget<Text>(
+        find.byKey(const ValueKey('upcoming-schedule-deadline-1')),
+      );
+      final deadlineSpans = (deadlineText.textSpan! as TextSpan).children!;
+      expect((deadlineSpans.first as TextSpan).text, 'DDL: ');
+      expect((deadlineSpans.last as TextSpan).text, '10h 0m');
+      expect(
+        (deadlineSpans.last as TextSpan).style!.fontSize,
+        (deadlineSpans.first as TextSpan).style!.fontSize! * 1.25,
+      );
+      expect(
+        tester
+            .getTopLeft(
+              find.byKey(const ValueKey('upcoming-schedule-deadline-1')),
+            )
+            .dx,
+        greaterThan(tester.getTopLeft(scheduleInfo).dx),
       );
       expect(
         find.descendant(

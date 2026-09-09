@@ -21,6 +21,7 @@ void main() {
     const duration = Duration(days: 1, hours: 2, minutes: 3);
     for (final language in AppLanguage.values) {
       expect(AppStrings(language.locale).deadline(duration), 'DDL: 1d 2h');
+      expect(AppStrings(language.locale).deadlineValue(duration), '1d 2h');
     }
     expect(
       AppStrings(AppLanguage.en.locale).deadline(const Duration(minutes: 43)),

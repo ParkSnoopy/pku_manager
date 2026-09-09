@@ -132,6 +132,8 @@ class _ScheduleWithClassEntry extends StatelessWidget {
     final strings = AppStrings.of(context);
     final course = relatedClass;
     final colors = Theme.of(context).colorScheme;
+    final deadline = scheduleDeadline(schedule).difference(now);
+    const deadlineLabelSize = 14.0;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Column(
@@ -159,22 +161,35 @@ class _ScheduleWithClassEntry extends StatelessWidget {
                     style: const TextStyle(fontSize: 15),
                   ),
                   subtitle: Text(
-                    '${scheduleDateLabel(schedule)}\n'
-                    '${strings.deadline(scheduleDeadline(schedule).difference(now))}',
-                    maxLines: 2,
+                    key: ValueKey('upcoming-schedule-info-${schedule.id}'),
+                    schedule.allDay
+                        ? scheduleDateLabel(schedule)
+                        : '${scheduleDateLabel(schedule)} ${scheduleTimeLabel(schedule)}',
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 14),
                   ),
-                  trailing: schedule.allDay
-                      ? null
-                      : Text(
-                          scheduleTimeLabel(schedule),
-                          textAlign: TextAlign.end,
+                  trailing: Text.rich(
+                    key: ValueKey('upcoming-schedule-deadline-${schedule.id}'),
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'DDL: ',
+                          style: TextStyle(fontSize: deadlineLabelSize),
+                        ),
+                        TextSpan(
+                          text: strings.deadlineValue(deadline),
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: deadlineLabelSize * 1.25,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                  ),
                 ),
               ),
             ),
