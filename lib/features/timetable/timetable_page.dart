@@ -20,6 +20,7 @@ import 'timetable_color.dart';
 import 'timetable_export.dart';
 import 'timetable_grid.dart';
 import 'timetable_side_pane.dart';
+import 'upcoming_course.dart';
 
 const teachingPortalUrl =
     'https://course.pku.edu.cn/webapps/portal/execute/tabs/tabAction?tab_tab_group_id=_1_1';
@@ -70,6 +71,7 @@ class _TimetablePageState extends State<TimetablePage>
   int? _focusedScheduleId;
   Set<String> _focusedCourseSourceIds = const {};
   Timer? _focusTimer;
+  Timer? _deadlineTimer;
   Timetable? _appearanceTimetable;
 
   @override
@@ -78,6 +80,9 @@ class _TimetablePageState extends State<TimetablePage>
     WidgetsBinding.instance.addObserver(this);
     _appearanceTimetable = widget.controller.timetable;
     widget.controller.addListener(_syncCourseAppearances);
+    _deadlineTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -92,6 +97,7 @@ class _TimetablePageState extends State<TimetablePage>
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.removeListener(_syncCourseAppearances);
     _focusTimer?.cancel();
+    _deadlineTimer?.cancel();
     super.dispose();
   }
 
@@ -474,7 +480,9 @@ class _TimetablePageState extends State<TimetablePage>
                       controller: widget.calendar,
                       now: controller.clock(),
                       timetable: timetable,
+                      calendar: controller.week.calendar,
                       onSelected: _showScheduleDetails,
+                      onClassSelected: _selectUpcomingClass,
                     )
                   : CourseEditorDialog(
                       key: ValueKey(

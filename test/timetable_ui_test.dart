@@ -429,7 +429,7 @@ void main() {
       expect(find.text('Upcoming schedule'), findsOneWidget);
       expect(find.text('Homework deadline'), findsOneWidget);
       expect(find.text('All-day deadline'), findsOneWidget);
-      expect(find.textContaining('2026-09-07'), findsNWidgets(2));
+      expect(find.textContaining('2026-09-07'), findsNWidgets(3));
       expect(find.text('09:00'), findsOneWidget);
       expect(find.text('All day'), findsNothing);
       expect(
@@ -438,9 +438,38 @@ void main() {
               find.byKey(const ValueKey('upcoming-schedule-color-1')),
             )
             .color,
-        scheduleColor(calendar.schedules.first),
+        scheduleColor(
+          tester.element(
+            find.byKey(const ValueKey('upcoming-schedule-color-1')),
+          ),
+          calendar.schedules.first,
+        ),
       );
-      expect(find.text('Algebra'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('upcoming-related-class-1')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('upcoming-schedule-1')),
+          matching: find.textContaining('Algebra'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('upcoming-schedule-1')),
+          matching: find.textContaining('DDL:'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('upcoming-related-class-1')),
+          matching: find.textContaining('DDL:'),
+        ),
+        findsOneWidget,
+      );
       final relatedMouse = await tester.createGesture(
         kind: PointerDeviceKind.mouse,
       );
@@ -559,6 +588,20 @@ void main() {
       expect(find.text("Tomorrow's classes"), findsOneWidget);
       expect(find.text('Algebra'), findsOneWidget);
       expect(find.text('Chemistry'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('upcoming-class-first')),
+          matching: find.textContaining('DDL:'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('tomorrow-schedule-1')),
+          matching: find.textContaining('DDL:'),
+        ),
+        findsOneWidget,
+      );
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('upcoming-class-pane')),

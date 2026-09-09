@@ -299,7 +299,7 @@ class _CalendarDay extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final schedule = schedules[index];
                       final starts = _beijingDateTime(schedule.startsAt);
-                      final background = scheduleColor(schedule);
+                      final background = scheduleColor(context, schedule);
                       final foreground = scheduleForeground(background);
                       final focused = schedule.id == focusedScheduleId;
                       return Padding(
@@ -373,7 +373,9 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
     text: widget.schedule.note,
   );
   late CalendarSchedule _schedule = widget.schedule;
-  late Color _color = Color(widget.schedule.colorValue);
+  late Color? _color = widget.schedule.colorValue == null
+      ? null
+      : Color(widget.schedule.colorValue!);
   late DateTime _date = _beijingDate(widget.schedule.startsAt);
   late TimeOfDay _time = TimeOfDay.fromDateTime(
     _beijingDateTime(widget.schedule.startsAt),
@@ -413,8 +415,8 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
       _date.year,
       _date.month,
       _date.day,
-      _schedule.allDay ? 0 : _time.hour,
-      _schedule.allDay ? 0 : _time.minute,
+      _schedule.allDay ? 23 : _time.hour,
+      _schedule.allDay ? 59 : _time.minute,
     ).subtract(const Duration(hours: 8));
     setState(() => _schedule = _schedule.copyWith(startsAt: startsAt));
   }
@@ -434,7 +436,7 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
   Future<void> _chooseColor() async {
     final color = await widget.colorPicker(
       context,
-      color: _color,
+      color: _color ?? Theme.of(context).colorScheme.primary,
       title: AppStrings.of(context).text(AppText.scheduleColor),
     );
     if (mounted) setState(() => _color = color);
@@ -451,7 +453,7 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
       _schedule.copyWith(
         title: title,
         note: _note.text.trim(),
-        colorValue: _color.toARGB32(),
+        colorValue: _color?.toARGB32(),
       ),
     );
   }
@@ -564,11 +566,26 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
                 const SizedBox(height: 16),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    key: const ValueKey('schedule-color'),
-                    onPressed: _chooseColor,
-                    icon: Icon(Icons.circle, color: _color),
-                    label: Text(strings.text(AppText.scheduleColor)),
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        key: const ValueKey('schedule-color'),
+                        onPressed: _chooseColor,
+                        icon: Icon(
+                          Icons.circle,
+                          color:
+                              _color ?? Theme.of(context).colorScheme.primary,
+                        ),
+                        label: Text(strings.text(AppText.scheduleColor)),
+                      ),
+                      if (_color != null)
+                        TextButton(
+                          key: const ValueKey('schedule-color-unfix'),
+                          onPressed: () => setState(() => _color = null),
+                          child: Text(strings.text(AppText.useThemeColor)),
+                        ),
+                    ],
                   ),
                 ),
               ],

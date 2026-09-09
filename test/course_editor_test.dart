@@ -59,8 +59,16 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('course-custom-color')));
     await tester.pump();
     expect(find.text('Custom color'), findsOneWidget);
-    await tester.ensureVisible(find.byKey(const ValueKey('course-color-lock')));
-    await tester.tap(find.byKey(const ValueKey('course-color-lock')));
+    expect(result!.appearance.color, const Color(0xff135724));
+    expect(result!.appearance.lockColor, isTrue);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('course-color-unfix')),
+    );
+    await tester.tap(find.byKey(const ValueKey('course-color-unfix')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('course-color-unfix')), findsNothing);
+    expect(result!.appearance.color, isNull);
+    expect(result!.appearance.lockColor, isFalse);
     await tester.drag(find.byType(ListView), const Offset(0, -300));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('course-important-outline')));
@@ -83,7 +91,7 @@ void main() {
       'Short',
       'Short',
     ]);
-    expect(result!.appearance.color, const Color(0xff135724));
+    expect(result!.appearance.color, isNull);
     expect(result!.appearance.lockColor, isFalse);
     expect(result!.appearance.outlined, isTrue);
     expect(result!.appearance.outlineColor, const Color(0xff246813));

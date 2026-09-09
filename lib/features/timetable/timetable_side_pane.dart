@@ -7,74 +7,7 @@ import '../../l10n/app_strings.dart';
 import '../calendar/schedule_color.dart';
 import '../calendar/upcoming_schedules_pane.dart';
 import 'timetable_style.dart';
-
-final class UpcomingCourse {
-  const UpcomingCourse({required this.group, required this.startsAt});
-
-  final CourseGroup group;
-  final DateTime startsAt;
-}
-
-List<UpcomingCourse> upcomingCourses(
-  Timetable timetable,
-  DateTime now, {
-  SemesterCalendar? calendar,
-}) {
-  final result = <UpcomingCourse>[];
-  final beijingNow = now.toUtc().add(const Duration(hours: 8));
-  for (var day = 1; day <= 5; day++) {
-    for (final group in timetable.groupsForDay(day)) {
-      final start = timetableClassStarts[group.firstPeriod];
-      if (start == null) continue;
-      final parts = start.split(':').map(int.parse).toList(growable: false);
-      for (var offset = 0; offset <= 14; offset++) {
-        final beijingDate = DateTime.utc(
-          beijingNow.year,
-          beijingNow.month,
-          beijingNow.day + offset,
-        );
-        if (beijingDate.weekday != group.weekday) continue;
-        final startsAt = DateTime.utc(
-          beijingDate.year,
-          beijingDate.month,
-          beijingDate.day,
-          parts[0],
-          parts[1],
-        ).subtract(const Duration(hours: 8));
-        if (!startsAt.isAfter(now)) continue;
-        final semesterWeek = calendar?.weekAt(startsAt);
-        if (calendar != null && semesterWeek == null) continue;
-        final parity = semesterWeek?.parity;
-        if (!group.primary.frequency.isCurrent(parity)) continue;
-        result.add(UpcomingCourse(group: group, startsAt: startsAt));
-        break;
-      }
-    }
-  }
-  result.sort((a, b) => a.startsAt.compareTo(b.startsAt));
-  return List.unmodifiable(result);
-}
-
-List<UpcomingCourse> tomorrowCourses(
-  Timetable timetable,
-  DateTime now, {
-  SemesterCalendar? calendar,
-}) {
-  final beijingNow = now.toUtc().add(const Duration(hours: 8));
-  final tomorrow = DateTime.utc(
-    beijingNow.year,
-    beijingNow.month,
-    beijingNow.day + 1,
-  );
-  return List.unmodifiable(
-    upcomingCourses(timetable, now, calendar: calendar).where((course) {
-      final date = course.startsAt.toUtc().add(const Duration(hours: 8));
-      return date.year == tomorrow.year &&
-          date.month == tomorrow.month &&
-          date.day == tomorrow.day;
-    }),
-  );
-}
+import 'upcoming_course.dart';
 
 class UpcomingClassPane extends StatelessWidget {
   const UpcomingClassPane({
@@ -156,8 +89,9 @@ class UpcomingClassPane extends StatelessWidget {
                           ),
                           subtitle: Text(
                             '${timetableClassStarts[item.group.firstPeriod]}'
-                            '${item.group.primary.room.isEmpty ? '' : ' · ${item.group.primary.room}'}',
-                            maxLines: 1,
+                            '${item.group.primary.room.isEmpty ? '' : ' · ${item.group.primary.room}'}\n'
+                            '${strings.deadline(item.startsAt.difference(now))}',
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontSize: 14),
                           ),
@@ -165,6 +99,7 @@ class UpcomingClassPane extends StatelessWidget {
                         for (final schedule in schedulesFor(item))
                           _ScheduleEntry(
                             schedule: schedule,
+                            now: now,
                             onTap: () => onScheduleSelected(schedule),
                           ),
                         const Divider(height: 1),
@@ -181,6 +116,7 @@ class UpcomingClassPane extends StatelessWidget {
                         for (final schedule in unrelated)
                           _ScheduleEntry(
                             schedule: schedule,
+                            now: now,
                             onTap: () => onScheduleSelected(schedule),
                           ),
                       ],
@@ -194,14 +130,19 @@ class UpcomingClassPane extends StatelessWidget {
 }
 
 class _ScheduleEntry extends StatelessWidget {
-  const _ScheduleEntry({required this.schedule, required this.onTap});
+  const _ScheduleEntry({
+    required this.schedule,
+    required this.now,
+    required this.onTap,
+  });
 
   final CalendarSchedule schedule;
+  final DateTime now;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final background = scheduleColor(schedule);
+    final background = scheduleColor(context, schedule);
     final foreground = scheduleForeground(background);
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 8, 8),
@@ -219,10 +160,9 @@ class _ScheduleEntry extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           subtitle: Text(
-            schedule.allDay
-                ? scheduleDateLabel(schedule)
-                : '${scheduleDateLabel(schedule)} ${scheduleTimeLabel(schedule)}',
-            maxLines: 1,
+            '${schedule.allDay ? scheduleDateLabel(schedule) : '${scheduleDateLabel(schedule)} ${scheduleTimeLabel(schedule)}'}\n'
+            '${AppStrings.of(context).deadline(scheduleDeadline(schedule).difference(now))}',
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
         ),

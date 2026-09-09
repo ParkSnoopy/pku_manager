@@ -93,7 +93,8 @@ enum AppText {
   classColor,
   rolledColor,
   manualColor,
-  keepColorWhenRolling,
+  useAutomaticColor,
+  useThemeColor,
   importantOutline,
   outlineColor,
   outlineThickness,
@@ -143,6 +144,22 @@ class AppStrings {
     'zh' => first == last ? '第$first节' : '第$first–$last节',
     _ => first == last ? '$first교시' : '$first–$last교시',
   };
+
+  String deadline(Duration duration) {
+    final minutes = duration.isNegative
+        ? 0
+        : (duration.inSeconds + 59) ~/ Duration.secondsPerMinute;
+    final days = minutes ~/ Duration.minutesPerDay;
+    final hours =
+        minutes.remainder(Duration.minutesPerDay) ~/ Duration.minutesPerHour;
+    final remainingMinutes = minutes.remainder(Duration.minutesPerHour);
+    final value = days > 0
+        ? '${days}d ${hours}h'
+        : hours > 0
+        ? '${hours}h ${remainingMinutes}m'
+        : '${remainingMinutes}m';
+    return 'DDL: $value';
+  }
 
   String monthLabel(DateTime month) => switch (locale.languageCode) {
     'en' => '${_months[month.month - 1]} ${month.year}',
@@ -257,7 +274,8 @@ class AppStrings {
       AppText.classColor: '강의 색상',
       AppText.rolledColor: '자동 색상',
       AppText.manualColor: '사용자 지정 색상',
-      AppText.keepColorWhenRolling: '색상 조합을 변경해도 이 색상 유지',
+      AppText.useAutomaticColor: '자동 색상 사용',
+      AppText.useThemeColor: '테마 색상 사용',
       AppText.importantOutline: '중요 강의 테두리',
       AppText.outlineColor: '테두리 색상',
       AppText.outlineThickness: '테두리 두께',
@@ -354,7 +372,8 @@ class AppStrings {
       AppText.classColor: 'Class color',
       AppText.rolledColor: 'Rolled color',
       AppText.manualColor: 'Custom color',
-      AppText.keepColorWhenRolling: 'Keep this color when rolling',
+      AppText.useAutomaticColor: 'Use automatic color',
+      AppText.useThemeColor: 'Use theme color',
       AppText.importantOutline: 'Important class outline',
       AppText.outlineColor: 'Outline color',
       AppText.outlineThickness: 'Outline thickness',
@@ -450,7 +469,8 @@ class AppStrings {
       AppText.classColor: '课程颜色',
       AppText.rolledColor: '自动配色',
       AppText.manualColor: '自定义颜色',
-      AppText.keepColorWhenRolling: '更换配色时保留此颜色',
+      AppText.useAutomaticColor: '使用自动配色',
+      AppText.useThemeColor: '使用主题色',
       AppText.importantOutline: '重要课程边框',
       AppText.outlineColor: '边框颜色',
       AppText.outlineThickness: '边框粗细',

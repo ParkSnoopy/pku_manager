@@ -16,4 +16,15 @@ void main() {
       }
     }
   });
+
+  test('time remaining uses the unified DDL expression', () {
+    const duration = Duration(days: 1, hours: 2, minutes: 3);
+    for (final language in AppLanguage.values) {
+      expect(AppStrings(language.locale).deadline(duration), 'DDL: 1d 2h');
+    }
+    expect(
+      AppStrings(AppLanguage.en.locale).deadline(const Duration(minutes: 43)),
+      'DDL: 43m',
+    );
+  });
 }

@@ -36,11 +36,14 @@ void main() {
       earlier.id,
       later.id,
     ]);
+    expect(repository.load().first.colorValue, isNull);
+    expect(earlier.startsAt, DateTime.utc(2026, 9, 7, 15, 59));
     expect(repository.load().last.title, 'Homework deadline');
     expect(repository.load().last.allDay, isTrue);
     expect(repository.load().last.relatedClassSourceId, 'source-class');
     expect(repository.load().last.note, 'Bring notes');
     expect(repository.load().last.colorValue, 0xff123456);
+    expect(later.startsAt, DateTime.utc(2026, 9, 8, 15, 59));
 
     repository.update(
       later.copyWith(

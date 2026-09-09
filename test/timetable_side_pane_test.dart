@@ -3,7 +3,7 @@ import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/semester.dart';
 import 'package:pku_manager/domain/timetable.dart';
 
-import 'package:pku_manager/features/timetable/timetable_side_pane.dart';
+import 'package:pku_manager/features/timetable/upcoming_course.dart';
 
 void main() {
   test('tomorrow list includes every grouped class in start order', () {

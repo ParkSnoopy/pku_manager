@@ -86,7 +86,7 @@ CREATE TABLE calendar_schedules(
  all_day INTEGER NOT NULL CHECK(all_day IN (0, 1)),
  related_class_source_id TEXT,
  note TEXT NOT NULL,
- color INTEGER NOT NULL);
+ color INTEGER);
 ''');
       });
     }

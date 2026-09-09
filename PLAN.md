@@ -6,7 +6,7 @@ Build an offline-first school life management application for Android, iOS, Linu
 
 ## Current Context
 
-- The Flutter application is at version `0.0.10`; all `0.0.x` builds keep schema version 0 without compatibility code.
+- The Flutter application is at version `0.0.11`; all `0.0.x` builds keep schema version 0 without compatibility code.
 - Android, iOS, Linux, macOS, and Windows Flutter runners exist. Web is unsupported.
 - Domain, SQLite, workbook parsing, responsive timetable, editing, appearance, export, and native packaging layers are implemented.
 - The deployed Week Parity application currently reads `https://parksnoopy-undergraduate.github.io/week/config.toml`.

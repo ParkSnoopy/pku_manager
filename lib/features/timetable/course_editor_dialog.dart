@@ -84,7 +84,6 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
   late WeekFrequency _frequency = _primary?.frequency ?? WeekFrequency.every;
   late Color _color = widget.courseAppearance.color ?? widget.suggestedColor;
   late bool _customColor = widget.courseAppearance.color != null;
-  late bool _lockColor = widget.courseAppearance.lockColor;
   late bool _outlined = widget.courseAppearance.outlined;
   late Color _outlineColor = widget.courseAppearance.outlineColor;
   late double _outlineWidth = widget.courseAppearance.outlineWidth;
@@ -172,15 +171,14 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
                     ),
                   ),
                   if (_customColor)
-                    SwitchListTile(
-                      key: const ValueKey('course-color-lock'),
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(strings.text(AppText.keepColorWhenRolling)),
-                      value: _lockColor,
-                      onChanged: (value) {
-                        setState(() => _lockColor = value);
-                        _publish();
-                      },
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        key: const ValueKey('course-color-unfix'),
+                        onPressed: _useAutomaticColor,
+                        icon: const Icon(Icons.restart_alt),
+                        label: Text(strings.text(AppText.useAutomaticColor)),
+                      ),
                     ),
                   SwitchListTile(
                     key: const ValueKey('course-important-outline'),
@@ -401,7 +399,7 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
         updates,
         appearance: CourseAppearance(
           color: _customColor ? _color : null,
-          lockColor: _lockColor,
+          lockColor: _customColor,
           outlined: _outlined,
           outlineColor: _outlineColor,
           outlineWidth: _outlineWidth,
@@ -421,7 +419,14 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
     setState(() {
       _color = color;
       _customColor = true;
-      _lockColor = true;
+    });
+    _publish();
+  }
+
+  void _useAutomaticColor() {
+    setState(() {
+      _color = widget.suggestedColor;
+      _customColor = false;
     });
     _publish();
   }

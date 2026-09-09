@@ -74,6 +74,7 @@ void main() {
     );
     expect(find.byKey(const ValueKey('save-schedule-editor')), findsOneWidget);
     expect(find.byKey(const ValueKey('schedule-color')), findsOneWidget);
+    expect(find.byKey(const ValueKey('schedule-color-unfix')), findsNothing);
     expect(find.byKey(const ValueKey('schedule-note')), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const ValueKey('schedule-editor'))).width,
@@ -99,6 +100,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('schedule-color')));
     await tester.pump();
+    expect(find.byKey(const ValueKey('schedule-color-unfix')), findsOneWidget);
     expect(controller.schedules, isEmpty);
     await tester.tap(find.byKey(const ValueKey('save-schedule-editor')));
     await tester.pumpAndSettle();
@@ -125,8 +127,25 @@ void main() {
       find.byKey(const ValueKey('schedule-title')),
       'Meeting info',
     );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('schedule-color-unfix')),
+    );
+    await tester.tap(find.byKey(const ValueKey('schedule-color-unfix')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('schedule-color-unfix')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('save-schedule-editor')));
     await tester.pumpAndSettle();
     expect(controller.schedules.single.title, 'Meeting info');
+    expect(controller.schedules.single.colorValue, isNull);
+    expect(
+      tester
+          .widget<Material>(
+            find.byKey(const ValueKey('calendar-schedule-color-1')),
+          )
+          .color,
+      Theme.of(
+        tester.element(find.byKey(const ValueKey('calendar-schedule-color-1'))),
+      ).colorScheme.primary,
+    );
   });
 }

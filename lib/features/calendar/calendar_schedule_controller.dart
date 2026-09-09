@@ -23,7 +23,7 @@ final class CalendarScheduleController extends ChangeNotifier {
     bool allDay = true,
     String? relatedClassSourceId,
     String note = '',
-    int colorValue = 0xffffd6a5,
+    int? colorValue,
   }) {
     final schedule = store.create(
       title: title,
@@ -67,7 +67,7 @@ final class MemoryCalendarScheduleStore implements CalendarScheduleStore {
     bool allDay = true,
     String? relatedClassSourceId,
     String note = '',
-    int colorValue = 0xffffd6a5,
+    int? colorValue,
   }) {
     final normalized = title.trim();
     if (normalized.isEmpty) {
@@ -76,7 +76,7 @@ final class MemoryCalendarScheduleStore implements CalendarScheduleStore {
     final schedule = CalendarSchedule(
       id: _nextId++,
       title: normalized,
-      startsAt: startsAt.toUtc(),
+      startsAt: normalizedScheduleStart(startsAt, allDay),
       allDay: allDay,
       relatedClassSourceId: relatedClassSourceId,
       note: note,
@@ -98,7 +98,7 @@ final class MemoryCalendarScheduleStore implements CalendarScheduleStore {
     }
     _schedules[index] = schedule.copyWith(
       title: normalized,
-      startsAt: schedule.startsAt.toUtc(),
+      startsAt: normalizedScheduleStart(schedule.startsAt, schedule.allDay),
     );
   }
 

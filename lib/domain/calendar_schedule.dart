@@ -6,7 +6,7 @@ final class CalendarSchedule {
     this.allDay = true,
     this.relatedClassSourceId,
     this.note = '',
-    this.colorValue = 0xffffd6a5,
+    this.colorValue,
   });
 
   final int id;
@@ -15,7 +15,7 @@ final class CalendarSchedule {
   final bool allDay;
   final String? relatedClassSourceId;
   final String note;
-  final int colorValue;
+  final int? colorValue;
 
   CalendarSchedule copyWith({
     String? title,
@@ -23,7 +23,7 @@ final class CalendarSchedule {
     bool? allDay,
     Object? relatedClassSourceId = _unchanged,
     String? note,
-    int? colorValue,
+    Object? colorValue = _unchanged,
   }) => CalendarSchedule(
     id: id,
     title: title ?? this.title,
@@ -33,11 +33,26 @@ final class CalendarSchedule {
         ? this.relatedClassSourceId
         : relatedClassSourceId as String?,
     note: note ?? this.note,
-    colorValue: colorValue ?? this.colorValue,
+    colorValue: identical(colorValue, _unchanged)
+        ? this.colorValue
+        : colorValue as int?,
   );
 }
 
 const _unchanged = Object();
+
+DateTime normalizedScheduleStart(DateTime startsAt, bool allDay) {
+  final value = startsAt.toUtc();
+  if (!allDay) return value;
+  final beijing = value.add(const Duration(hours: 8));
+  return DateTime.utc(
+    beijing.year,
+    beijing.month,
+    beijing.day,
+    23,
+    59,
+  ).subtract(const Duration(hours: 8));
+}
 
 abstract interface class CalendarScheduleStore {
   List<CalendarSchedule> load();
@@ -48,7 +63,7 @@ abstract interface class CalendarScheduleStore {
     bool allDay = true,
     String? relatedClassSourceId,
     String note = '',
-    int colorValue = 0xffffd6a5,
+    int? colorValue,
   });
 
   void update(CalendarSchedule schedule);

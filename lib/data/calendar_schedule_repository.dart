@@ -24,10 +24,10 @@ FROM calendar_schedules ORDER BY starts_at, id''',
     bool allDay = true,
     String? relatedClassSourceId,
     String note = '',
-    int colorValue = 0xffffd6a5,
+    int? colorValue,
   }) {
     final normalizedTitle = _validTitle(title);
-    final normalizedStart = startsAt.toUtc();
+    final normalizedStart = normalizedScheduleStart(startsAt, allDay);
     store.database.execute(
       '''INSERT INTO calendar_schedules(
 title, starts_at, all_day, related_class_source_id, note, color)
@@ -60,7 +60,10 @@ VALUES (?, ?, ?, ?, ?, ?)''',
 related_class_source_id = ?, note = ?, color = ? WHERE id = ?''',
       [
         normalizedTitle,
-        schedule.startsAt.toUtc().millisecondsSinceEpoch,
+        normalizedScheduleStart(
+          schedule.startsAt,
+          schedule.allDay,
+        ).millisecondsSinceEpoch,
         schedule.allDay ? 1 : 0,
         schedule.relatedClassSourceId,
         schedule.note,
@@ -91,7 +94,7 @@ related_class_source_id = ?, note = ?, color = ? WHERE id = ?''',
     allDay: (row['all_day'] as int) != 0,
     relatedClassSourceId: row['related_class_source_id'] as String?,
     note: row['note'] as String,
-    colorValue: row['color'] as int,
+    colorValue: row['color'] as int?,
   );
 
   String _validTitle(String value) {
