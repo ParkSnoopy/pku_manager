@@ -49,6 +49,7 @@ class TimetableGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final geometry = TimetableGeometry(timetable.periodCount);
+    final effectiveIndexColor = _themedTimetableColor(context, indexColor);
     return LayoutBuilder(
       builder: (context, constraints) {
         if (days.length == 1) {
@@ -64,7 +65,7 @@ class TimetableGrid extends StatelessWidget {
                 paletteIndex: paletteIndex,
                 fontWeight: fontWeight,
                 focusedCourseSourceIds: focusedCourseSourceIds,
-                indexColor: indexColor,
+                indexColor: effectiveIndexColor,
                 autoTextColor: autoTextColor,
                 schedules: schedules,
                 courseAppearances: courseAppearances,
@@ -90,7 +91,7 @@ class TimetableGrid extends StatelessWidget {
               paletteIndex: paletteIndex,
               fontWeight: fontWeight,
               focusedCourseSourceIds: focusedCourseSourceIds,
-              indexColor: indexColor,
+              indexColor: effectiveIndexColor,
               autoTextColor: autoTextColor,
               schedules: schedules,
               courseAppearances: courseAppearances,
@@ -221,59 +222,63 @@ class _Header extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const ValueKey('timetable-weekday-row'),
-    height: timetableHeaderHeight,
-    decoration: BoxDecoration(
-      color: color,
-      border: const Border(bottom: BorderSide(color: timetableDivider)),
-    ),
-    child: Row(
-      children: [
-        const SizedBox(width: timetableIndexWidth),
-        for (final day in days)
-          SizedBox(
-            width: courseWidth,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Text(
-                  AppStrings.of(context).weekday(day),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: timetableMonoFont,
-                    fontFamilyFallback: timetableFontFallback,
-                    fontSize: 20,
-                    fontWeight: fontWeight,
-                    color: timetableInk,
-                    height: 1,
-                  ),
-                ),
-                if (days.length == 1) ...[
-                  Positioned(
-                    left: 0,
-                    child: IconButton(
-                      onPressed: previousDay,
-                      tooltip: AppStrings.of(context).text(AppText.previousDay),
-                      icon: const Icon(Icons.chevron_left),
+  Widget build(BuildContext context) {
+    final foreground = _foregroundFor(color);
+    return Container(
+      key: const ValueKey('timetable-weekday-row'),
+      height: timetableHeaderHeight,
+      decoration: BoxDecoration(
+        color: color,
+        border: const Border(bottom: BorderSide(color: timetableDivider)),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: timetableIndexWidth),
+          for (final day in days)
+            SizedBox(
+              width: courseWidth,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Text(
+                    AppStrings.of(context).weekday(day),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: timetableMonoFont,
+                      fontFamilyFallback: timetableFontFallback,
+                      fontSize: 20,
+                      fontWeight: fontWeight,
+                      color: foreground,
+                      height: 1,
                     ),
                   ),
-                  Positioned(
-                    right: 0,
-                    child: IconButton(
-                      onPressed: nextDay,
-                      tooltip: AppStrings.of(context).text(AppText.nextDay),
-                      icon: const Icon(Icons.chevron_right),
+                  if (days.length == 1) ...[
+                    Positioned(
+                      left: 0,
+                      child: IconButton(
+                        onPressed: previousDay,
+                        tooltip: AppStrings.of(context)
+                            .text(AppText.previousDay),
+                        icon: Icon(Icons.chevron_left, color: foreground),
+                      ),
                     ),
-                  ),
+                    Positioned(
+                      right: 0,
+                      child: IconButton(
+                        onPressed: nextDay,
+                        tooltip: AppStrings.of(context).text(AppText.nextDay),
+                        icon: Icon(Icons.chevron_right, color: foreground),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _PeriodRow extends StatelessWidget {
@@ -311,7 +316,11 @@ class _PeriodRow extends StatelessWidget {
           child: ColoredBox(
             key: ValueKey('timetable-index-$period'),
             color: indexColor,
-            child: _TimeLabel(period: period, fontWeight: fontWeight),
+            child: _TimeLabel(
+              period: period,
+              fontWeight: fontWeight,
+              color: _foregroundFor(indexColor),
+            ),
           ),
         ),
         for (final day in days)
@@ -325,10 +334,15 @@ class _PeriodRow extends StatelessWidget {
 }
 
 class _TimeLabel extends StatelessWidget {
-  const _TimeLabel({required this.period, required this.fontWeight});
+  const _TimeLabel({
+    required this.period,
+    required this.fontWeight,
+    required this.color,
+  });
 
   final int period;
   final FontWeight fontWeight;
+  final Color color;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -338,7 +352,7 @@ class _TimeLabel extends StatelessWidget {
         fontFamily: timetablePeriodFont,
         fontSize: 30,
         fontWeight: fontWeight,
-        color: timetableInk,
+        color: color,
         height: 1,
       ),
     ),
@@ -571,14 +585,18 @@ class _MeetingTileState extends State<_MeetingTile> {
   @override
   Widget build(BuildContext context) {
     final meeting = widget.meeting;
-    final background = timetableCourseColor(
-      meeting,
-      widget.paletteSeed,
-      appearance: widget.appearance,
-      paletteIndex: widget.paletteIndex,
+    final background = _themedTimetableColor(
+      context,
+      timetableCourseColor(
+        meeting,
+        widget.paletteSeed,
+        appearance: widget.appearance,
+        paletteIndex: widget.paletteIndex,
+      ),
     );
     final foreground =
-        widget.autoTextColor && background.computeLuminance() <= .5
+        Theme.of(context).brightness == Brightness.dark ||
+            widget.autoTextColor && background.computeLuminance() <= .5
         ? Colors.white
         : Colors.black;
     final outline = widget.appearance?.outlined ?? false
@@ -614,69 +632,77 @@ class _MeetingTileState extends State<_MeetingTile> {
                         _removeDetails();
                         widget.onEdit();
                       },
-                      child: Padding(
-                        key: ValueKey('meeting-content-${meeting.sourceId}'),
-                        padding: const EdgeInsets.all(
-                          timetableCourseContentPadding,
-                        ),
-                        child: DefaultTextStyle(
-                          key: ValueKey(
-                            'meeting-text-style-${meeting.sourceId}',
-                          ),
-                          style: TextStyle(
-                            color: foreground,
-                            fontFamily: timetableMonoFont,
-                            fontFamilyFallback: timetableFontFallback,
-                          ),
-                          child: SingleChildScrollView(
-                            physics: const NeverScrollableScrollPhysics(),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  meeting.displayName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: timetableCourseNameFontSize,
-                                    fontWeight: widget.fontWeight,
-                                    height: 1.5,
-                                    letterSpacing: -.2,
+                      child: widget.isCurrent
+                          ? Padding(
+                              key: ValueKey(
+                                'meeting-content-${meeting.sourceId}',
+                              ),
+                              padding: const EdgeInsets.all(
+                                timetableCourseContentPadding,
+                              ),
+                              child: DefaultTextStyle(
+                                key: ValueKey(
+                                  'meeting-text-style-${meeting.sourceId}',
+                                ),
+                                style: TextStyle(
+                                  color: foreground,
+                                  fontFamily: timetableMonoFont,
+                                  fontFamilyFallback: timetableFontFallback,
+                                ),
+                                child: SingleChildScrollView(
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        meeting.displayName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: timetableCourseNameFontSize,
+                                          fontWeight: widget.fontWeight,
+                                          height: 1.5,
+                                          letterSpacing: -.2,
+                                        ),
+                                      ),
+                                      if (meeting.room.isNotEmpty) ...[
+                                        Text(
+                                          '  ${meeting.room}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize:
+                                                timetableClassroomFontSize,
+                                            fontWeight: widget.fontWeight,
+                                            height: 1.5,
+                                          ),
+                                        ),
+                                      ],
+                                      if (meeting.note.isNotEmpty) ...[
+                                        const SizedBox(
+                                          height:
+                                              timetableClassroomFontSize * 1.5,
+                                        ),
+                                        Text(
+                                          '${AppStrings.of(context).text(AppText.notes)}: '
+                                          '${meeting.note}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize:
+                                                timetableCourseNoteFontSize,
+                                            fontWeight: widget.fontWeight,
+                                            height: 1.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
-                                if (meeting.room.isNotEmpty) ...[
-                                  Text(
-                                    '  ${meeting.room}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: timetableClassroomFontSize,
-                                      fontWeight: widget.fontWeight,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ],
-                                if (meeting.note.isNotEmpty) ...[
-                                  const SizedBox(
-                                    height: timetableClassroomFontSize * 1.5,
-                                  ),
-                                  Text(
-                                    '${AppStrings.of(context).text(AppText.notes)}: '
-                                    '${meeting.note}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: timetableCourseNoteFontSize,
-                                      fontWeight: widget.fontWeight,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                              ),
+                            )
+                          : null,
                     ),
                     if (widget.appearance?.color != null)
                       Positioned(
@@ -710,6 +736,18 @@ class _MeetingTileState extends State<_MeetingTile> {
     );
   }
 }
+
+Color _themedTimetableColor(BuildContext context, Color color) {
+  final theme = Theme.of(context);
+  if (theme.brightness != Brightness.dark) return color;
+  return Color.alphaBlend(
+    theme.colorScheme.surface.withValues(alpha: .65),
+    color,
+  );
+}
+
+Color _foregroundFor(Color background) =>
+    background.computeLuminance() > .5 ? Colors.black : Colors.white;
 
 class _Details extends StatelessWidget {
   const _Details({

@@ -41,6 +41,13 @@ class SettingsPage extends StatelessWidget {
             AppStrings.of(context).text(AppText.theme),
             style: Theme.of(context).textTheme.titleLarge,
           ),
+          SwitchListTile(
+            key: const ValueKey('dark-mode'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(AppStrings.of(context).text(AppText.darkMode)),
+            value: controller.darkMode,
+            onChanged: controller.setDarkMode,
+          ),
           const SizedBox(height: 16),
           Text(AppStrings.of(context).text(AppText.accentColor)),
           const SizedBox(height: 8),

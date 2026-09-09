@@ -171,13 +171,42 @@ void main() {
         Theme.of(appTextContext).textTheme.bodyMedium?.fontWeight,
         FontWeight.w400,
       );
+      expect(Theme.of(appTextContext).brightness, Brightness.light);
+      final lightCourseColor = tester
+          .widget<Material>(find.byKey(const ValueKey('meeting-color-first')))
+          .color!;
+      final lightIndexColor = tester
+          .widget<ColoredBox>(find.byKey(const ValueKey('timetable-index-1')))
+          .color;
+      appearance.setDarkMode(true);
+      await tester.pumpAndSettle();
+      expect(
+        Theme.of(tester.element(find.text('Calendar'))).brightness,
+        Brightness.dark,
+      );
+      final darkCourseColor = tester
+          .widget<Material>(find.byKey(const ValueKey('meeting-color-first')))
+          .color!;
+      final darkIndexColor = tester
+          .widget<ColoredBox>(find.byKey(const ValueKey('timetable-index-1')))
+          .color;
+      expect(
+        darkCourseColor.computeLuminance(),
+        lessThan(lightCourseColor.computeLuminance()),
+      );
+      expect(
+        darkIndexColor.computeLuminance(),
+        lessThan(lightIndexColor.computeLuminance()),
+      );
+      appearance.setDarkMode(false);
+      await tester.pumpAndSettle();
       expect(find.text('Calendar'), findsOneWidget);
       expect(find.text('Show all'), findsNothing);
       expect(find.text('Refresh'), findsNothing);
       expect(find.text('Current'), findsNothing);
       expect(find.text('Algebra'), findsOneWidget);
       expect(find.textContaining('continued'), findsNothing);
-      expect(find.text('Physics'), findsOneWidget);
+      expect(find.text('Physics'), findsNothing);
       expect(
         (tester
                     .widget<DecoratedBox>(
@@ -232,6 +261,7 @@ void main() {
         ),
       );
       expect(opacity.opacity, .5);
+      expect(find.byKey(const ValueKey('meeting-content-even')), findsNothing);
       expect(find.byTooltip('Roll colors'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
       final firstColor = tester

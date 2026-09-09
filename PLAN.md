@@ -6,7 +6,7 @@ Build an offline-first school life management application for Android, iOS, Linu
 
 ## Current Context
 
-- The Flutter application is at version `0.0.9`; all `0.0.x` builds keep schema version 0 without compatibility code.
+- The Flutter application is at version `0.0.10`; all `0.0.x` builds keep schema version 0 without compatibility code.
 - Android, iOS, Linux, macOS, and Windows Flutter runners exist. Web is unsupported.
 - Domain, SQLite, workbook parsing, responsive timetable, editing, appearance, export, and native packaging layers are implemented.
 - The deployed Week Parity application currently reads `https://parksnoopy-undergraduate.github.io/week/config.toml`.
@@ -73,7 +73,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - `lib/features/timetable/week_status.dart`: semester week, parity, freshness, and refresh status.
 - `lib/features/schedule_import/schedule_import_action.dart`: import affordance and user-facing validation failures.
 - `lib/features/schedule_import/schedule_import_review.dart`: request only fields that failed parsing, use direct room choices for ambiguous exercise classes, or reject the candidate without mutation.
-- `lib/features/settings/appearance_controller.dart` and `settings_page.dart`: persistent accent, language, and repeatable timetable color rolls.
+- `lib/features/settings/appearance_controller.dart` and `settings_page.dart`: persistent light/dark mode, accent, language, and repeatable timetable color rolls.
 - `lib/features/timetable/course_editor_dialog.dart`: add weekday meetings and edit imported records through separate overlays.
 - `lib/features/timetable/timetable_export.dart`: complete Monday–Friday PNG and XLSX export.
 
@@ -176,7 +176,7 @@ Boundary interfaces are owned by their consumers. Features import domain contrac
 - Model incomplete import review separately from failure and ready state.
 - Serialize imports so concurrent selections cannot replace each other out of order.
 - Keep parity refresh independent from local timetable availability.
-- Show every meeting by default; non-current meetings render at half opacity without a visibility toggle.
+- Show every meeting block by default; non-current meetings render at half opacity without cell text or a visibility toggle.
 - Test startup combinations of schedule present or absent and parity fresh, cached, or unavailable.
 
 ### 8. Build Responsive Timetable UI

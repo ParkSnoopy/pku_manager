@@ -244,7 +244,11 @@ class _CalendarDay extends StatelessWidget {
       child: DecoratedBox(
         key: ValueKey('calendar-day-${date.year}-${date.month}-${date.day}'),
         decoration: BoxDecoration(
-          color: inMonth ? Colors.transparent : const Color(0xffd3d3d3),
+          color: inMonth
+              ? Colors.transparent
+              : colors.brightness == Brightness.dark
+              ? colors.surfaceContainerHighest
+              : const Color(0xffd3d3d3),
           border: Border.all(
             color: isToday ? colors.primary : colors.outlineVariant,
             width: isToday ? 2 : .5,
@@ -458,7 +462,8 @@ class _ScheduleEditorState extends State<_ScheduleEditor> {
     return AlertDialog(
       key: const ValueKey('schedule-editor'),
       insetPadding: const EdgeInsets.all(24),
-      backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 1),
+      backgroundColor: Theme.of(context).colorScheme.surface
+          .withValues(alpha: 1),
       surfaceTintColor: Colors.transparent,
       title: Text(strings.text(AppText.editSchedule)),
       content: ConstrainedBox(

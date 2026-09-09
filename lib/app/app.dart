@@ -104,7 +104,9 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       locale: _appearance.language.locale,
       supportedLocales: AppStrings.supportedLocales,
       localizationsDelegates: AppStrings.localizationsDelegates,
-      theme: _theme(),
+      theme: _theme(Brightness.light),
+      darkTheme: _theme(Brightness.dark),
+      themeMode: _appearance.darkMode ? ThemeMode.dark : ThemeMode.light,
       builder: (context, child) {
         final media = MediaQuery.of(context);
         final platformScale = media.textScaler.scale(14) / 14;
@@ -135,10 +137,10 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
     ),
   );
 
-  ThemeData _theme() {
+  ThemeData _theme(Brightness brightness) {
     final scheme = ColorScheme.fromSeed(
       seedColor: _appearance.accent,
-      brightness: Brightness.light,
+      brightness: brightness,
     );
     final base = ThemeData(
       useMaterial3: true,

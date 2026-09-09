@@ -59,7 +59,8 @@ CREATE TABLE appearance(
  font_scale REAL NOT NULL CHECK(font_scale BETWEEN 1 AND 2),
  font_weight INTEGER NOT NULL CHECK(font_weight IN (100, 200, 300, 400, 500, 600, 700, 800, 900)),
  timetable_index_color INTEGER NOT NULL,
- auto_text_color INTEGER NOT NULL CHECK(auto_text_color IN (0, 1)));
+ auto_text_color INTEGER NOT NULL CHECK(auto_text_color IN (0, 1)),
+ dark_mode INTEGER NOT NULL CHECK(dark_mode IN (0, 1)));
 CREATE TABLE user_meetings(
  source INTEGER NOT NULL REFERENCES sources(id),
  identity TEXT NOT NULL, name TEXT NOT NULL, short_name TEXT NOT NULL,

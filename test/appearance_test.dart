@@ -55,6 +55,7 @@ void main() {
     expect(controller.fontWeightValue, 400);
     expect(controller.timetableIndexColor, const Color(0xffe8e0d2));
     expect(controller.autoTextColor, isFalse);
+    expect(controller.darkMode, isFalse);
     for (var weight = 100; weight <= 900; weight += 100) {
       controller.setFontWeight(weight);
       expect(controller.fontWeight.value, weight);
@@ -77,6 +78,7 @@ void main() {
     controller.setFontWeight(900);
     controller.setTimetableIndexColor(const Color(0xff112233));
     controller.setAutoTextColor(true);
+    controller.setDarkMode(true);
     controller.setCourseAppearance(
       const ['locked'],
       const CourseAppearance(
@@ -107,6 +109,7 @@ void main() {
     expect(restored.fontWeightValue, 900);
     expect(restored.timetableIndexColor, const Color(0xff112233));
     expect(restored.autoTextColor, isTrue);
+    expect(restored.darkMode, isTrue);
     expect(restored.showRollInNavbar, isFalse);
     expect(
       restored.courseAppearanceFor('locked'),
@@ -154,7 +157,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Theme'), findsOneWidget);
     expect(find.byType(DropdownButton<dynamic>), findsNothing);
-    expect(find.text('Dark'), findsNothing);
+    expect(find.text('Dark mode'), findsOneWidget);
+    expect(controller.darkMode, isFalse);
+    await tester.tap(find.byKey(const ValueKey('dark-mode')));
+    await tester.pump();
+    expect(controller.darkMode, isTrue);
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('language-cycle')),
       300,

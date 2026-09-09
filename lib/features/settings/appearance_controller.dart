@@ -15,6 +15,7 @@ final class AppearanceSettings {
     this.fontWeightValue = 400,
     this.timetableIndexColor = const Color(0xffe8e0d2),
     this.autoTextColor = false,
+    this.darkMode = false,
   });
 
   final Color accent;
@@ -26,6 +27,7 @@ final class AppearanceSettings {
   final int fontWeightValue;
   final Color timetableIndexColor;
   final bool autoTextColor;
+  final bool darkMode;
 
   AppearanceSettings copyWith({
     Color? accent,
@@ -37,6 +39,7 @@ final class AppearanceSettings {
     int? fontWeightValue,
     Color? timetableIndexColor,
     bool? autoTextColor,
+    bool? darkMode,
   }) => AppearanceSettings(
     accent: accent ?? this.accent,
     paletteSeed: paletteSeed ?? this.paletteSeed,
@@ -47,6 +50,7 @@ final class AppearanceSettings {
     fontWeightValue: fontWeightValue ?? this.fontWeightValue,
     timetableIndexColor: timetableIndexColor ?? this.timetableIndexColor,
     autoTextColor: autoTextColor ?? this.autoTextColor,
+    darkMode: darkMode ?? this.darkMode,
   );
 }
 
@@ -96,6 +100,7 @@ final class AppearanceController extends ChangeNotifier {
   FontWeight get fontWeight => FontWeight.values[fontWeightValue ~/ 100 - 1];
   Color get timetableIndexColor => _settings.timetableIndexColor;
   bool get autoTextColor => _settings.autoTextColor;
+  bool get darkMode => _settings.darkMode;
   Map<String, CourseAppearance> get courseAppearances =>
       Map.unmodifiable(_courseAppearances);
 
@@ -129,6 +134,8 @@ final class AppearanceController extends ChangeNotifier {
 
   void setAutoTextColor(bool value) =>
       _set(_settings.copyWith(autoTextColor: value));
+
+  void setDarkMode(bool value) => _set(_settings.copyWith(darkMode: value));
 
   void setRollPalette(int value) {
     RangeError.checkValueInInterval(value, 0, rollPalettes.length - 1);
