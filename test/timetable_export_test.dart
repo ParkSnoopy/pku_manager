@@ -80,6 +80,35 @@ Future<Color> _pixel(Uint8List png, int x, int y) async {
   }
 }
 
+Future<bool> _containsDarkPixel(
+  Uint8List png, {
+  required int left,
+  required int top,
+  required int right,
+  required int bottom,
+}) async {
+  final codec = await ui.instantiateImageCodec(png);
+  final frame = await codec.getNextFrame();
+  final image = frame.image;
+  try {
+    final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    for (var y = top; y < bottom; y++) {
+      for (var x = left; x < right; x++) {
+        final offset = (y * image.width + x) * 4;
+        if (data!.getUint8(offset) < 80 &&
+            data.getUint8(offset + 1) < 80 &&
+            data.getUint8(offset + 2) < 80) {
+          return true;
+        }
+      }
+    }
+    return false;
+  } finally {
+    image.dispose();
+    codec.dispose();
+  }
+}
+
 void _expectColorNear(Color actual, Color expected) {
   expect(actual.a, closeTo(expected.a, .001));
   expect(actual.r, closeTo(expected.r, .01));
@@ -343,5 +372,42 @@ void main() {
       effectiveCourse,
     );
     expect(effectiveCourse.a, 1);
+  });
+
+  test('PNG wraps and clips notes like timetable cells', () async {
+    final noteTable = Timetable([
+      Course(
+        sourceId: 'note',
+        name: 'Course',
+        weekday: 1,
+        firstPeriod: 1,
+        lastPeriod: 3,
+        room: 'Room',
+        note: List.filled(40, 'MMMM').join(' '),
+      ),
+    ], periodCount: 3);
+    final png = await const CanvasTimetablePngEncoder().encode(
+      noteTable,
+      strings,
+      4,
+    );
+    int pixel(double logical) => (logical * timetableExportScale).round();
+    final cellLeft = timetableExportPadding + timetableIndexWidth;
+    final cellBottom = timetableExportPadding + timetableHeaderHeight + 300;
+
+    expect(
+      await _containsDarkPixel(
+        png,
+        left: pixel(cellLeft + timetableCourseContentPadding),
+        top: pixel(cellBottom - timetableCourseContentPadding - 11),
+        right: pixel(
+          cellLeft +
+              TimetableGeometry(noteTable.periodCount).courseWidth -
+              timetableCourseContentPadding,
+        ),
+        bottom: pixel(cellBottom - timetableCourseContentPadding),
+      ),
+      isTrue,
+    );
   });
 }

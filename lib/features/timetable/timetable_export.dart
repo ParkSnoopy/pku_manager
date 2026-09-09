@@ -540,11 +540,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
         if (meeting.note.isNotEmpty) {
           contentTop += timetableClassroomFontSize * 1.5;
           final availableHeight = item.bottom - inset - contentTop;
-          final noteLines =
-              (availableHeight /
-                      (timetableCourseNoteFontSize * fontScale * 1.5))
-                  .floor();
-          if (noteLines > 0) {
+          if (availableHeight > 0) {
             _drawReferenceText(
               canvas,
               meeting.note,
@@ -560,7 +556,8 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
               weight: fontWeight,
               color: foreground,
               lineHeight: 1.5,
-              maxLines: noteLines,
+              maxLines: null,
+              ellipsize: false,
             );
           }
         }
@@ -625,14 +622,15 @@ void _drawReferenceText(
   required ui.Color color,
   double? letterSpacing,
   double lineHeight = 1.3,
-  int maxLines = 1,
+  int? maxLines = 1,
+  bool ellipsize = true,
 }) {
   final builder =
       ui.ParagraphBuilder(
         ui.ParagraphStyle(
           maxLines: maxLines,
           textAlign: center ? ui.TextAlign.center : ui.TextAlign.left,
-          ellipsis: '…',
+          ellipsis: ellipsize ? '…' : null,
         ),
       )..pushStyle(
         ui.TextStyle(
