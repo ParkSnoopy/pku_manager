@@ -56,6 +56,7 @@ CREATE TABLE appearance(
  roll_palette INTEGER NOT NULL CHECK(roll_palette BETWEEN 0 AND 9),
  language TEXT NOT NULL CHECK(language IN ('ko', 'en', 'zh')),
  show_roll_nav INTEGER NOT NULL CHECK(show_roll_nav IN (0, 1)),
+ close_action TEXT NOT NULL CHECK(close_action IN ('close', 'tray')),
  font_family TEXT NOT NULL CHECK(font_family IN ('serif', 'sans')),
  font_scale REAL NOT NULL CHECK(font_scale BETWEEN 0.8 AND 1.5),
  font_weight INTEGER NOT NULL CHECK(font_weight IN (100, 200, 300, 400, 500, 600, 700, 800, 900)),

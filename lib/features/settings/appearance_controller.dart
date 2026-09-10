@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../l10n/app_strings.dart';
+import '../../domain/application_close_action.dart';
 import '../timetable/timetable_color.dart';
 
 enum AppFontFamily {
@@ -22,6 +23,7 @@ final class AppearanceSettings {
     this.rollPalette = 0,
     this.language = AppLanguage.defaultLanguage,
     this.showRollInNavbar = true,
+    this.applicationCloseAction = ApplicationCloseAction.closeApp,
     this.fontFamily = AppFontFamily.serif,
     this.fontScale = 1,
     this.fontWeightValue = 400,
@@ -38,6 +40,7 @@ final class AppearanceSettings {
   final int rollPalette;
   final AppLanguage language;
   final bool showRollInNavbar;
+  final ApplicationCloseAction applicationCloseAction;
   final AppFontFamily fontFamily;
   final double fontScale;
   final int fontWeightValue;
@@ -54,6 +57,7 @@ final class AppearanceSettings {
     int? rollPalette,
     AppLanguage? language,
     bool? showRollInNavbar,
+    ApplicationCloseAction? applicationCloseAction,
     AppFontFamily? fontFamily,
     double? fontScale,
     int? fontWeightValue,
@@ -69,6 +73,8 @@ final class AppearanceSettings {
     rollPalette: rollPalette ?? this.rollPalette,
     language: language ?? this.language,
     showRollInNavbar: showRollInNavbar ?? this.showRollInNavbar,
+    applicationCloseAction:
+        applicationCloseAction ?? this.applicationCloseAction,
     fontFamily: fontFamily ?? this.fontFamily,
     fontScale: fontScale ?? this.fontScale,
     fontWeightValue: fontWeightValue ?? this.fontWeightValue,
@@ -122,6 +128,8 @@ final class AppearanceController extends ChangeNotifier {
   int get rollPaletteIndex => _settings.rollPalette;
   AppLanguage get language => _settings.language;
   bool get showRollInNavbar => _settings.showRollInNavbar;
+  ApplicationCloseAction get applicationCloseAction =>
+      _settings.applicationCloseAction;
   AppFontFamily get fontFamily => _settings.fontFamily;
   double get fontScale => _settings.fontScale;
   int get fontWeightValue => _settings.fontWeightValue;
@@ -151,6 +159,8 @@ final class AppearanceController extends ChangeNotifier {
   });
   void setShowRollInNavbar(bool value) =>
       _set(_settings.copyWith(showRollInNavbar: value));
+  void setApplicationCloseAction(ApplicationCloseAction value) =>
+      _set(_settings.copyWith(applicationCloseAction: value));
   void cycleFontFamily() => _set(
     _settings.copyWith(
       fontFamily: fontFamily == AppFontFamily.serif

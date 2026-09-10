@@ -460,6 +460,7 @@ class _TimetablePageState extends State<TimetablePage>
                   ? SettingsPage(
                       key: ValueKey('settings-page-$_pageGeneration'),
                       controller: widget.appearance,
+                      showCloseAction: widget.windowController.supported,
                     )
                   : _destination == 1
                   ? _calendarBody(c)

@@ -75,7 +75,8 @@ jobs:
             -o Dir::Etc::sourcelist='sources.list.d/ubuntu.sources' \
             -o Dir::Etc::sourceparts='-'
           sudo apt-get install -y \
-            clang cmake ninja-build pkg-config libgtk-3-dev libfuse2t64 xvfb
+            clang cmake ninja-build pkg-config libgtk-3-dev \
+            libayatana-appindicator3-dev libfuse2t64 xvfb
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
