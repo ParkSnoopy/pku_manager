@@ -30,7 +30,6 @@ jobs:
           VERSION="${VERSION%%+*}"
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           TAG="v${VERSION}"
-          test -z "$(git ls-remote --tags origin "refs/tags/${TAG}" "refs/tags/${TAG}^{}")"
           printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
           printf 'tag=%s\n' "$TAG" >> "$GITHUB_OUTPUT"
 
@@ -268,12 +267,26 @@ jobs:
     permissions:
       contents: write
     steps:
+      - id: release_lookup
+        name: Test existing release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: gh release view "$TAG" --repo "$GITHUB_REPOSITORY"
       - uses: actions/download-artifact@v4
         with:
           pattern: PKU_Manager-v${{ needs.prepare.outputs.version }}-*
           path: dist
           merge-multiple: true
-      - name: Publish GitHub release
+      - name: Override existing release assets
+        if: steps.release_lookup.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+      - name: Publish new GitHub release
+        if: steps.release_lookup.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.tag }}
