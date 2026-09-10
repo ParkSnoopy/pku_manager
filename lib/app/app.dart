@@ -183,9 +183,16 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
   );
 
   ThemeData _theme(Brightness brightness) {
-    final accentScheme = ColorScheme.fromSeed(
-      seedColor: _appearance.accent,
+    final accent = _appearance.accent;
+    final generatedAccentScheme = ColorScheme.fromSeed(
+      seedColor: accent,
       brightness: brightness,
+    );
+    final accentScheme = generatedAccentScheme.copyWith(
+      primary: accent,
+      onPrimary: ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
+          ? Colors.white
+          : Colors.black,
     );
     final neutralScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xff808080),

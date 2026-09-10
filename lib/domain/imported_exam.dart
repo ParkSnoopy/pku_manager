@@ -10,9 +10,11 @@ final class ImportedExam {
 ImportedExam? parseImportedExam(String value) {
   final sourceText = value.trim();
   if (sourceText.isEmpty) return null;
-  final date = RegExp(
-    r'(\d{4})\s*(?:年|[-/.])\s*(\d{1,2})\s*(?:月|[-/.])\s*(\d{1,2})\s*日?',
-  ).firstMatch(sourceText);
+  final date =
+      RegExp(
+        r'(\d{4})\s*(?:年|[-/.])\s*(\d{1,2})\s*(?:月|[-/.])\s*(\d{1,2})\s*日?',
+      ).firstMatch(sourceText) ??
+      RegExp(r'(?:^|\D)(\d{4})(\d{2})(\d{2})(?!\d)').firstMatch(sourceText);
   if (date == null) return null;
   final period = switch (sourceText) {
     final text when text.contains('上午') => 1,

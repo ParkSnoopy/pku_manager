@@ -83,6 +83,20 @@ void main() {
         ),
       );
       await tester.pump();
+      const nearWhite = Color(0xfffefefe);
+      appearance.setAccent(nearWhite);
+      await tester.pumpAndSettle();
+      final themedContext = tester.element(find.text('Calendar'));
+      expect(Theme.of(themedContext).colorScheme.primary, nearWhite);
+      expect(Theme.of(themedContext).colorScheme.onPrimary, Colors.black);
+      appearance.setDarkMode(true);
+      await tester.pumpAndSettle();
+      expect(
+        Theme.of(tester.element(find.text('Calendar'))).colorScheme.primary,
+        nearWhite,
+      );
+      appearance.setDarkMode(false);
+      await tester.pumpAndSettle();
       expect(desktopWindowOptions.size, desktopLaunchSize);
       expect(windowController.closeAction, ApplicationCloseAction.closeApp);
       expect(windowController.showLabel, 'Show application');
