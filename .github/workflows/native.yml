@@ -25,31 +25,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION=''
-          while IFS= read -r line; do
-            case "$line" in
-              'version: '*)
-                VERSION="${line#version: }"
-                VERSION="${VERSION%%+*}"
-                break
-                ;;
-            esac
-          done < pubspec.yaml
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            printf 'pubspec.yaml version must use X.Y.Z: %s\n' "$VERSION" >&2
-            exit 1
-          fi
+          VERSION="$(grep -m1 '^version: ' pubspec.yaml)"
+          VERSION="${VERSION#version: }"
+          VERSION="${VERSION%%+*}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           TAG="v${VERSION}"
-          TAG_SHA=''
-          while read -r sha ref; do
-            if [[ -z "$TAG_SHA" || "$ref" == "refs/tags/${TAG}^{}" ]]; then
-              TAG_SHA="$sha"
-            fi
-          done < <(git ls-remote --tags origin "refs/tags/${TAG}" "refs/tags/${TAG}^{}")
-          if [[ -n "$TAG_SHA" && "$TAG_SHA" != "$GITHUB_SHA" ]]; then
-            printf '%s already points to another commit; update pubspec.yaml before releasing.\n' "$TAG" >&2
-            exit 1
-          fi
+          test -z "$(git ls-remote --tags origin "refs/tags/${TAG}" "refs/tags/${TAG}^{}")"
           printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
           printf 'tag=%s\n' "$TAG" >> "$GITHUB_OUTPUT"
 
@@ -109,10 +90,10 @@ jobs:
       - name: Launch packaged runtime
         shell: bash
         run: |
-          set +e
-          GDK_BACKEND=x11 xvfb-run -a timeout 15s "build/appimage/PKU_Manager-v${VERSION}-linux.AppImage" > build/appimage/runtime.log 2>&1
-          status=$?
-          test "$status" = 124
+          set -euo pipefail
+          test "$(GDK_BACKEND=x11 xvfb-run -a timeout 15s \
+            "build/appimage/PKU_Manager-v${VERSION}-linux.AppImage" \
+            > build/appimage/runtime.log 2>&1; printf '%s' "$?")" = 124
       - name: Launch Firejail AppImage entrypoint
         shell: bash
         run: |
@@ -120,29 +101,19 @@ jobs:
           APPDIR="$PWD/build/appimage/PKUManager.AppDir"
           readelf -d "$APPDIR/pku_manager" | grep -F 'Library runpath: [$ORIGIN/lib]'
           readelf -d "$APPDIR/lib/libtray_manager_plugin.so" | grep -F 'Library rpath: [$ORIGIN]'
-          for library in \
-            libayatana-appindicator3.so.1 \
-            libayatana-indicator3.so.7 \
-            libayatana-ido3-0.4.so.0 \
-            libdbusmenu-glib.so.4 \
-            libdbusmenu-gtk3.so.4; do
-            test -f "$APPDIR/lib/$library"
-          done
-          set +e
-          GDK_BACKEND=x11 LD_DEBUG=libs xvfb-run -a timeout 15s \
-            "$APPDIR/pku_manager" > build/appimage/firejail-entrypoint.log 2>&1
-          status=$?
-          set -e
-          test "$status" = 124
-          for library in \
-            libayatana-appindicator3.so.1 \
-            libayatana-indicator3.so.7 \
-            libayatana-ido3-0.4.so.0 \
-            libdbusmenu-glib.so.4 \
-            libdbusmenu-gtk3.so.4; do
-            grep -F "calling init: $APPDIR/lib/$library" \
-              build/appimage/firejail-entrypoint.log
-          done
+          test -f "$APPDIR/lib/libayatana-appindicator3.so.1"
+          test -f "$APPDIR/lib/libayatana-indicator3.so.7"
+          test -f "$APPDIR/lib/libayatana-ido3-0.4.so.0"
+          test -f "$APPDIR/lib/libdbusmenu-glib.so.4"
+          test -f "$APPDIR/lib/libdbusmenu-gtk3.so.4"
+          test "$(GDK_BACKEND=x11 LD_DEBUG=libs xvfb-run -a timeout 15s \
+            "$APPDIR/pku_manager" \
+            > build/appimage/firejail-entrypoint.log 2>&1; printf '%s' "$?")" = 124
+          grep -F "calling init: $APPDIR/lib/libayatana-appindicator3.so.1" build/appimage/firejail-entrypoint.log
+          grep -F "calling init: $APPDIR/lib/libayatana-indicator3.so.7" build/appimage/firejail-entrypoint.log
+          grep -F "calling init: $APPDIR/lib/libayatana-ido3-0.4.so.0" build/appimage/firejail-entrypoint.log
+          grep -F "calling init: $APPDIR/lib/libdbusmenu-glib.so.4" build/appimage/firejail-entrypoint.log
+          grep -F "calling init: $APPDIR/lib/libdbusmenu-gtk3.so.4" build/appimage/firejail-entrypoint.log
       - uses: actions/upload-artifact@v4
         with:
           name: PKU_Manager-v${{ needs.prepare.outputs.version }}-linux.AppImage
@@ -267,23 +238,24 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           & 'C:\Program Files (x86)\NSIS\makensis.exe' packaging/windows/installer.nsi
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Move-Item packaging/windows/pku-manager-setup.exe "packaging/windows/PKU_Manager-v${env:VERSION}-windows.exe"
       - name: Install, upgrade, launch, uninstall
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           $installer = Resolve-Path "packaging/windows/PKU_Manager-v${env:VERSION}-windows.exe"
           $installed = Join-Path $env:LOCALAPPDATA 'Programs\PKU Manager'
-          $install = Start-Process $installer -ArgumentList '/S' -Wait -PassThru
-          if ($install.ExitCode -ne 0) { throw 'Installation failed' }
-          $upgrade = Start-Process $installer -ArgumentList '/S' -Wait -PassThru
-          if ($upgrade.ExitCode -ne 0) { throw 'Upgrade failed' }
+          & $installer /S
+          & $installer /S
           $app = Start-Process "$installed\pku_manager.exe" -PassThru
           Start-Sleep -Seconds 10
-          if ($app.HasExited) { throw 'Installed runtime exited early' }
+          Get-Process -Id $app.Id -ErrorAction Stop | Out-Null
           Stop-Process -Id $app.Id
-          Start-Process "$installed\Uninstall.exe" -ArgumentList '/S' -Wait
+          & "$installed\Uninstall.exe" /S
       - uses: actions/upload-artifact@v4
         with:
           name: PKU_Manager-v${{ needs.prepare.outputs.version }}-windows.exe
@@ -308,14 +280,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/* \
-              --repo "$GITHUB_REPOSITORY" \
-              --clobber
-          else
-            gh release create "$TAG" dist/* \
-              --repo "$GITHUB_REPOSITORY" \
-              --target "$GITHUB_SHA" \
-              --title "$TAG" \
-              --generate-notes
-          fi
+          gh release create "$TAG" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
+            --generate-notes
