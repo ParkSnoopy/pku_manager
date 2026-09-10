@@ -451,7 +451,7 @@ class _CalendarDay extends StatelessWidget {
                     final background = scheduleColor(context, schedule);
                     final foreground = scheduleForeground(background);
                     final focused = schedule.id == focusedScheduleId;
-                    final canSelect =
+                    final canJump =
                         onSelect != null &&
                         schedule.relatedClassSourceId != null;
                     return Padding(
@@ -465,12 +465,11 @@ class _CalendarDay extends StatelessWidget {
                           ),
                           color: background,
                           child: MouseRegion(
-                            cursor: canSelect
-                                ? SystemMouseCursors.click
-                                : MouseCursor.defer,
+                            cursor: SystemMouseCursors.click,
                             child: InkWell(
                               key: ValueKey('calendar-schedule-${schedule.id}'),
-                              onTap: !canSelect
+                              onTap: () => onEdit(schedule),
+                              onDoubleTap: !canJump
                                   ? null
                                   : () => onSelect!(schedule),
                               onLongPress: () => onEdit(schedule),

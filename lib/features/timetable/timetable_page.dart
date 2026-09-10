@@ -179,6 +179,31 @@ class _TimetablePageState extends State<TimetablePage>
     _focusClass(course.group.weekday, sourceIds);
   }
 
+  void _editUpcomingClass(UpcomingCourse course) {
+    if (MediaQuery.orientationOf(context) == Orientation.landscape) {
+      _focusTimer?.cancel();
+      setState(() {
+        _destination = 0;
+        _day = course.group.weekday;
+        _focusedScheduleId = null;
+        _focusedCourseSourceIds = const {};
+        _editor = _EditorSelection(
+          course.group.weekday,
+          course.group.firstPeriod,
+          course.group.meetings,
+        );
+      });
+      return;
+    }
+    unawaited(
+      _editCell(
+        course.group.weekday,
+        course.group.firstPeriod,
+        course.group.meetings,
+      ),
+    );
+  }
+
   void _navigateToRelatedClass(CalendarSchedule schedule) {
     final timetable = widget.controller.timetable;
     if (timetable == null || schedule.relatedClassSourceId == null) return;
@@ -508,6 +533,10 @@ class _TimetablePageState extends State<TimetablePage>
             ),
           ],
         ),
+        bottomNavigationBar: const SizedBox(
+          key: ValueKey('app-bottom-spacer'),
+          height: 8,
+        ),
       );
     },
   );
@@ -555,6 +584,7 @@ class _TimetablePageState extends State<TimetablePage>
                       onSelected: _navigateToSchedule,
                       onEdit: _editSchedule,
                       onClassSelected: _selectUpcomingClass,
+                      onClassEdit: _editUpcomingClass,
                     )
                   : CourseEditorDialog(
                       key: ValueKey(
@@ -622,7 +652,9 @@ class _TimetablePageState extends State<TimetablePage>
                 calendar: controller.week.calendar,
                 schedules: widget.calendar.schedules,
                 onSelected: _selectUpcomingClass,
+                onEdit: _editUpcomingClass,
                 onScheduleSelected: _navigateToSchedule,
+                onScheduleEdit: _editSchedule,
               ),
             ),
           ],

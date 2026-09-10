@@ -17,6 +17,7 @@ class UpcomingSchedulesPane extends StatelessWidget {
     required this.onSelected,
     required this.onEdit,
     required this.onClassSelected,
+    required this.onClassEdit,
     this.timetable,
     this.calendar,
   });
@@ -26,6 +27,7 @@ class UpcomingSchedulesPane extends StatelessWidget {
   final ValueChanged<CalendarSchedule> onSelected;
   final ValueChanged<CalendarSchedule> onEdit;
   final ValueChanged<UpcomingCourse> onClassSelected;
+  final ValueChanged<UpcomingCourse> onClassEdit;
   final Timetable? timetable;
   final SemesterCalendar? calendar;
 
@@ -90,9 +92,12 @@ class UpcomingSchedulesPane extends StatelessWidget {
                           background: background,
                           foreground: foreground,
                           relatedClass: relatedClass,
-                          onScheduleTap: () => onSelected(schedule),
-                          onScheduleEdit: () => onEdit(schedule),
+                          onScheduleTap: () => onEdit(schedule),
+                          onScheduleDoubleTap: () => onSelected(schedule),
                           onClassTap: relatedClass == null
+                              ? null
+                              : () => onClassEdit(relatedClass),
+                          onClassDoubleTap: relatedClass == null
                               ? null
                               : () => onClassSelected(relatedClass),
                         );
@@ -114,8 +119,9 @@ class _ScheduleWithClassEntry extends StatelessWidget {
     required this.foreground,
     required this.relatedClass,
     required this.onScheduleTap,
-    required this.onScheduleEdit,
+    required this.onScheduleDoubleTap,
     required this.onClassTap,
+    required this.onClassDoubleTap,
   });
 
   final CalendarSchedule schedule;
@@ -124,8 +130,9 @@ class _ScheduleWithClassEntry extends StatelessWidget {
   final Color foreground;
   final UpcomingCourse? relatedClass;
   final VoidCallback onScheduleTap;
-  final VoidCallback onScheduleEdit;
+  final VoidCallback onScheduleDoubleTap;
   final VoidCallback? onClassTap;
+  final VoidCallback? onClassDoubleTap;
 
   @override
   Widget build(BuildContext context) {
@@ -146,8 +153,9 @@ class _ScheduleWithClassEntry extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onScheduleTap,
-              onSecondaryTap: onScheduleEdit,
-              onLongPress: onScheduleEdit,
+              onDoubleTap: onScheduleDoubleTap,
+              onSecondaryTap: onScheduleTap,
+              onLongPress: onScheduleTap,
               child: Material(
                 key: ValueKey('upcoming-schedule-color-${schedule.id}'),
                 color: background,
@@ -202,21 +210,24 @@ class _ScheduleWithClassEntry extends StatelessWidget {
                 color: colors.secondaryContainer,
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,
-                  child: ListTile(
+                  child: InkWell(
                     onTap: onClassTap,
-                    textColor: colors.onSecondaryContainer,
-                    dense: true,
-                    leading: const Icon(Icons.school_outlined),
-                    title: Text(
-                      course.group.primary.displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      '${beijingDateLabel(course.startsAt)} '
-                      '${beijingTimeLabel(course.startsAt)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    onDoubleTap: onClassDoubleTap,
+                    child: ListTile(
+                      textColor: colors.onSecondaryContainer,
+                      dense: true,
+                      leading: const Icon(Icons.school_outlined),
+                      title: Text(
+                        course.group.primary.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '${beijingDateLabel(course.startsAt)} '
+                        '${beijingTimeLabel(course.startsAt)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 ),

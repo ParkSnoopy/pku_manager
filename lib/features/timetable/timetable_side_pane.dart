@@ -15,16 +15,20 @@ class UpcomingClassPane extends StatelessWidget {
     required this.timetable,
     required this.now,
     required this.onSelected,
+    required this.onEdit,
     required this.schedules,
     required this.onScheduleSelected,
+    required this.onScheduleEdit,
     this.calendar,
   });
 
   final Timetable timetable;
   final DateTime now;
   final ValueChanged<UpcomingCourse> onSelected;
+  final ValueChanged<UpcomingCourse> onEdit;
   final List<CalendarSchedule> schedules;
   final ValueChanged<CalendarSchedule> onScheduleSelected;
+  final ValueChanged<CalendarSchedule> onScheduleEdit;
   final SemesterCalendar? calendar;
 
   @override
@@ -75,26 +79,29 @@ class UpcomingClassPane extends StatelessWidget {
                       for (final item in courses) ...[
                         MouseRegion(
                           cursor: SystemMouseCursors.click,
-                          child: ListTile(
-                            key: ValueKey(
-                              'upcoming-class-${item.group.primary.sourceId}',
-                            ),
-                            onTap: () => onSelected(item),
-                            title: Text(
-                              item.group.primary.displayName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
+                          child: InkWell(
+                            onTap: () => onEdit(item),
+                            onDoubleTap: () => onSelected(item),
+                            child: ListTile(
+                              key: ValueKey(
+                                'upcoming-class-${item.group.primary.sourceId}',
                               ),
-                            ),
-                            subtitle: Text(
-                              '${timetableClassStarts[item.group.firstPeriod]}'
-                              '${item.group.primary.room.isEmpty ? '' : ' · ${item.group.primary.room}'}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 14),
+                              title: Text(
+                                item.group.primary.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${timetableClassStarts[item.group.firstPeriod]}'
+                                '${item.group.primary.room.isEmpty ? '' : ' · ${item.group.primary.room}'}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 14),
+                              ),
                             ),
                           ),
                         ),
@@ -102,7 +109,8 @@ class UpcomingClassPane extends StatelessWidget {
                           _ScheduleEntry(
                             schedule: schedule,
                             now: now,
-                            onTap: () => onScheduleSelected(schedule),
+                            onTap: () => onScheduleEdit(schedule),
+                            onDoubleTap: () => onScheduleSelected(schedule),
                           ),
                         const Divider(height: 1),
                       ],
@@ -119,7 +127,8 @@ class UpcomingClassPane extends StatelessWidget {
                           _ScheduleEntry(
                             schedule: schedule,
                             now: now,
-                            onTap: () => onScheduleSelected(schedule),
+                            onTap: () => onScheduleEdit(schedule),
+                            onDoubleTap: () => onScheduleSelected(schedule),
                           ),
                       ],
                     ],
@@ -136,11 +145,13 @@ class _ScheduleEntry extends StatelessWidget {
     required this.schedule,
     required this.now,
     required this.onTap,
+    required this.onDoubleTap,
   });
 
   final CalendarSchedule schedule;
   final DateTime now;
   final VoidCallback onTap;
+  final VoidCallback onDoubleTap;
 
   @override
   Widget build(BuildContext context) {
@@ -153,21 +164,24 @@ class _ScheduleEntry extends StatelessWidget {
         color: background,
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
-          child: ListTile(
-            key: ValueKey('tomorrow-schedule-${schedule.id}'),
+          child: InkWell(
             onTap: onTap,
-            textColor: foreground,
-            dense: true,
-            title: Text(
-              schedule.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              '${schedule.allDay ? scheduleDateLabel(schedule) : '${scheduleDateLabel(schedule)} ${scheduleTimeLabel(schedule)}'}\n'
-              '${AppStrings.of(context).deadline(scheduleDeadline(schedule).difference(now))}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            onDoubleTap: onDoubleTap,
+            child: ListTile(
+              key: ValueKey('tomorrow-schedule-${schedule.id}'),
+              textColor: foreground,
+              dense: true,
+              title: Text(
+                schedule.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                '${schedule.allDay ? scheduleDateLabel(schedule) : '${scheduleDateLabel(schedule)} ${scheduleTimeLabel(schedule)}'}\n'
+                '${AppStrings.of(context).deadline(scheduleDeadline(schedule).difference(now))}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ),

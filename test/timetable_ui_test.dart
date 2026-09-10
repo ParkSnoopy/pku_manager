@@ -20,6 +20,18 @@ import 'package:pku_manager/features/settings/appearance_controller.dart';
 import 'package:pku_manager/l10n/app_strings.dart';
 import 'package:pku_manager/ui/flashing_outline.dart';
 
+Future<void> _doubleTap(WidgetTester tester, Finder target) async {
+  await tester.tap(target);
+  await tester.pump(const Duration(milliseconds: 100));
+  await tester.tap(target);
+}
+
+Future<void> _singleTap(WidgetTester tester, Finder target) async {
+  await tester.tap(target);
+  await tester.pump(const Duration(milliseconds: 350));
+  await tester.pumpAndSettle();
+}
+
 final class _Store implements ScheduleStore {
   _Store(this.value);
   Timetable value;
@@ -620,6 +632,9 @@ void main() {
         ),
       );
       await tester.pump();
+      final bottomSpacer = find.byKey(const ValueKey('app-bottom-spacer'));
+      expect(tester.getSize(bottomSpacer).height, 8);
+      expect(tester.getBottomRight(bottomSpacer).dy, 800);
       expect(
         find.byKey(const ValueKey('upcoming-schedule-pane')),
         findsOneWidget,
@@ -749,7 +764,39 @@ void main() {
       );
       await relatedMouse.removePointer();
       await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('upcoming-schedule-1')));
+      await _singleTap(
+        tester,
+        find.byKey(const ValueKey('upcoming-schedule-1')),
+      );
+      expect(find.byKey(const ValueKey('schedule-editor')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('cancel-schedule-editor')));
+      await tester.pumpAndSettle();
+      await _singleTap(
+        tester,
+        find.byKey(const ValueKey('upcoming-related-class-1')),
+      );
+      expect(find.byKey(const ValueKey('course-editor-pane')), findsOneWidget);
+      await tester.tap(find.text('Close'));
+      await tester.pump();
+      await _doubleTap(
+        tester,
+        find.byKey(const ValueKey('upcoming-related-class-1')),
+      );
+      await tester.pump();
+      expect(find.byKey(const ValueKey('course-editor-pane')), findsNothing);
+      expect(
+        tester
+            .widget<FlashingOutline>(
+              find.byKey(const ValueKey('meeting-flash-first')),
+            )
+            .active,
+        isTrue,
+      );
+      await tester.pump(const Duration(milliseconds: 1500));
+      await _doubleTap(
+        tester,
+        find.byKey(const ValueKey('upcoming-schedule-1')),
+      );
       await tester.pump();
       expect(find.byKey(const ValueKey('calendar-page')), findsOneWidget);
       expect(find.byKey(const ValueKey('schedule-editor')), findsNothing);
@@ -872,7 +919,17 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pump();
       expect(find.text('September 2026'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('calendar-schedule-1')));
+      await _singleTap(
+        tester,
+        find.byKey(const ValueKey('calendar-schedule-1')),
+      );
+      expect(find.byKey(const ValueKey('schedule-editor')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('cancel-schedule-editor')));
+      await tester.pumpAndSettle();
+      await _doubleTap(
+        tester,
+        find.byKey(const ValueKey('calendar-schedule-1')),
+      );
       await tester.pump();
       expect(
         find.byKey(const ValueKey('upcoming-schedule-pane')),
@@ -929,7 +986,17 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Upcoming schedule'), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('tomorrow-schedule-1')));
+      await _singleTap(
+        tester,
+        find.byKey(const ValueKey('tomorrow-schedule-1')),
+      );
+      expect(find.byKey(const ValueKey('schedule-editor')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('cancel-schedule-editor')));
+      await tester.pumpAndSettle();
+      await _doubleTap(
+        tester,
+        find.byKey(const ValueKey('tomorrow-schedule-1')),
+      );
       await tester.pump();
       expect(find.byKey(const ValueKey('schedule-editor')), findsNothing);
       expect(
@@ -941,7 +1008,19 @@ void main() {
         isTrue,
       );
       await tester.pump(const Duration(milliseconds: 1500));
-      await tester.tap(find.byKey(const ValueKey('upcoming-class-first')));
+      await _singleTap(
+        tester,
+        find.byKey(const ValueKey('upcoming-class-first')),
+      );
+      expect(find.byKey(const ValueKey('course-editor-pane')), findsOneWidget);
+      await tester.tap(find.text('Close'));
+      await tester.pump();
+      await tester.tap(find.text('Calendar'));
+      await tester.pump();
+      await _doubleTap(
+        tester,
+        find.byKey(const ValueKey('upcoming-class-first')),
+      );
       await tester.pump();
       expect(find.byKey(const ValueKey('course-editor-pane')), findsNothing);
       expect(
