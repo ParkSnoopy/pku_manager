@@ -21,7 +21,7 @@ Section "Install"
   CreateDirectory "$SMPROGRAMS\PKU Manager"
   CreateShortcut "$SMPROGRAMS\PKU Manager\PKU Manager.lnk" "$INSTDIR\pku_manager.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\PKU Manager" "DisplayName" "PKU Manager"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\PKU Manager" "UninstallString" '$"$INSTDIR\Uninstall.exe$"'
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\PKU Manager" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\PKU Manager" "InstallLocation" "$INSTDIR"
 SectionEnd
 

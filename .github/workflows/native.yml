@@ -258,13 +258,15 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           $installer = Resolve-Path "packaging/windows/PKU_Manager-v${env:VERSION}-windows.exe"
           $installed = Join-Path $env:LOCALAPPDATA 'Programs\PKU Manager'
-          & $installer /S
-          & $installer /S
-          $app = Start-Process "$installed\pku_manager.exe" -PassThru
+          Start-Process -FilePath $installer -ArgumentList '/S' -Wait
+          Start-Process -FilePath $installer -ArgumentList '/S' -Wait
+          $executable = Resolve-Path "$installed\pku_manager.exe"
+          $uninstaller = Resolve-Path "$installed\Uninstall.exe"
+          $app = Start-Process -FilePath $executable -PassThru
           Start-Sleep -Seconds 10
           Get-Process -Id $app.Id -ErrorAction Stop | Out-Null
           Stop-Process -Id $app.Id
-          & "$installed\Uninstall.exe" /S
+          Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait
       - uses: actions/upload-artifact@v4
         with:
           name: PKU_Manager-v${{ needs.prepare.outputs.version }}-windows.exe
