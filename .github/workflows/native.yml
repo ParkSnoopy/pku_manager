@@ -6,6 +6,9 @@ on:
 permissions:
   contents: read
 
+env:
+  GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
 concurrency:
   group: native-release-${{ github.ref }}
   cancel-in-progress: false
@@ -20,11 +23,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
+          token: ${{ env.GITHUB_TOKEN }}
       - id: release
         name: Read release version
         shell: bash
         run: |
           set -euo pipefail
+          test -n "$GITHUB_TOKEN"
+          gh api "repos/$GITHUB_REPOSITORY" >/dev/null
           VERSION="$(grep -m1 '^version: ' pubspec.yaml)"
           VERSION="${VERSION#version: }"
           VERSION="${VERSION%%+*}"
@@ -42,6 +48,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
+          token: ${{ env.GITHUB_TOKEN }}
       - name: Download Noto CJK fonts
         shell: bash
         run: |
@@ -128,6 +135,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
+          token: ${{ env.GITHUB_TOKEN }}
       - name: Download Noto CJK fonts
         shell: bash
         run: |
@@ -163,6 +171,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
+          token: ${{ env.GITHUB_TOKEN }}
       - name: Download Noto CJK fonts
         shell: bash
         run: |
@@ -215,6 +224,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
+          token: ${{ env.GITHUB_TOKEN }}
       - name: Download Noto CJK fonts
         shell: bash
         run: |
@@ -279,6 +289,7 @@ jobs:
           pattern: PKU_Manager-v${{ needs.prepare.outputs.version }}-*
           path: dist
           merge-multiple: true
+          github-token: ${{ env.GITHUB_TOKEN }}
       - name: Override existing release assets
         if: steps.release_lookup.outcome == 'success'
         env:
