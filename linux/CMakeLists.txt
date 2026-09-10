@@ -74,6 +74,14 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# Firejail's --appimage mode launches the application binary directly instead
+# of AppRun. Give the tray plugin a transitive relative RPATH so its complete
+# native dependency chain resolves from the AppImage's lib directory.
+set_target_properties(tray_manager_plugin PROPERTIES
+  BUILD_WITH_INSTALL_RPATH TRUE
+  INSTALL_RPATH "$ORIGIN")
+target_link_options(tray_manager_plugin PRIVATE "-Wl,--disable-new-dtags")
+
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build

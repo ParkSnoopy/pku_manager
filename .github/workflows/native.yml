@@ -113,6 +113,36 @@ jobs:
           GDK_BACKEND=x11 xvfb-run -a timeout 15s "build/appimage/PKU_Manager-v${VERSION}-linux.AppImage" > build/appimage/runtime.log 2>&1
           status=$?
           test "$status" = 124
+      - name: Launch Firejail AppImage entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          APPDIR="$PWD/build/appimage/PKUManager.AppDir"
+          readelf -d "$APPDIR/pku_manager" | grep -F 'Library runpath: [$ORIGIN/lib]'
+          readelf -d "$APPDIR/lib/libtray_manager_plugin.so" | grep -F 'Library rpath: [$ORIGIN]'
+          for library in \
+            libayatana-appindicator3.so.1 \
+            libayatana-indicator3.so.7 \
+            libayatana-ido3-0.4.so.0 \
+            libdbusmenu-glib.so.4 \
+            libdbusmenu-gtk3.so.4; do
+            test -f "$APPDIR/lib/$library"
+          done
+          set +e
+          GDK_BACKEND=x11 LD_DEBUG=libs xvfb-run -a timeout 15s \
+            "$APPDIR/pku_manager" > build/appimage/firejail-entrypoint.log 2>&1
+          status=$?
+          set -e
+          test "$status" = 124
+          for library in \
+            libayatana-appindicator3.so.1 \
+            libayatana-indicator3.so.7 \
+            libayatana-ido3-0.4.so.0 \
+            libdbusmenu-glib.so.4 \
+            libdbusmenu-gtk3.so.4; do
+            grep -F "calling init: $APPDIR/lib/$library" \
+              build/appimage/firejail-entrypoint.log
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: PKU_Manager-v${{ needs.prepare.outputs.version }}-linux.AppImage
