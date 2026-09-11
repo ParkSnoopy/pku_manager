@@ -80,7 +80,7 @@
 - Product identity must be consistent across Flutter, Android, iOS, Linux, macOS, Windows, AppImage, and NSIS metadata.
 - Platform support means packaged-runtime verification, not compilation alone.
 - Desktop windows launch at the configured desktop size, remain resizable, and support full-screen entry and exit from both the application control and keyboard.
-- Desktop Settings persist one close action: close the app by default, or hide it to a system-tray icon that restores the window and offers an explicit app-close action. If tray creation fails, the window remains visible.
+- A system-tray icon is created at desktop launch, restores the window, and offers an explicit app-close action. Desktop Settings persist one close action: close the app by default, or hide the window to the existing tray icon. If tray creation fails, the window remains visible.
 - Product behavior stays in Dart. Flutter plugins or narrow Dart wrappers may bridge native platform or SQLite facilities, but native code does not own timetable or parity rules.
 - Application-owned schema-like interchange uses Protobuf or XML instead of JSON. External source formats remain unchanged at their boundaries.
 - AGPL-licensed source, tests, and fixtures are not copied until licensing obligations are explicitly accepted or permission is obtained. Every relevant reference behavior and test scenario is independently represented in Dart tests.

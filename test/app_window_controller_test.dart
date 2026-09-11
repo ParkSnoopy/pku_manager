@@ -5,7 +5,7 @@ import 'package:tray_manager/tray_manager.dart' as tray;
 import 'package:window_manager/window_manager.dart';
 
 void main() {
-  test('desktop close action hides to tray or destroys the app', () async {
+  test('desktop tray is ready at launch and handles close actions', () async {
     final window = _WindowBackend();
     final systemTray = _TrayBackend();
     final controller = DesktopWindowController(
@@ -15,8 +15,13 @@ void main() {
     addTearDown(controller.dispose);
     await controller.initialize();
     expect(window.preventClose, isTrue);
+    expect(systemTray.iconPath, desktopTrayIconPath);
+    expect(
+      systemTray.menu!.getMenuItem('show_window')!.label,
+      'Show application',
+    );
 
-    controller.configureCloseAction(
+    await controller.configureCloseAction(
       ApplicationCloseAction.exitToSystemTray,
       showLabel: 'Show application',
       exitLabel: 'Close the app',
@@ -24,7 +29,6 @@ void main() {
     await controller.handleWindowClose();
     expect(window.hideCount, 1);
     expect(window.destroyCount, 0);
-    expect(systemTray.iconPath, desktopTrayIconPath);
     expect(
       systemTray.menu!.getMenuItem('show_window')!.label,
       'Show application',
@@ -35,11 +39,12 @@ void main() {
     expect(window.showCount, 2);
     expect(window.focusCount, 2);
 
-    controller.configureCloseAction(
+    await controller.configureCloseAction(
       ApplicationCloseAction.closeApp,
       showLabel: 'Show application',
       exitLabel: 'Close the app',
     );
+    expect(systemTray.destroyCount, 0);
     await controller.handleWindowClose();
     expect(systemTray.destroyCount, 1);
     expect(window.destroyCount, 1);
@@ -65,6 +70,22 @@ void main() {
     expect(window.hideCount, 0);
     expect(window.showCount, 2);
     expect(window.focusCount, 2);
+    expect(window.destroyCount, 0);
+  });
+
+  test('tray setup failure does not block application launch', () async {
+    final window = _WindowBackend();
+    final systemTray = _TrayBackend()..setIconError = StateError('no tray');
+    final controller = DesktopWindowController(
+      windowBackend: window,
+      trayBackend: systemTray,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.initialize();
+
+    expect(window.showCount, 1);
+    expect(window.focusCount, 1);
     expect(window.destroyCount, 0);
   });
 }
@@ -119,6 +140,7 @@ final class _TrayBackend implements SystemTrayBackend {
   int destroyCount = 0;
   String? iconPath;
   tray.Menu? menu;
+  Object? setIconError;
 
   @override
   bool available = true;
@@ -136,7 +158,10 @@ final class _TrayBackend implements SystemTrayBackend {
   Future<void> setContextMenu(tray.Menu value) async => menu = value;
 
   @override
-  Future<void> setIcon(String value) async => iconPath = value;
+  Future<void> setIcon(String value) async {
+    if (setIconError case final error?) throw error;
+    iconPath = value;
+  }
 
   @override
   Future<void> setToolTip(String value) async {}

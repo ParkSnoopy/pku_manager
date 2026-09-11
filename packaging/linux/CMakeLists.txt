@@ -41,6 +41,6 @@ add_custom_target(appimage
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/AppRun" "${APPDIR}/AppRun"
   COMMAND chmod +x "${APPDIR}/AppRun"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/pku_manager.desktop" "${APPDIR}/pku_manager.desktop"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/../../linux/runner/resources/pku_manager.svg" "${APPDIR}/pku_manager.svg"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/../../linux/runner/resources/pku_manager.png" "${APPDIR}/pku_manager.png"
   COMMAND ${CMAKE_COMMAND} -E env ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "${APPIMAGETOOL}" --runtime-file "${RUNTIME}" "${APPDIR}" "${CMAKE_CURRENT_BINARY_DIR}/pku-manager.AppImage"
   VERBATIM)

@@ -174,6 +174,7 @@ final class DesktopWindowController extends AppWindowController
     _tray.addListener(this);
     await _window.setPreventClose(true);
     _isFullScreen = await _window.isFullScreen();
+    await _tryEnsureTray();
     await _window.waitUntilReadyToShow(desktopWindowOptions, showWindow);
   }
 
@@ -193,10 +194,10 @@ final class DesktopWindowController extends AppWindowController
     _closeAction = action;
     _showLabel = showLabel;
     _exitLabel = exitLabel;
-    if (_trayReady && action == ApplicationCloseAction.closeApp) {
-      await _destroyTray();
-    } else if (_trayReady) {
+    if (_trayReady) {
       await _setTrayMenu();
+    } else {
+      await _tryEnsureTray();
     }
   }
 
@@ -235,6 +236,15 @@ final class DesktopWindowController extends AppWindowController
       return;
     }
     await _setTrayMenu();
+  }
+
+  Future<void> _tryEnsureTray() async {
+    if (!_tray.available) return;
+    try {
+      await _ensureTray();
+    } catch (error, stackTrace) {
+      debugPrint('System tray could not be opened: $error\n$stackTrace');
+    }
   }
 
   Future<void> _setTrayMenu() => _tray.setContextMenu(

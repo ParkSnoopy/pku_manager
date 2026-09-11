@@ -2,6 +2,7 @@
 /.sample/
 *.xls
 *.png
+!/linux/runner/resources/pku_manager.png
 *.xlsx
 
 # Miscellaneous
