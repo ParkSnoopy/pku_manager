@@ -28,7 +28,7 @@ void main() {
     expect(stagedPath, startsWith('${runtimeDirectory.path}/'));
     expect(stagedPath, isNot(contains('flutter_assets')));
     expect(File(stagedPath).readAsBytesSync(), iconBytes);
-  });
+  }, skip: !Platform.isLinux);
 }
 
 final class _AssetBundle extends CachingAssetBundle {
