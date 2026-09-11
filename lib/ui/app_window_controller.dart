@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:tray_manager/tray_manager.dart' as tray;
 import 'package:window_manager/window_manager.dart';
 
@@ -14,11 +15,15 @@ const desktopWindowOptions = WindowOptions(
   center: true,
   title: 'PKU Manager',
 );
-const _desktopTrayPng =
+const _linuxDesktopTrayPng = 'linux/runner/resources/pku_manager.png';
+const _macosDesktopTrayPng =
     'macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png';
 const _desktopTrayIco = 'windows/runner/resources/app_icon.ico';
-String get desktopTrayIconPath =>
-    Platform.isWindows ? _desktopTrayIco : _desktopTrayPng;
+String get desktopTrayIconPath => Platform.isWindows
+    ? _desktopTrayIco
+    : Platform.isLinux
+    ? _linuxDesktopTrayPng
+    : _macosDesktopTrayPng;
 
 bool get isDesktopWindowPlatform =>
     !kIsWeb &&
@@ -121,8 +126,28 @@ final class _WindowManagerBackend implements DesktopWindowBackend {
   }
 }
 
-final class _TrayManagerBackend implements SystemTrayBackend {
-  const _TrayManagerBackend();
+typedef LinuxTrayMethodInvoker = Future<void> Function(
+  String method,
+  Map<String, Object?> arguments,
+);
+
+final class TrayManagerBackend implements SystemTrayBackend {
+  TrayManagerBackend({
+    AssetBundle? assetBundle,
+    Map<String, String>? environment,
+    LinuxTrayMethodInvoker? invokeLinuxMethod,
+  }) : _assetBundle = assetBundle ?? rootBundle,
+       _environment = environment ?? Platform.environment,
+       _invokeLinuxMethod =
+           invokeLinuxMethod ??
+           ((method, arguments) =>
+               _channel.invokeMethod<void>(method, arguments));
+
+  static const _channel = MethodChannel('tray_manager');
+  final AssetBundle _assetBundle;
+  final Map<String, String> _environment;
+  final LinuxTrayMethodInvoker _invokeLinuxMethod;
+  File? _stagedLinuxIcon;
 
   @override
   bool get available =>
@@ -132,7 +157,18 @@ final class _TrayManagerBackend implements SystemTrayBackend {
   void addListener(tray.TrayListener listener) =>
       tray.trayManager.addListener(listener);
   @override
-  Future<void> destroy() => tray.trayManager.destroy();
+  Future<void> destroy() async {
+    await tray.trayManager.destroy();
+    final icon = _stagedLinuxIcon;
+    _stagedLinuxIcon = null;
+    if (icon == null) return;
+    try {
+      await icon.parent.delete(recursive: true);
+    } on FileSystemException {
+      // Runtime directories are cleared by the operating system at logout.
+    }
+  }
+
   @override
   void removeListener(tray.TrayListener listener) =>
       tray.trayManager.removeListener(listener);
@@ -140,7 +176,30 @@ final class _TrayManagerBackend implements SystemTrayBackend {
   Future<void> setContextMenu(tray.Menu menu) =>
       tray.trayManager.setContextMenu(menu);
   @override
-  Future<void> setIcon(String path) => tray.trayManager.setIcon(path);
+  Future<void> setIcon(String path) async {
+    if (!Platform.isLinux) {
+      await tray.trayManager.setIcon(path);
+      return;
+    }
+    final runtimeDirectory = _environment['XDG_RUNTIME_DIR'];
+    if (runtimeDirectory == null || runtimeDirectory.isEmpty) {
+      throw StateError('XDG_RUNTIME_DIR is unavailable.');
+    }
+    final directory = Directory('$runtimeDirectory/pku_manager-$pid');
+    await directory.create();
+    final icon = File('${directory.path}/tray_icon.png');
+    final data = await _assetBundle.load(path);
+    await icon.writeAsBytes(
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      flush: true,
+    );
+    _stagedLinuxIcon = icon;
+    await _invokeLinuxMethod('setIcon', {
+      'id': 'com.parksnoopy.pku_manager',
+      'iconPath': icon.path,
+    });
+  }
+
   @override
   Future<void> setToolTip(String value) => tray.trayManager.setToolTip(value);
 }
@@ -151,7 +210,7 @@ final class DesktopWindowController extends AppWindowController
     DesktopWindowBackend? windowBackend,
     SystemTrayBackend? trayBackend,
   }) : _window = windowBackend ?? const _WindowManagerBackend(),
-       _tray = trayBackend ?? const _TrayManagerBackend();
+       _tray = trayBackend ?? TrayManagerBackend();
 
   final DesktopWindowBackend _window;
   final SystemTrayBackend _tray;

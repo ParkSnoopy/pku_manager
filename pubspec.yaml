@@ -72,6 +72,7 @@ flutter:
   assets:
     - assets/fonts/NotoSansCJK.ttc
     - assets/fonts/NotoSerifCJK.ttc
+    - linux/runner/resources/pku_manager.png
     - macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png
     - windows/runner/resources/app_icon.ico
 
