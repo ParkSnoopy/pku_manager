@@ -632,7 +632,8 @@ class _MeetingTileState extends State<_MeetingTile> {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontSize: timetableCourseNameFontSize,
-                                          fontWeight: widget.fontWeight,
+                                          fontWeight:
+                                              timetableCourseNameFontWeight,
                                           height: 1.5,
                                           letterSpacing: -.2,
                                         ),

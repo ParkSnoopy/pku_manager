@@ -151,7 +151,7 @@ void main() {
         strings: strings,
         paletteSeed: 4,
         fontFamily: 'PKU Noto Serif CJK SC',
-        fontWeight: ui.FontWeight.w700,
+        fontWeight: ui.FontWeight.w400,
         indexColor: const Color(0xfffff0e0),
         surfaceColor: const Color(0xfffafafa),
         courseAppearances: const {
@@ -203,6 +203,7 @@ void main() {
         'FF123456',
       );
       final styled = sheet.cell(CellIndex.indexByString('B2')).cellStyle!;
+      expect(styled.isBold, isTrue);
       expect(styled.backgroundColor.colorHex, 'FF123456');
       expect(styled.fontFamily, 'Noto Serif CJK SC');
       expect(

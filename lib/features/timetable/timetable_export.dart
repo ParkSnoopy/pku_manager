@@ -264,7 +264,9 @@ final class TimetableExporter {
         final outer = ExcelColor.fromHexString('#FF92918D');
         final thin = ExcelColor.fromHexString('#FFE6DFD8');
         cell.cellStyle = CellStyle(
-          bold: fontWeight.value >= ui.FontWeight.w600.value,
+          bold:
+              !index && meetings.isNotEmpty && role == 0 ||
+              fontWeight.value >= ui.FontWeight.w600.value,
           fontFamily: _xlsxFontFamily(fontFamily),
           fontSize:
               ((row == 0
@@ -512,7 +514,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           fontFamily: fontFamily,
           fontFallback: timetableFontFallback,
           fontSize: timetableCourseNameFontSize * fontScale,
-          weight: fontWeight,
+          weight: timetableCourseNameFontWeight,
           color: foreground,
           letterSpacing: -.2,
           lineHeight: 1.5,

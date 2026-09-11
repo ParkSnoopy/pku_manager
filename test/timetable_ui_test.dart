@@ -354,6 +354,7 @@ void main() {
         ),
       );
       expect(courseName.style?.fontSize, 22.5);
+      expect(courseName.style?.fontWeight, FontWeight.bold);
       expect(courseName.style?.height, 1.5);
       expect(courseName.overflow, TextOverflow.ellipsis);
       final content = tester.widget<Padding>(
