@@ -97,7 +97,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(GDK_BACKEND=x11 xvfb-run -a timeout 15s \
+          test "$(GDK_BACKEND=x11 APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a timeout 15s \
             "build/appimage/PKU_Manager-v${VERSION}-linux.AppImage" \
             > build/appimage/runtime.log 2>&1; printf '%s' "$?")" = 124
       - name: Launch Firejail AppImage entrypoint
