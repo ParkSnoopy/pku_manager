@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=PKU Manager
+Comment=Offline timetable and semester weeks
+Exec=pku_manager
+Icon=pku_manager
+Categories=Education;Office;
+Terminal=false
