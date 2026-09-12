@@ -1,3 +1,6 @@
+!define APP_ICON "..\..\windows\runner\resources\app_icon.ico"
+!define MUI_ICON "${APP_ICON}"
+!define MUI_UNICON "${APP_ICON}"
 !include "MUI2.nsh"
 !ifndef BUNDLE
 !define BUNDLE "..\..\build\windows\x64\runner\Release"
@@ -13,6 +16,8 @@ InstallDirRegKey HKCU "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 SetOverwrite on
+Icon "${APP_ICON}"
+UninstallIcon "${APP_ICON}"
 VIProductVersion "${VERSION}.0"
 VIAddVersionKey "CompanyName" "ParkSnoopy"
 VIAddVersionKey "FileDescription" "PKU Manager installer"
