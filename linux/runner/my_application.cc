@@ -14,6 +14,22 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+static void set_window_icon(GtkWindow* window) {
+  g_autofree gchar* executable = g_file_read_link("/proc/self/exe", nullptr);
+  if (executable == nullptr) return;
+
+  g_autofree gchar* executable_dir = g_path_get_dirname(executable);
+  g_autofree gchar* appimage_icon =
+      g_build_filename(executable_dir, "pku_manager.png", nullptr);
+  g_autofree gchar* bundle_icon =
+      g_build_filename(executable_dir, "data", "flutter_assets", "linux",
+                       "runner", "resources", "pku_manager.png", nullptr);
+  const gchar* icon =
+      g_file_test(appimage_icon, G_FILE_TEST_IS_REGULAR) ? appimage_icon
+                                                         : bundle_icon;
+  gtk_window_set_icon_from_file(window, icon, nullptr);
+}
+
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
@@ -24,6 +40,7 @@ static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+  set_window_icon(window);
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu
