@@ -93,3 +93,7 @@ Parser acceptance requires a sanitized real PKU BIFF8 workbook in addition to sy
 - Timetable behavior reference: `https://github.com/ParkSnoopy/pku-elective-prettify`
 
 Reference code and fixtures are not copied without an approved compatible license. Pin exact revisions and record independently reimplemented behavior in `docs/REFERENCE_CASES.md`.
+
+## License
+
+Copyright (C) 2026 ParkSnoopy. PKU Manager is licensed under the GNU General Public License version 2 only (`GPL-2.0-only`). See `LICENSE`.
