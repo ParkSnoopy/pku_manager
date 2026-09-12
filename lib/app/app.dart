@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -32,6 +33,7 @@ class PkuManagerApp extends StatefulWidget {
     this.browserLauncher,
     this.calendar,
     this.windowController,
+    this.requireLanguageSelection = false,
   });
   final TimetableController? controller;
   final AppearanceController? appearance;
@@ -39,6 +41,7 @@ class PkuManagerApp extends StatefulWidget {
   final BrowserLauncher? browserLauncher;
   final CalendarScheduleController? calendar;
   final AppWindowController? windowController;
+  final bool requireLanguageSelection;
   @override
   State<PkuManagerApp> createState() => _PkuManagerAppState();
 }
@@ -52,9 +55,11 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
   late final TimetableExporter _exporter;
   late final AppWindowController _windowController;
   String? _failure;
+  late bool _requiresLanguageSelection;
   @override
   void initState() {
     super.initState();
+    _requiresLanguageSelection = widget.requireLanguageSelection;
     _appearance =
         widget.appearance ?? AppearanceController(MemoryAppearanceStore());
     _exporter = widget.exporter ?? TimetableExporter(NativeExportFileWriter());
@@ -79,7 +84,9 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       if (!mounted) return;
       await directory.create(recursive: true);
       if (!mounted) return;
-      final database = AppDatabase('${directory.path}/pku_manager.sqlite3');
+      final databasePath = '${directory.path}/pku_manager.sqlite3';
+      final isFirstLaunch = !await File(databasePath).exists();
+      final database = AppDatabase(databasePath);
       _database = database;
       _dataTransfer = AppDataTransfer(
         database,
@@ -101,8 +108,11 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
             AppStrings(_appearance.language.locale).text(AppText.finalExam),
         onPublished: _calendar!.reload,
       );
-      setState(() => _controller = controller);
-      controller.start();
+      setState(() {
+        _controller = controller;
+        _requiresLanguageSelection = isFirstLaunch;
+      });
+      if (!isFirstLaunch) controller.start();
     } catch (_) {
       if (mounted) {
         setState(() => _failure = 'Application data could not be opened.');
@@ -166,6 +176,12 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
     _controller?.reload();
   }
 
+  void _selectLanguage(AppLanguage language) {
+    _appearance.setLanguage(language);
+    setState(() => _requiresLanguageSelection = false);
+    if (widget.controller == null) _controller?.start();
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: _appearance,
@@ -198,7 +214,9 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
           ),
         );
       },
-      home: _controller != null && _calendar != null
+      home: _requiresLanguageSelection
+          ? _LanguageSelectionPage(onSelected: _selectLanguage)
+          : _controller != null && _calendar != null
           ? TimetablePage(
               controller: _controller!,
               calendar: _calendar!,
@@ -264,6 +282,64 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       ),
     );
   }
+}
+
+final class _LanguageSelectionPage extends StatelessWidget {
+  const _LanguageSelectionPage({required this.onSelected});
+
+  final ValueChanged<AppLanguage> onSelected;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.language, size: 48),
+              const SizedBox(height: 24),
+              Column(
+                children: [
+                  for (final label in const [
+                    '언어 선택',
+                    'Choose language',
+                    '选择语言',
+                  ])
+                    Text(label, style: Theme.of(context).textTheme.titleLarge),
+                ],
+              ),
+              const SizedBox(height: 32),
+              for (final language in AppLanguage.values) ...[
+                OutlinedButton(
+                  key: ValueKey('language-${language.code}'),
+                  onPressed: () => onSelected(language),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(56),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: Text(switch (language) {
+                    AppLanguage.ko => '한국어',
+                    AppLanguage.en => 'English',
+                    AppLanguage.zhHans => '简体中文',
+                  }),
+                ),
+                if (language != AppLanguage.values.last)
+                  const SizedBox(height: 12),
+              ],
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 TextTheme _weightedTextTheme(TextTheme theme, FontWeight weight) =>

@@ -146,4 +146,45 @@ void main() {
       controller.dispose();
     },
   );
+
+  testWidgets('first launch requires a language before showing the app', (
+    tester,
+  ) async {
+    final database = AppDatabase(':memory:');
+    addTearDown(database.close);
+    final controller = TimetableController(
+      schedules: ScheduleRepository(database),
+      decoder: ScheduleXlsParser(),
+      picker: Picker(),
+      weeks: WeekConfigRepository(
+        database,
+        WeekConfigParser(SemesterConfig()),
+        fetch: () async => throw StateError('offline'),
+      ),
+    );
+    addTearDown(controller.dispose);
+    final appearanceStore = MemoryAppearanceStore();
+    final appearance = AppearanceController(appearanceStore);
+
+    await tester.pumpWidget(
+      PkuManagerApp(
+        controller: controller,
+        appearance: appearance,
+        requireLanguageSelection: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('language-en')), findsOneWidget);
+    expect(find.text('언어 선택'), findsOneWidget);
+    expect(find.text('Choose language'), findsOneWidget);
+    expect(find.text('选择语言'), findsOneWidget);
+    expect(find.text('Timetable'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('language-en')));
+    await tester.pumpAndSettle();
+
+    expect(appearance.language, AppLanguage.en);
+    expect(AppearanceController(appearanceStore).language, AppLanguage.en);
+    expect(find.text('Timetable'), findsOneWidget);
+  });
 }
