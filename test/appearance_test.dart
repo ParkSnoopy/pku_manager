@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/data/app_database.dart';
 import 'package:pku_manager/data/sqlite_appearance_store.dart';
+import 'package:pku_manager/domain/application_close_action.dart';
 import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/features/settings/appearance_controller.dart';
 import 'package:pku_manager/features/settings/settings_page.dart';
@@ -61,6 +62,7 @@ void main() {
     expect(controller.autoTextColor, isFalse);
     expect(controller.darkMode, isFalse);
     expect(controller.blendAccentIntoTheme, isFalse);
+    expect(controller.applicationCloseAction, ApplicationCloseAction.closeApp);
     expect(appearanceAccents, const [
       Color(0xffffb3ba),
       Color(0xffffd3b6),
@@ -95,6 +97,9 @@ void main() {
     controller.setAutoTextColor(true);
     controller.setDarkMode(true);
     controller.setBlendAccentIntoTheme(true);
+    controller.setApplicationCloseAction(
+      ApplicationCloseAction.exitToSystemTray,
+    );
     controller.setCustomPaletteColor(2, const Color(0xffabcdef));
     controller.setCourseAppearance(
       const ['locked'],
@@ -130,6 +135,10 @@ void main() {
     expect(restored.autoTextColor, isTrue);
     expect(restored.darkMode, isTrue);
     expect(restored.blendAccentIntoTheme, isTrue);
+    expect(
+      restored.applicationCloseAction,
+      ApplicationCloseAction.exitToSystemTray,
+    );
     expect(restored.customPalette[2], const Color(0xffabcdef));
     expect(
       timetableCourseColor(
@@ -184,6 +193,7 @@ void main() {
         localizationsDelegates: AppStrings.localizationsDelegates,
         home: SettingsPage(
           controller: controller,
+          showCloseAction: true,
           colorPicker: (context, {required color, required title}) async =>
               const Color(0xff234567),
         ),
@@ -347,5 +357,19 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('show-roll-navbar')));
     await tester.pump();
     expect(controller.showRollInNavbar, isFalse);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('on-application-close')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('On application close'), findsOneWidget);
+    expect(find.text('Close the app'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('on-application-close')));
+    await tester.pump();
+    expect(
+      controller.applicationCloseAction,
+      ApplicationCloseAction.exitToSystemTray,
+    );
+    expect(find.text('Exit to system tray'), findsOneWidget);
   });
 }

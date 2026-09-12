@@ -58,6 +58,8 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
     _exporter = widget.exporter ?? TimetableExporter(NativeExportFileWriter());
     _windowController =
         widget.windowController ?? UnsupportedWindowController();
+    _appearance.addListener(_syncWindowCloseAction);
+    _syncWindowCloseAction();
     if (widget.controller != null) {
       _controller = widget.controller;
       _calendar =
@@ -77,7 +79,10 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       if (!mounted) return;
       final database = AppDatabase('${directory.path}/pku_manager.sqlite3');
       _database = database;
+      _appearance.removeListener(_syncWindowCloseAction);
       _appearance = AppearanceController(SqliteAppearanceStore(database));
+      _appearance.addListener(_syncWindowCloseAction);
+      _syncWindowCloseAction();
       _calendar = CalendarScheduleController(
         CalendarScheduleRepository(database),
       );
@@ -101,11 +106,29 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
 
   @override
   void dispose() {
+    _appearance.removeListener(_syncWindowCloseAction);
     if (widget.controller == null) _controller?.dispose();
     if (widget.calendar == null) _calendar?.dispose();
     if (widget.windowController == null) _windowController.dispose();
     _database?.close();
     super.dispose();
+  }
+
+  void _syncWindowCloseAction() {
+    final strings = AppStrings(_appearance.language.locale);
+    unawaited(_configureWindowCloseAction(strings));
+  }
+
+  Future<void> _configureWindowCloseAction(AppStrings strings) async {
+    try {
+      await _windowController.configureCloseAction(
+        _appearance.applicationCloseAction,
+        showLabel: strings.text(AppText.showApplication),
+        exitLabel: strings.text(AppText.closeTheApp),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('$error\n$stackTrace');
+    }
   }
 
   @override
@@ -160,9 +183,16 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
   );
 
   ThemeData _theme(Brightness brightness) {
-    final accentScheme = ColorScheme.fromSeed(
-      seedColor: _appearance.accent,
+    final accent = _appearance.accent;
+    final generatedAccentScheme = ColorScheme.fromSeed(
+      seedColor: accent,
       brightness: brightness,
+    );
+    final accentScheme = generatedAccentScheme.copyWith(
+      primary: accent,
+      onPrimary: ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
+          ? Colors.white
+          : Colors.black,
     );
     final neutralScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xff808080),

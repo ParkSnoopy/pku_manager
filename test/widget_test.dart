@@ -7,6 +7,7 @@ import 'package:pku_manager/data/schedule_repository.dart';
 import 'package:pku_manager/data/schedule_xls_parser.dart';
 import 'package:pku_manager/data/week_config_parser.dart';
 import 'package:pku_manager/data/week_config_repository.dart';
+import 'package:pku_manager/domain/application_close_action.dart';
 import 'package:pku_manager/domain/schedule_import.dart';
 import 'package:pku_manager/domain/semester.dart';
 import 'package:pku_manager/features/timetable/timetable_controller.dart';
@@ -31,6 +32,21 @@ class TestWindowController extends AppWindowController {
   Future<void> toggleFullScreen() async {
     isFullScreen = !isFullScreen;
     notifyListeners();
+  }
+
+  ApplicationCloseAction? closeAction;
+  String? showLabel;
+  String? exitLabel;
+
+  @override
+  Future<void> configureCloseAction(
+    ApplicationCloseAction action, {
+    required String showLabel,
+    required String exitLabel,
+  }) async {
+    closeAction = action;
+    this.showLabel = showLabel;
+    this.exitLabel = exitLabel;
   }
 }
 
@@ -67,7 +83,23 @@ void main() {
         ),
       );
       await tester.pump();
+      const nearWhite = Color(0xfffefefe);
+      appearance.setAccent(nearWhite);
+      await tester.pumpAndSettle();
+      final themedContext = tester.element(find.text('Calendar'));
+      expect(Theme.of(themedContext).colorScheme.primary, nearWhite);
+      expect(Theme.of(themedContext).colorScheme.onPrimary, Colors.black);
+      appearance.setDarkMode(true);
+      await tester.pumpAndSettle();
+      expect(
+        Theme.of(tester.element(find.text('Calendar'))).colorScheme.primary,
+        nearWhite,
+      );
+      appearance.setDarkMode(false);
+      await tester.pumpAndSettle();
       expect(desktopWindowOptions.size, desktopLaunchSize);
+      expect(windowController.closeAction, ApplicationCloseAction.closeApp);
+      expect(windowController.showLabel, 'Show application');
       await tester.tap(find.byTooltip('Full screen'));
       await tester.pump();
       expect(windowController.isFullScreen, isTrue);
@@ -75,6 +107,22 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.f11);
       await tester.pump();
       expect(windowController.isFullScreen, isFalse);
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('on-application-close')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.byKey(const ValueKey('on-application-close')));
+      await tester.pump();
+      expect(
+        windowController.closeAction,
+        ApplicationCloseAction.exitToSystemTray,
+      );
+      expect(windowController.exitLabel, 'Close the app');
+      await tester.tap(find.text('Timetable'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('Import your exported'), findsOneWidget);
       await tester.tap(find.byTooltip('Import'));
       await tester.pumpAndSettle();

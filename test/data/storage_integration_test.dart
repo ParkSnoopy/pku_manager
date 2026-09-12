@@ -10,6 +10,7 @@ import 'package:pku_manager/data/week_config_parser.dart';
 import 'package:pku_manager/data/week_config_repository.dart';
 import 'package:pku_manager/domain/semester.dart';
 import 'package:pku_manager/domain/course.dart';
+import 'package:pku_manager/domain/imported_exam.dart';
 import 'package:pku_manager/domain/week_source.dart';
 
 void main() {
@@ -184,6 +185,20 @@ void main() {
     final bytes = File(path).readAsBytesSync();
     final candidate = ScheduleXlsParser().parse(bytes);
     expect(candidate.records, isNotEmpty);
+    final examTexts = candidate.records
+        .map((record) => record.meeting.exam)
+        .where((exam) => exam.isNotEmpty)
+        .toList(growable: false);
+    final expectedExams = {
+      for (final record in candidate.records)
+        if (parseImportedExam(record.meeting.exam) case final exam?)
+          (record.meeting.name, exam.startsAt),
+    };
+    expect(
+      examTexts.where((exam) => parseImportedExam(exam) != null),
+      isNotEmpty,
+      reason: 'Expected a dated exam in: $examTexts',
+    );
     // Incomplete rooms/tutorial alternatives require explicit user completion;
     // synthetic corrections here test persistence, not the user's real choices.
     final completions = {
@@ -207,6 +222,10 @@ void main() {
     var db = AppDatabase(databasePath);
     ScheduleRepository(db).publish(candidate, completions);
     expect(db.activeSource, bytes);
+    expect(
+      CalendarScheduleRepository(db).load(),
+      hasLength(expectedExams.length),
+    );
     db.close();
     db = AppDatabase(databasePath);
     expect(

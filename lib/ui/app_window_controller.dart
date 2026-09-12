@@ -1,8 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:tray_manager/tray_manager.dart' as tray;
 import 'package:window_manager/window_manager.dart';
+
+import '../domain/application_close_action.dart';
 
 const desktopLaunchSize = Size(1600, 900);
 const desktopWindowOptions = WindowOptions(
@@ -10,6 +15,15 @@ const desktopWindowOptions = WindowOptions(
   center: true,
   title: 'PKU Manager',
 );
+const _linuxDesktopTrayPng = 'linux/runner/resources/pku_manager.png';
+const _macosDesktopTrayPng =
+    'macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png';
+const _desktopTrayIco = 'windows/runner/resources/app_icon.ico';
+String get desktopTrayIconPath => Platform.isWindows
+    ? _desktopTrayIco
+    : Platform.isLinux
+    ? _linuxDesktopTrayPng
+    : _macosDesktopTrayPng;
 
 bool get isDesktopWindowPlatform =>
     !kIsWeb &&
@@ -24,6 +38,11 @@ abstract class AppWindowController extends ChangeNotifier {
   bool get supported;
   bool get isFullScreen;
   Future<void> toggleFullScreen();
+  Future<void> configureCloseAction(
+    ApplicationCloseAction action, {
+    required String showLabel,
+    required String exitLabel,
+  });
 }
 
 final class UnsupportedWindowController extends AppWindowController {
@@ -35,13 +54,172 @@ final class UnsupportedWindowController extends AppWindowController {
 
   @override
   Future<void> toggleFullScreen() async {}
+
+  @override
+  Future<void> configureCloseAction(
+    ApplicationCloseAction action, {
+    required String showLabel,
+    required String exitLabel,
+  }) async {}
+}
+
+abstract interface class DesktopWindowBackend {
+  Future<void> ensureInitialized();
+  void addListener(WindowListener listener);
+  void removeListener(WindowListener listener);
+  Future<bool> isFullScreen();
+  Future<void> waitUntilReadyToShow(
+    WindowOptions options,
+    Future<void> Function() callback,
+  );
+  Future<void> show();
+  Future<void> hide();
+  Future<void> focus();
+  Future<void> destroy();
+  Future<void> setFullScreen(bool value);
+  Future<void> setPreventClose(bool value);
+}
+
+abstract interface class SystemTrayBackend {
+  bool get available;
+  void addListener(tray.TrayListener listener);
+  void removeListener(tray.TrayListener listener);
+  Future<void> setIcon(String path);
+  Future<void> setToolTip(String value);
+  Future<void> setContextMenu(tray.Menu menu);
+  Future<void> destroy();
+}
+
+final class _WindowManagerBackend implements DesktopWindowBackend {
+  const _WindowManagerBackend();
+
+  @override
+  void addListener(WindowListener listener) =>
+      windowManager.addListener(listener);
+  @override
+  Future<void> destroy() => windowManager.destroy();
+  @override
+  Future<void> ensureInitialized() => windowManager.ensureInitialized();
+  @override
+  Future<void> focus() => windowManager.focus();
+  @override
+  Future<void> hide() => windowManager.hide();
+  @override
+  Future<bool> isFullScreen() => windowManager.isFullScreen();
+  @override
+  void removeListener(WindowListener listener) =>
+      windowManager.removeListener(listener);
+  @override
+  Future<void> setFullScreen(bool value) => windowManager.setFullScreen(value);
+  @override
+  Future<void> setPreventClose(bool value) =>
+      windowManager.setPreventClose(value);
+  @override
+  Future<void> show() => windowManager.show();
+  @override
+  Future<void> waitUntilReadyToShow(
+    WindowOptions options,
+    Future<void> Function() callback,
+  ) async {
+    await windowManager.waitUntilReadyToShow(options);
+    await callback();
+  }
+}
+
+typedef LinuxTrayMethodInvoker = Future<void> Function(
+  String method,
+  Map<String, Object?> arguments,
+);
+
+final class TrayManagerBackend implements SystemTrayBackend {
+  TrayManagerBackend({
+    AssetBundle? assetBundle,
+    Map<String, String>? environment,
+    LinuxTrayMethodInvoker? invokeLinuxMethod,
+  }) : _assetBundle = assetBundle ?? rootBundle,
+       _environment = environment ?? Platform.environment,
+       _invokeLinuxMethod =
+           invokeLinuxMethod ??
+           ((method, arguments) =>
+               _channel.invokeMethod<void>(method, arguments));
+
+  static const _channel = MethodChannel('tray_manager');
+  final AssetBundle _assetBundle;
+  final Map<String, String> _environment;
+  final LinuxTrayMethodInvoker _invokeLinuxMethod;
+  File? _stagedLinuxIcon;
+
+  @override
+  bool get available =>
+      !Platform.isLinux ||
+      (Platform.environment['DBUS_SESSION_BUS_ADDRESS']?.isNotEmpty ?? false);
+  @override
+  void addListener(tray.TrayListener listener) =>
+      tray.trayManager.addListener(listener);
+  @override
+  Future<void> destroy() async {
+    await tray.trayManager.destroy();
+    final icon = _stagedLinuxIcon;
+    _stagedLinuxIcon = null;
+    if (icon == null) return;
+    try {
+      await icon.parent.delete(recursive: true);
+    } on FileSystemException {
+      // Runtime directories are cleared by the operating system at logout.
+    }
+  }
+
+  @override
+  void removeListener(tray.TrayListener listener) =>
+      tray.trayManager.removeListener(listener);
+  @override
+  Future<void> setContextMenu(tray.Menu menu) =>
+      tray.trayManager.setContextMenu(menu);
+  @override
+  Future<void> setIcon(String path) async {
+    if (!Platform.isLinux) {
+      await tray.trayManager.setIcon(path);
+      return;
+    }
+    final runtimeDirectory = _environment['XDG_RUNTIME_DIR'];
+    if (runtimeDirectory == null || runtimeDirectory.isEmpty) {
+      throw StateError('XDG_RUNTIME_DIR is unavailable.');
+    }
+    final directory = Directory('$runtimeDirectory/pku_manager-$pid');
+    await directory.create();
+    final icon = File('${directory.path}/tray_icon.png');
+    final data = await _assetBundle.load(path);
+    await icon.writeAsBytes(
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      flush: true,
+    );
+    _stagedLinuxIcon = icon;
+    await _invokeLinuxMethod('setIcon', {
+      'id': 'com.parksnoopy.pku_manager',
+      'iconPath': icon.path,
+    });
+  }
+
+  @override
+  Future<void> setToolTip(String value) => tray.trayManager.setToolTip(value);
 }
 
 final class DesktopWindowController extends AppWindowController
-    with WindowListener {
-  DesktopWindowController();
+    with WindowListener, tray.TrayListener {
+  DesktopWindowController({
+    DesktopWindowBackend? windowBackend,
+    SystemTrayBackend? trayBackend,
+  }) : _window = windowBackend ?? const _WindowManagerBackend(),
+       _tray = trayBackend ?? TrayManagerBackend();
 
+  final DesktopWindowBackend _window;
+  final SystemTrayBackend _tray;
   bool _isFullScreen = false;
+  bool _trayReady = false;
+  bool _exiting = false;
+  ApplicationCloseAction _closeAction = ApplicationCloseAction.closeApp;
+  String _showLabel = 'Show application';
+  String _exitLabel = 'Close the app';
 
   @override
   bool get supported => true;
@@ -50,22 +228,133 @@ final class DesktopWindowController extends AppWindowController
   bool get isFullScreen => _isFullScreen;
 
   Future<void> initialize() async {
-    await windowManager.ensureInitialized();
-    windowManager.addListener(this);
-    _isFullScreen = await windowManager.isFullScreen();
-    unawaited(
-      windowManager.waitUntilReadyToShow(desktopWindowOptions, () async {
-        await windowManager.show();
-        await windowManager.focus();
-      }),
-    );
+    await _window.ensureInitialized();
+    _window.addListener(this);
+    _tray.addListener(this);
+    await _window.setPreventClose(true);
+    _isFullScreen = await _window.isFullScreen();
+    await _tryEnsureTray();
+    await _window.waitUntilReadyToShow(desktopWindowOptions, showWindow);
   }
 
   @override
   Future<void> toggleFullScreen() async {
     final fullScreen = !_isFullScreen;
-    await windowManager.setFullScreen(fullScreen);
+    await _window.setFullScreen(fullScreen);
     _updateFullScreen(fullScreen);
+  }
+
+  @override
+  Future<void> configureCloseAction(
+    ApplicationCloseAction action, {
+    required String showLabel,
+    required String exitLabel,
+  }) async {
+    _closeAction = action;
+    _showLabel = showLabel;
+    _exitLabel = exitLabel;
+    if (_trayReady) {
+      await _setTrayMenu();
+    } else {
+      await _tryEnsureTray();
+    }
+  }
+
+  Future<void> handleWindowClose() async {
+    if (_exiting) return;
+    if (_closeAction == ApplicationCloseAction.closeApp) {
+      _exiting = true;
+      await _destroyTray();
+      await _window.destroy();
+      return;
+    }
+    if (!_tray.available) {
+      await showWindow();
+      return;
+    }
+    try {
+      await _ensureTray();
+      await _window.hide();
+    } catch (error, stackTrace) {
+      debugPrint('System tray could not be opened: $error\n$stackTrace');
+      await showWindow();
+    }
+  }
+
+  Future<void> showWindow() async {
+    await _window.show();
+    await _window.focus();
+  }
+
+  Future<void> _ensureTray() async {
+    if (!_trayReady) {
+      await _tray.setIcon(desktopTrayIconPath);
+      if (!Platform.isLinux) await _tray.setToolTip('PKU Manager');
+      await _setTrayMenu();
+      _trayReady = true;
+      return;
+    }
+    await _setTrayMenu();
+  }
+
+  Future<void> _tryEnsureTray() async {
+    if (!_tray.available) return;
+    try {
+      await _ensureTray();
+    } catch (error, stackTrace) {
+      debugPrint('System tray could not be opened: $error\n$stackTrace');
+    }
+  }
+
+  Future<void> _setTrayMenu() => _tray.setContextMenu(
+    tray.Menu(
+      items: [
+        tray.MenuItem(key: 'show_window', label: _showLabel),
+        tray.MenuItem.separator(),
+        tray.MenuItem(key: 'exit_app', label: _exitLabel),
+      ],
+    ),
+  );
+
+  Future<void> _destroyTray() async {
+    if (!_trayReady) return;
+    _trayReady = false;
+    await _tray.destroy();
+  }
+
+  Future<void> _exit() async {
+    if (_exiting) return;
+    _exiting = true;
+    await _destroyTray();
+    await _window.destroy();
+  }
+
+  Future<void> _reportFailure(Future<void> operation) async {
+    try {
+      await operation;
+    } catch (error, stackTrace) {
+      debugPrint('$error\n$stackTrace');
+    }
+  }
+
+  void _run(Future<void> operation) => unawaited(_reportFailure(operation));
+
+  @override
+  void onWindowClose() => _run(handleWindowClose());
+
+  @override
+  void onTrayIconMouseDown() => _run(showWindow());
+
+  @override
+  void onTrayMenuItemClick(tray.MenuItem menuItem) {
+    switch (menuItem.key) {
+      case 'show_window':
+        _run(showWindow());
+        break;
+      case 'exit_app':
+        _run(_exit());
+        break;
+    }
   }
 
   @override
@@ -82,7 +371,9 @@ final class DesktopWindowController extends AppWindowController
 
   @override
   void dispose() {
-    windowManager.removeListener(this);
+    _window.removeListener(this);
+    _tray.removeListener(this);
+    _run(_destroyTray());
     super.dispose();
   }
 }

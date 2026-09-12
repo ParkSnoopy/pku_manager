@@ -35,6 +35,7 @@ const timetableCourseNameFontSize = 22.5;
 const timetableClassroomFontSize = 22.5;
 const timetableCourseNoteFontSize = 16.0;
 const timetableCourseContentPadding = 10.0;
+const timetableCourseNameFontWeight = FontWeight.bold;
 
 Color themedTimetableColor(
   Color color, {

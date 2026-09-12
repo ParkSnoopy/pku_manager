@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../features/settings/appearance_controller.dart';
 import '../features/timetable/timetable_color.dart';
 import '../l10n/app_strings.dart';
+import '../domain/application_close_action.dart';
 import 'app_database.dart';
 
 final class SqliteAppearanceStore implements AppearanceStore {
@@ -12,14 +13,12 @@ final class SqliteAppearanceStore implements AppearanceStore {
 
   @override
   AppearanceSettings load() {
-    final rows = database.database.select(
-      '''SELECT accent, palette_seed, roll_palette, language, show_roll_nav,
+    final rows = database.database.select('''SELECT accent, palette_seed, roll_palette, language, show_roll_nav, close_action,
 font_family, font_scale, font_weight, timetable_font_scale,
 timetable_index_color, auto_text_color, dark_mode, blend_accent_theme,
 custom_palette_0, custom_palette_1, custom_palette_2, custom_palette_3,
 custom_palette_4
-FROM appearance WHERE id = 1''',
-    );
+FROM appearance WHERE id = 1''');
     if (rows.isEmpty) return const AppearanceSettings();
     final row = rows.single;
     return AppearanceSettings(
@@ -28,6 +27,9 @@ FROM appearance WHERE id = 1''',
       rollPalette: row['roll_palette'] as int,
       language: AppLanguage.parse(row['language'] as String),
       showRollInNavbar: (row['show_roll_nav'] as int) != 0,
+      applicationCloseAction: ApplicationCloseAction.parse(
+        row['close_action'] as String,
+      ),
       fontFamily: AppFontFamily.parse(row['font_family'] as String),
       fontScale: (row['font_scale'] as num).toDouble(),
       fontWeightValue: row['font_weight'] as int,
@@ -69,14 +71,15 @@ JOIN active_schedule ON course_appearance.source = active_schedule.source''');
     database.transaction(() {
       database.database.execute(
         '''INSERT INTO appearance (
-id, accent, palette_seed, roll_palette, language, show_roll_nav, font_family,
+id, accent, palette_seed, roll_palette, language, show_roll_nav, close_action, font_family,
 font_scale, font_weight, timetable_font_scale, timetable_index_color,
 auto_text_color, dark_mode, blend_accent_theme, custom_palette_0,
 custom_palette_1, custom_palette_2, custom_palette_3, custom_palette_4)
-VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET accent=excluded.accent,
 palette_seed=excluded.palette_seed, roll_palette=excluded.roll_palette,
 language=excluded.language, show_roll_nav=excluded.show_roll_nav,
+close_action=excluded.close_action,
 font_family=excluded.font_family, font_scale=excluded.font_scale,
 font_weight=excluded.font_weight,
 timetable_font_scale=excluded.timetable_font_scale,
@@ -94,6 +97,7 @@ custom_palette_4=excluded.custom_palette_4''',
           settings.rollPalette,
           settings.language.code,
           settings.showRollInNavbar ? 1 : 0,
+          settings.applicationCloseAction.code,
           settings.fontFamily.code,
           settings.fontScale,
           settings.fontWeightValue,

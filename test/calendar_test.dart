@@ -8,6 +8,35 @@ import 'package:pku_manager/features/calendar/calendar_page.dart';
 import 'package:pku_manager/l10n/app_strings.dart';
 
 void main() {
+  testWidgets('real schedule color picker opens in Korean', (tester) async {
+    final controller = CalendarScheduleController(
+      MemoryCalendarScheduleStore(),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ko'),
+        supportedLocales: AppStrings.supportedLocales,
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        home: CalendarPage(
+          now: DateTime.utc(2026, 9, 7),
+          controller: controller,
+          timetable: Timetable(const [], periodCount: 12),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('calendar-add-2026-9-7')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('schedule-color')));
+    await tester.tap(find.byKey(const ValueKey('schedule-color')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('일정 색상'), findsWidgets);
+  });
+
   testWidgets('schedule editor saves or cancels a blank colorable draft', (
     tester,
   ) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../l10n/app_strings.dart';
+import '../../domain/application_close_action.dart';
 import '../timetable/timetable_color.dart';
 import 'appearance_controller.dart';
 import 'color_picker_dialog.dart';
@@ -20,10 +21,12 @@ class SettingsPage extends StatelessWidget {
     super.key,
     required this.controller,
     this.colorPicker = showAppColorPicker,
+    this.showCloseAction = false,
   });
 
   final AppearanceController controller;
   final ColorPickerLauncher colorPicker;
+  final bool showCloseAction;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -318,6 +321,32 @@ class SettingsPage extends StatelessWidget {
             value: controller.showRollInNavbar,
             onChanged: controller.setShowRollInNavbar,
           ),
+          if (showCloseAction) ...[
+            const SizedBox(height: 24),
+            SwitchListTile(
+              key: const ValueKey('on-application-close'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                AppStrings.of(context).text(AppText.onApplicationClose),
+              ),
+              subtitle: Text(
+                AppStrings.of(context).text(
+                  controller.applicationCloseAction ==
+                          ApplicationCloseAction.exitToSystemTray
+                      ? AppText.exitToSystemTray
+                      : AppText.closeTheApp,
+                ),
+              ),
+              value:
+                  controller.applicationCloseAction ==
+                  ApplicationCloseAction.exitToSystemTray,
+              onChanged: (value) => controller.setApplicationCloseAction(
+                value
+                    ? ApplicationCloseAction.exitToSystemTray
+                    : ApplicationCloseAction.closeApp,
+              ),
+            ),
+          ],
         ],
       ),
     ),
