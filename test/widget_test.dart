@@ -72,7 +72,8 @@ void main() {
         db.close();
       });
       final appearance = AppearanceController(MemoryAppearanceStore())
-        ..setLanguage(AppLanguage.en);
+        ..setLanguage(AppLanguage.en)
+        ..setUiScale(1);
       final windowController = TestWindowController();
       addTearDown(windowController.dispose);
       await tester.pumpWidget(
@@ -112,7 +113,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('on-application-close')),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find.byType(Scrollable).at(1),
       );
       await tester.tap(find.byKey(const ValueKey('on-application-close')));
       await tester.pump();
@@ -164,7 +165,7 @@ void main() {
     );
     addTearDown(controller.dispose);
     final appearanceStore = MemoryAppearanceStore();
-    final appearance = AppearanceController(appearanceStore);
+    final appearance = AppearanceController(appearanceStore)..setUiScale(1);
 
     await tester.pumpWidget(
       PkuManagerApp(

@@ -105,6 +105,37 @@ void main() {
     expect(CalendarScheduleRepository(destination).load().single.title, 'Keep');
   });
 
+  test('purge removes every persisted row while preserving the schema', () {
+    final database = AppDatabase(':memory:');
+    addTearDown(database.close);
+    _seed(database, marker: 6, title: 'Delete', language: AppLanguage.en);
+
+    database.purgeData();
+
+    database.validate();
+    expect(database.activeSource, isNull);
+    for (final table in [
+      'sources',
+      'meetings',
+      'completions',
+      'issues',
+      'active_schedule',
+      'week_cache',
+      'appearance',
+      'user_meetings',
+      'course_appearance',
+      'calendar_schedules',
+    ]) {
+      expect(
+        database.database
+            .select('SELECT COUNT(*) AS count FROM $table')
+            .single['count'],
+        0,
+        reason: table,
+      );
+    }
+  });
+
   test('application decode failure restores the previous database', () async {
     final directory = Directory.systemTemp.createTempSync('pku-app-data-test-');
     addTearDown(() => directory.deleteSync(recursive: true));

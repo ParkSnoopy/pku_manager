@@ -178,6 +178,30 @@ JOIN active_schedule ON sources.id = active_schedule.source WHERE active_schedul
         : Uint8List.fromList(rows.first['bytes'] as List<int>);
   }
 
+  void purgeData() {
+    transaction(() {
+      for (final table in const [
+        'course_appearance',
+        'calendar_schedules',
+        'completions',
+        'issues',
+        'user_meetings',
+        'active_schedule',
+        'meetings',
+        'week_cache',
+        'appearance',
+        'sources',
+      ]) {
+        database.execute('DELETE FROM $table');
+      }
+      database.execute(
+        "DELETE FROM sqlite_sequence WHERE name = 'calendar_schedules'",
+      );
+    });
+    database.execute('VACUUM');
+    validate();
+  }
+
   void close() => database.close();
 }
 

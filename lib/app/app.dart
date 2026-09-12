@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../data/app_data_transfer.dart';
 import '../data/app_database.dart';
 import '../data/calendar_schedule_repository.dart';
+import '../data/file_device_settings_store.dart';
 import '../data/schedule_picker.dart';
 import '../data/schedule_repository.dart';
 import '../data/schedule_xls_parser.dart';
@@ -51,6 +52,7 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
   TimetableController? _controller;
   CalendarScheduleController? _calendar;
   AppDataTransfer? _dataTransfer;
+  DeviceSettingsStore? _deviceSettings;
   late AppearanceController _appearance;
   late final TimetableExporter _exporter;
   late final AppWindowController _windowController;
@@ -87,13 +89,20 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       final databasePath = '${directory.path}/pku_manager.sqlite3';
       final isFirstLaunch = !await File(databasePath).exists();
       final database = AppDatabase(databasePath);
+      final deviceSettings = FileDeviceSettingsStore(
+        File('${directory.path}/device_settings.json'),
+      );
       _database = database;
+      _deviceSettings = deviceSettings;
       _dataTransfer = AppDataTransfer(
         database,
         const NativeAppDataFileAccess(),
       );
       _appearance.removeListener(_syncWindowCloseAction);
-      _appearance = AppearanceController(SqliteAppearanceStore(database));
+      _appearance = AppearanceController(
+        SqliteAppearanceStore(database),
+        deviceSettings: deviceSettings,
+      );
       _appearance.addListener(_syncWindowCloseAction);
       _syncWindowCloseAction();
       _calendar = CalendarScheduleController(
@@ -163,6 +172,18 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
     return true;
   }
 
+  Future<bool> _purgeAppData() async {
+    final database = _database;
+    final deviceSettings = _deviceSettings;
+    if (database == null || deviceSettings == null) return false;
+    database.purgeData();
+    deviceSettings.purge();
+    _validateAndReloadAppData();
+    if (!mounted) return false;
+    setState(() => _requiresLanguageSelection = true);
+    return true;
+  }
+
   void _validateAndReloadAppData() {
     final database = _database;
     if (database == null) throw StateError('Application data is not open');
@@ -197,21 +218,22 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       builder: (context, child) {
         final media = MediaQuery.of(context);
         final platformScale = media.textScaler.scale(14) / 14;
-        return MediaQuery(
-          data: media.copyWith(
-            textScaler: TextScaler.linear(
-              platformScale * _appearance.fontScale,
-            ),
-          ),
-          child: CallbackShortcuts(
-            bindings: _windowController.supported
-                ? {
-                    const SingleActivator(LogicalKeyboardKey.f11): () =>
-                        unawaited(_windowController.toggleFullScreen()),
-                  }
-                : const {},
-            child: Focus(autofocus: true, child: child!),
-          ),
+        final scaledMedia = media.copyWith(
+          textScaler: TextScaler.linear(platformScale * _appearance.fontScale),
+        );
+        final content = CallbackShortcuts(
+          bindings: _windowController.supported
+              ? {
+                  const SingleActivator(LogicalKeyboardKey.f11): () =>
+                      unawaited(_windowController.toggleFullScreen()),
+                }
+              : const {},
+          child: Focus(autofocus: true, child: child!),
+        );
+        return _ScaledUi(
+          scale: _appearance.uiScale,
+          media: scaledMedia,
+          child: content,
         );
       },
       home: _requiresLanguageSelection
@@ -226,6 +248,7 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
               windowController: _windowController,
               exportAppData: _exportAppData,
               importAppData: _importAppData,
+              purgeAppData: _purgeAppData,
             )
           : Scaffold(
               body: Center(
@@ -284,6 +307,63 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
   }
 }
 
+final class _ScaledUi extends StatelessWidget {
+  const _ScaledUi({
+    required this.scale,
+    required this.media,
+    required this.child,
+  });
+
+  final double scale;
+  final MediaQueryData media;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      if (!constraints.hasBoundedWidth || !constraints.hasBoundedHeight) {
+        return child;
+      }
+      final logicalSize = Size(
+        constraints.maxWidth / scale,
+        constraints.maxHeight / scale,
+      );
+      final scaledMedia = media.copyWith(
+        size: logicalSize,
+        devicePixelRatio: media.devicePixelRatio * scale,
+        padding: _divideInsets(media.padding, scale),
+        viewPadding: _divideInsets(media.viewPadding, scale),
+        viewInsets: _divideInsets(media.viewInsets, scale),
+        systemGestureInsets: _divideInsets(media.systemGestureInsets, scale),
+      );
+      return ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.topLeft,
+          minWidth: logicalSize.width,
+          maxWidth: logicalSize.width,
+          minHeight: logicalSize.height,
+          maxHeight: logicalSize.height,
+          child: Transform.scale(
+            alignment: Alignment.topLeft,
+            scale: scale,
+            child: SizedBox.fromSize(
+              size: logicalSize,
+              child: MediaQuery(data: scaledMedia, child: child),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+EdgeInsets _divideInsets(EdgeInsets value, double scale) => EdgeInsets.fromLTRB(
+  value.left / scale,
+  value.top / scale,
+  value.right / scale,
+  value.bottom / scale,
+);
+
 final class _LanguageSelectionPage extends StatelessWidget {
   const _LanguageSelectionPage({required this.onSelected});
 
@@ -291,50 +371,60 @@ final class _LanguageSelectionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.language, size: 48),
-              const SizedBox(height: 24),
-              Column(
+    body: LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final label in const [
-                    '언어 선택',
-                    'Choose language',
-                    '选择语言',
-                  ])
-                    Text(label, style: Theme.of(context).textTheme.titleLarge),
+                  const Icon(Icons.language, size: 48),
+                  const SizedBox(height: 24),
+                  Column(
+                    children: [
+                      for (final label in const [
+                        '언어 선택',
+                        'Choose language',
+                        '选择语言',
+                      ])
+                        Text(
+                          label,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  for (final language in AppLanguage.values) ...[
+                    OutlinedButton(
+                      key: ValueKey('language-${language.code}'),
+                      onPressed: () => onSelected(language),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(56),
+                        foregroundColor: Theme.of(context)
+                            .colorScheme
+                            .onSurface,
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      child: Text(switch (language) {
+                        AppLanguage.ko => '한국어',
+                        AppLanguage.en => 'English',
+                        AppLanguage.zhHans => '简体中文',
+                      }),
+                    ),
+                    if (language != AppLanguage.values.last)
+                      const SizedBox(height: 12),
+                  ],
                 ],
               ),
-              const SizedBox(height: 32),
-              for (final language in AppLanguage.values) ...[
-                OutlinedButton(
-                  key: ValueKey('language-${language.code}'),
-                  onPressed: () => onSelected(language),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(56),
-                    foregroundColor: Theme.of(context).colorScheme.onSurface,
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  child: Text(switch (language) {
-                    AppLanguage.ko => '한국어',
-                    AppLanguage.en => 'English',
-                    AppLanguage.zhHans => '简体中文',
-                  }),
-                ),
-                if (language != AppLanguage.values.last)
-                  const SizedBox(height: 12),
-              ],
-            ],
+            ),
           ),
         ),
       ),

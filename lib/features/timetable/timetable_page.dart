@@ -52,6 +52,7 @@ class TimetablePage extends StatefulWidget {
     required this.windowController,
     this.exportAppData,
     this.importAppData,
+    this.purgeAppData,
   });
   final TimetableController controller;
   final CalendarScheduleController calendar;
@@ -61,6 +62,7 @@ class TimetablePage extends StatefulWidget {
   final AppWindowController windowController;
   final AppDataAction? exportAppData;
   final AppDataAction? importAppData;
+  final AppDataAction? purgeAppData;
   @override
   State<TimetablePage> createState() => _TimetablePageState();
 }
@@ -422,80 +424,78 @@ class _TimetablePageState extends State<TimetablePage>
                 ),
               ],
               trailing: Expanded(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (widget.windowController.supported)
-                          ListenableBuilder(
-                            listenable: widget.windowController,
-                            builder: (context, _) => IconButton(
-                              key: const ValueKey('fullscreen-toggle'),
-                              onPressed: () => unawaited(
-                                widget.windowController.toggleFullScreen(),
-                              ),
-                              tooltip: strings.text(
-                                widget.windowController.isFullScreen
-                                    ? AppText.exitFullScreen
-                                    : AppText.fullScreen,
-                              ),
-                              icon: Icon(
-                                widget.windowController.isFullScreen
-                                    ? Icons.fullscreen_exit
-                                    : Icons.fullscreen,
-                              ),
+                child: SingleChildScrollView(
+                  reverse: true,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.windowController.supported)
+                        ListenableBuilder(
+                          listenable: widget.windowController,
+                          builder: (context, _) => IconButton(
+                            key: const ValueKey('fullscreen-toggle'),
+                            onPressed: () => unawaited(
+                              widget.windowController.toggleFullScreen(),
+                            ),
+                            tooltip: strings.text(
+                              widget.windowController.isFullScreen
+                                  ? AppText.exitFullScreen
+                                  : AppText.fullScreen,
+                            ),
+                            icon: Icon(
+                              widget.windowController.isFullScreen
+                                  ? Icons.fullscreen_exit
+                                  : Icons.fullscreen,
                             ),
                           ),
-                        if (widget.appearance.showRollInNavbar)
-                          IconButton(
-                            onPressed: c.timetable == null
-                                ? null
-                                : widget.appearance.rollPalette,
-                            tooltip: strings.text(AppText.rollColors),
-                            icon: const Icon(Icons.casino_outlined),
-                          ),
-                        PopupMenuButton<TimetableExportFormat>(
-                          enabled: c.timetable != null && !_exporting,
-                          tooltip: strings.text(AppText.export),
-                          icon: _exporting
-                              ? const SizedBox.square(
-                                  dimension: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.ios_share_outlined),
-                          onSelected: _export,
-                          itemBuilder: (_) => [
-                            PopupMenuItem(
-                              value: TimetableExportFormat.png,
-                              child: Text(strings.text(AppText.exportPng)),
-                            ),
-                            PopupMenuItem(
-                              value: TimetableExportFormat.xlsx,
-                              child: Text(strings.text(AppText.exportXlsx)),
-                            ),
-                          ],
                         ),
+                      if (widget.appearance.showRollInNavbar)
                         IconButton(
-                          onPressed: c.importing || c.candidate != null
+                          onPressed: c.timetable == null
                               ? null
-                              : c.import,
-                          tooltip: strings.text(AppText.import),
-                          icon: c.importing
-                              ? const SizedBox.square(
-                                  dimension: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.file_open_outlined),
+                              : widget.appearance.rollPalette,
+                          tooltip: strings.text(AppText.rollColors),
+                          icon: const Icon(Icons.casino_outlined),
                         ),
-                      ],
-                    ),
+                      PopupMenuButton<TimetableExportFormat>(
+                        enabled: c.timetable != null && !_exporting,
+                        tooltip: strings.text(AppText.export),
+                        icon: _exporting
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.ios_share_outlined),
+                        onSelected: _export,
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: TimetableExportFormat.png,
+                            child: Text(strings.text(AppText.exportPng)),
+                          ),
+                          PopupMenuItem(
+                            value: TimetableExportFormat.xlsx,
+                            child: Text(strings.text(AppText.exportXlsx)),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: c.importing || c.candidate != null
+                            ? null
+                            : c.import,
+                        tooltip: strings.text(AppText.import),
+                        icon: c.importing
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.file_open_outlined),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -511,6 +511,7 @@ class _TimetablePageState extends State<TimetablePage>
                       importAppData: widget.importAppData == null
                           ? null
                           : _importAppData,
+                      purgeAppData: widget.purgeAppData,
                     )
                   : _destination == 1
                   ? _calendarBody(c)

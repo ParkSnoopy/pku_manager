@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pku_manager/data/app_database.dart';
+import 'package:pku_manager/data/file_device_settings_store.dart';
 import 'package:pku_manager/data/sqlite_appearance_store.dart';
 import 'package:pku_manager/domain/application_close_action.dart';
 import 'package:pku_manager/domain/course.dart';
@@ -92,6 +93,7 @@ void main() {
     expect(controller.accent, const Color(0xffff5722));
     expect(controller.fontFamily, AppFontFamily.serif);
     expect(controller.fontScale, 1);
+    expect(controller.uiScale, 1.5);
     expect(controller.fontWeightValue, 400);
     expect(controller.timetableFontScale, 1);
     expect(controller.timetableIndexColor, const Color(0xffe8e0d2));
@@ -127,6 +129,7 @@ void main() {
     controller.cycleFontFamily();
     controller.setRollPalette(3);
     controller.setFontScale(1.4);
+    controller.setUiScale(1.75);
     controller.setFontWeight(900);
     controller.setTimetableFontScale(1.6);
     controller.setTimetableIndexColor(const Color(0xff112233));
@@ -165,6 +168,7 @@ void main() {
     expect(restored.rollPaletteIndex, 3);
     expect(restored.fontFamily, AppFontFamily.sans);
     expect(restored.fontScale, 1.4);
+    expect(restored.uiScale, 1.5);
     expect(restored.fontWeightValue, 900);
     expect(restored.timetableFontScale, 1.6);
     expect(restored.timetableIndexColor, const Color(0xff112233));
@@ -217,6 +221,43 @@ void main() {
     expect(restored.courseAppearances, isEmpty);
   });
 
+  test('UI scale persists outside the transferable database', () {
+    final directory = Directory.systemTemp.createTempSync('pku-ui-scale-test-');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final settings = FileDeviceSettingsStore(
+      File('${directory.path}/device-settings.json'),
+    );
+    final database = AppDatabase('${directory.path}/app.sqlite3');
+    addTearDown(database.close);
+    final controller = AppearanceController(
+      SqliteAppearanceStore(database),
+      deviceSettings: settings,
+    );
+
+    controller.setUiScale(1.75);
+    expect(
+      AppearanceController(
+        SqliteAppearanceStore(database),
+        deviceSettings: settings,
+      ).uiScale,
+      1.75,
+    );
+    controller.setUiScale(1.8);
+    expect(settings.loadUiScale(), 1.8);
+    expect(() => controller.setUiScale(.45), throwsRangeError);
+    expect(() => controller.setUiScale(2.05), throwsRangeError);
+    expect(() => controller.setUiScale(1.53), throwsArgumentError);
+
+    settings.purge();
+    expect(
+      AppearanceController(
+        SqliteAppearanceStore(database),
+        deviceSettings: settings,
+      ).uiScale,
+      1.5,
+    );
+  });
+
   testWidgets('settings page edits theme without a dropdown', (tester) async {
     final database = AppDatabase(':memory:');
     addTearDown(database.close);
@@ -246,6 +287,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('blend-accent-theme')));
     await tester.pump();
     expect(controller.blendAccentIntoTheme, isTrue);
+    await tester.ensureVisible(find.byKey(const ValueKey('ui-scale')));
+    await tester.enterText(find.byKey(const ValueKey('ui-scale-input')), '175');
+    await tester.pump();
+    expect(controller.uiScale, 1.75);
+    await tester.enterText(find.byKey(const ValueKey('ui-scale-input')), '173');
+    await tester.pump();
+    expect(controller.uiScale, 1.75);
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('language-cycle')),
       300,
@@ -419,6 +467,7 @@ void main() {
       final controller = AppearanceController(MemoryAppearanceStore());
       var exports = 0;
       var imports = 0;
+      var purges = 0;
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en'),
@@ -433,6 +482,10 @@ void main() {
               },
               importAppData: () async {
                 imports++;
+                return true;
+              },
+              purgeAppData: () async {
+                purges++;
                 return true;
               },
             ),
@@ -468,6 +521,27 @@ void main() {
       await tester.pumpAndSettle();
       expect(imports, 1);
       expect(find.text('App data imported'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('purge-app-data')));
+      await tester.pumpAndSettle();
+      expect(purges, 0);
+      expect(
+        find.text(
+          'All timetables, schedules, and settings will be permanently deleted.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, 'Purge app data'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(purges, 1);
+      expect(find.text('App data purged'), findsOneWidget);
     },
   );
 }

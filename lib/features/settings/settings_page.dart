@@ -26,6 +26,7 @@ class SettingsPage extends StatelessWidget {
     this.showCloseAction = false,
     this.exportAppData,
     this.importAppData,
+    this.purgeAppData,
   });
 
   final AppearanceController controller;
@@ -33,6 +34,7 @@ class SettingsPage extends StatelessWidget {
   final bool showCloseAction;
   final AppDataAction? exportAppData;
   final AppDataAction? importAppData;
+  final AppDataAction? purgeAppData;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -40,6 +42,7 @@ class SettingsPage extends StatelessWidget {
     builder: (context, _) => Material(
       color: Colors.transparent,
       child: ListView(
+        key: const ValueKey('settings-scroll'),
         padding: const EdgeInsets.all(24),
         children: [
           Text(
@@ -117,6 +120,17 @@ class SettingsPage extends StatelessWidget {
             ),
             value: controller.blendAccentIntoTheme,
             onChanged: controller.setBlendAccentIntoTheme,
+          ),
+          const SizedBox(height: 24),
+          _PercentSetting(
+            label: AppStrings.of(context).text(AppText.uiScale),
+            fieldKey: const ValueKey('ui-scale-input'),
+            sliderKey: const ValueKey('ui-scale'),
+            min: .5,
+            max: 2,
+            divisions: 30,
+            value: controller.uiScale,
+            onChanged: controller.setUiScale,
           ),
           const SizedBox(height: 24),
           Text(AppStrings.of(context).text(AppText.rollPalette)),
@@ -358,6 +372,7 @@ class SettingsPage extends StatelessWidget {
             _AppDataControls(
               exportAppData: exportAppData!,
               importAppData: importAppData!,
+              purgeAppData: purgeAppData,
             ),
           ],
         ],
@@ -370,10 +385,12 @@ class _AppDataControls extends StatefulWidget {
   const _AppDataControls({
     required this.exportAppData,
     required this.importAppData,
+    this.purgeAppData,
   });
 
   final AppDataAction exportAppData;
   final AppDataAction importAppData;
+  final AppDataAction? purgeAppData;
 
   @override
   State<_AppDataControls> createState() => _AppDataControlsState();
@@ -382,7 +399,11 @@ class _AppDataControls extends StatefulWidget {
 class _AppDataControlsState extends State<_AppDataControls> {
   bool _busy = false;
 
-  Future<void> _run(AppDataAction action, AppText success) async {
+  Future<void> _run(
+    AppDataAction action,
+    AppText success, {
+    AppText failure = AppText.appDataTransferFailed,
+  }) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
@@ -394,11 +415,7 @@ class _AppDataControlsState extends State<_AppDataControls> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppStrings.of(context).text(AppText.appDataTransferFailed),
-          ),
-        ),
+        SnackBar(content: Text(AppStrings.of(context).text(failure))),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -415,6 +432,9 @@ class _AppDataControlsState extends State<_AppDataControls> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
+            ),
             child: Text(strings.text(AppText.cancel)),
           ),
           FilledButton(
@@ -426,6 +446,42 @@ class _AppDataControlsState extends State<_AppDataControls> {
     );
     if (confirmed ?? false) {
       await _run(widget.importAppData, AppText.appDataImported);
+    }
+  }
+
+  Future<void> _purge() async {
+    final strings = AppStrings.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(strings.text(AppText.purgeAppData)),
+        content: Text(strings.text(AppText.purgeAppDataWarning)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
+            ),
+            child: Text(strings.text(AppText.cancel)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: Text(strings.text(AppText.purgeAppData)),
+          ),
+        ],
+      ),
+    );
+    final action = widget.purgeAppData;
+    if ((confirmed ?? false) && action != null) {
+      await _run(
+        action,
+        AppText.appDataPurged,
+        failure: AppText.appDataPurgeFailed,
+      );
     }
   }
 
@@ -458,6 +514,16 @@ class _AppDataControlsState extends State<_AppDataControls> {
               icon: const Icon(Icons.file_download_outlined),
               label: Text(strings.text(AppText.importAppData)),
             ),
+            if (widget.purgeAppData != null)
+              TextButton.icon(
+                key: const ValueKey('purge-app-data'),
+                onPressed: _busy ? null : _purge,
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+                icon: const Icon(Icons.delete_forever_outlined),
+                label: Text(strings.text(AppText.purgeAppData)),
+              ),
           ],
         ),
       ],
@@ -530,7 +596,10 @@ class _PercentSettingState extends State<_PercentSetting> {
     final percent = int.tryParse(text);
     if (percent == null) return;
     final value = percent / 100;
-    if (value >= widget.min && value <= widget.max) {
+    final steps = (value - widget.min) * 20;
+    if (value >= widget.min &&
+        value <= widget.max &&
+        (steps.roundToDouble() - steps).abs() < 0.000001) {
       widget.onChanged(value);
     }
   }

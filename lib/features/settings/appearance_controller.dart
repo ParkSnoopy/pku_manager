@@ -96,6 +96,25 @@ abstract interface class AppearanceStore {
   );
 }
 
+abstract interface class DeviceSettingsStore {
+  double loadUiScale();
+  void saveUiScale(double value);
+  void purge();
+}
+
+final class MemoryDeviceSettingsStore implements DeviceSettingsStore {
+  double _uiScale = 1.5;
+
+  @override
+  double loadUiScale() => _uiScale;
+
+  @override
+  void saveUiScale(double value) => _uiScale = value;
+
+  @override
+  void purge() => _uiScale = 1.5;
+}
+
 final class MemoryAppearanceStore implements AppearanceStore {
   AppearanceSettings _settings = const AppearanceSettings();
   Map<String, CourseAppearance> _courseAppearances = const {};
@@ -115,13 +134,18 @@ final class MemoryAppearanceStore implements AppearanceStore {
 }
 
 final class AppearanceController extends ChangeNotifier {
-  AppearanceController(this.store)
+  AppearanceController(this.store, {DeviceSettingsStore? deviceSettings})
     : _settings = store.load(),
-      _courseAppearances = store.loadCourseAppearances();
+      _courseAppearances = store.loadCourseAppearances(),
+      deviceSettings = deviceSettings ?? MemoryDeviceSettingsStore() {
+    _uiScale = this.deviceSettings.loadUiScale();
+  }
 
   final AppearanceStore store;
+  final DeviceSettingsStore deviceSettings;
   AppearanceSettings _settings;
   Map<String, CourseAppearance> _courseAppearances;
+  late double _uiScale;
 
   Color get accent => _settings.accent;
   int get paletteSeed => _settings.paletteSeed;
@@ -132,6 +156,7 @@ final class AppearanceController extends ChangeNotifier {
       _settings.applicationCloseAction;
   AppFontFamily get fontFamily => _settings.fontFamily;
   double get fontScale => _settings.fontScale;
+  double get uiScale => _uiScale;
   int get fontWeightValue => _settings.fontWeightValue;
   FontWeight get fontWeight => FontWeight.values[fontWeightValue ~/ 100 - 1];
   double get timetableFontScale => _settings.timetableFontScale;
@@ -171,6 +196,18 @@ final class AppearanceController extends ChangeNotifier {
   void setFontScale(double value) {
     if (value < .8 || value > 1.5) throw RangeError.value(value);
     _set(_settings.copyWith(fontScale: value));
+  }
+
+  void setUiScale(double value) {
+    if (value < .5 || value > 2) throw RangeError.value(value);
+    final steps = (value * 20).round();
+    if ((steps / 20 - value).abs() > 0.000001) {
+      throw ArgumentError.value(value, 'value', 'Must use 5% steps');
+    }
+    final normalized = steps / 20;
+    deviceSettings.saveUiScale(normalized);
+    _uiScale = normalized;
+    notifyListeners();
   }
 
   void setTimetableFontScale(double value) {
@@ -232,6 +269,7 @@ final class AppearanceController extends ChangeNotifier {
   void reload() {
     _settings = store.load();
     _courseAppearances = Map.unmodifiable(store.loadCourseAppearances());
+    _uiScale = deviceSettings.loadUiScale();
     notifyListeners();
   }
 

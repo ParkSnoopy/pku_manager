@@ -203,6 +203,15 @@ void main() {
       expect(find.byType(NavigationRail), findsOneWidget);
       final appTextContext = tester.element(find.text('Calendar'));
       expect(
+        MediaQuery.sizeOf(appTextContext),
+        const Size(800 / 1.5, 800 / 1.5),
+      );
+      appearance.setUiScale(1);
+      await tester.pump();
+      expect(MediaQuery.sizeOf(appTextContext), const Size(800, 800));
+      appearance.setUiScale(1.5);
+      await tester.pump();
+      expect(
         MediaQuery.textScalerOf(appTextContext).scale(10),
         moreOrLessEquals(10),
       );
@@ -542,7 +551,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('show-roll-navbar')),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find.byType(Scrollable).at(1),
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('show-roll-navbar')));
@@ -592,6 +601,7 @@ void main() {
       )..start();
       final appearance = AppearanceController(MemoryAppearanceStore())
         ..setLanguage(AppLanguage.en)
+        ..setUiScale(1)
         ..setTimetableIndexColor(const Color(0xffabcdef));
       final calendar = CalendarScheduleController(MemoryCalendarScheduleStore())
         ..create(
