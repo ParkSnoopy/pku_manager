@@ -190,6 +190,7 @@ void main() {
       )..start();
       final appearance = AppearanceController(MemoryAppearanceStore());
       appearance.setLanguage(AppLanguage.en);
+      appearance.setUiScale(1);
       final writer = _ExportWriter();
       final pngEncoder = _PngEncoder();
       await tester.pumpWidget(
@@ -206,15 +207,20 @@ void main() {
         MediaQuery.sizeOf(appTextContext),
         const Size(800 / 1.5, 800 / 1.5),
       );
-      appearance.setUiScale(1);
+      appearance.setUiScale(.5);
       await tester.pump();
-      expect(MediaQuery.sizeOf(appTextContext), const Size(800, 800));
+      expect(
+        MediaQuery.sizeOf(appTextContext),
+        const Size(800 / .75, 800 / .75),
+      );
       appearance.setUiScale(1.5);
       await tester.pump();
       expect(
         MediaQuery.textScalerOf(appTextContext).scale(10),
         moreOrLessEquals(10),
       );
+      appearance.setUiScale(1);
+      await tester.pump();
       expect(
         Theme.of(appTextContext).textTheme.bodyMedium?.fontFamily,
         'PKU Noto Serif CJK SC',
@@ -577,7 +583,7 @@ void main() {
   testWidgets(
     'landscape uses the timetable pane and keeps calendar independent',
     (tester) async {
-      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.physicalSize = const Size(1800, 1200);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -645,7 +651,7 @@ void main() {
       await tester.pump();
       final bottomSpacer = find.byKey(const ValueKey('app-bottom-spacer'));
       expect(tester.getSize(bottomSpacer).height, 8);
-      expect(tester.getBottomRight(bottomSpacer).dy, 800);
+      expect(tester.getBottomRight(bottomSpacer).dy, 1200);
       expect(
         find.byKey(const ValueKey('upcoming-schedule-pane')),
         findsOneWidget,
@@ -923,7 +929,7 @@ void main() {
         findsOneWidget,
       );
       for (var week = 0; week < 4; week++) {
-        await tester.drag(find.byType(PageView), const Offset(0, -180));
+        await tester.drag(find.byType(PageView), const Offset(0, -270));
         await tester.pumpAndSettle();
       }
       expect(find.text('October 2026'), findsOneWidget);

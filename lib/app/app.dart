@@ -25,6 +25,8 @@ import '../l10n/app_strings.dart';
 import '../ui/app_window_controller.dart';
 import '../ui/super_otc_font.dart';
 
+const _appBaseUiScale = 1.5;
+
 class PkuManagerApp extends StatefulWidget {
   const PkuManagerApp({
     super.key,
@@ -231,7 +233,7 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
           child: Focus(autofocus: true, child: child!),
         );
         return _ScaledUi(
-          scale: _appearance.uiScale,
+          scale: _appBaseUiScale * _appearance.uiScale,
           media: scaledMedia,
           child: content,
         );

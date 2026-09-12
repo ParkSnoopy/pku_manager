@@ -102,8 +102,10 @@ abstract interface class DeviceSettingsStore {
   void purge();
 }
 
+const defaultUiScale = 1.0;
+
 final class MemoryDeviceSettingsStore implements DeviceSettingsStore {
-  double _uiScale = 1.5;
+  double _uiScale = defaultUiScale;
 
   @override
   double loadUiScale() => _uiScale;
@@ -112,7 +114,7 @@ final class MemoryDeviceSettingsStore implements DeviceSettingsStore {
   void saveUiScale(double value) => _uiScale = value;
 
   @override
-  void purge() => _uiScale = 1.5;
+  void purge() => _uiScale = defaultUiScale;
 }
 
 final class MemoryAppearanceStore implements AppearanceStore {

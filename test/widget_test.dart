@@ -54,6 +54,10 @@ void main() {
   testWidgets(
     'empty timetable, cancellation, populated view and mobile swipe',
     (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       final db = AppDatabase(':memory:');
       final parser = ScheduleXlsParser();
       final store = ScheduleRepository(db);
@@ -151,6 +155,10 @@ void main() {
   testWidgets('first launch requires a language before showing the app', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final database = AppDatabase(':memory:');
     addTearDown(database.close);
     final controller = TimetableController(

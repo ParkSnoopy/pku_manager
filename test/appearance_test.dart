@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -93,7 +94,7 @@ void main() {
     expect(controller.accent, const Color(0xffff5722));
     expect(controller.fontFamily, AppFontFamily.serif);
     expect(controller.fontScale, 1);
-    expect(controller.uiScale, 1.5);
+
     expect(controller.fontWeightValue, 400);
     expect(controller.timetableFontScale, 1);
     expect(controller.timetableIndexColor, const Color(0xffe8e0d2));
@@ -168,7 +169,7 @@ void main() {
     expect(restored.rollPaletteIndex, 3);
     expect(restored.fontFamily, AppFontFamily.sans);
     expect(restored.fontScale, 1.4);
-    expect(restored.uiScale, 1.5);
+
     expect(restored.fontWeightValue, 900);
     expect(restored.timetableFontScale, 1.6);
     expect(restored.timetableIndexColor, const Color(0xff112233));
@@ -224,11 +225,18 @@ void main() {
   test('UI scale persists outside the transferable database', () {
     final directory = Directory.systemTemp.createTempSync('pku-ui-scale-test-');
     addTearDown(() => directory.deleteSync(recursive: true));
-    final settings = FileDeviceSettingsStore(
-      File('${directory.path}/device-settings.json'),
-    );
+    final settingsFile = File('${directory.path}/device-settings.json')
+      ..writeAsStringSync('{"uiScale":1.75}');
+    final settings = FileDeviceSettingsStore(settingsFile);
     final database = AppDatabase('${directory.path}/app.sqlite3');
     addTearDown(database.close);
+
+    expect(settings.loadUiScale(), 1);
+    expect(jsonDecode(settingsFile.readAsStringSync()), {
+      'formatVersion': 1,
+      'uiScale': 1,
+    });
+
     final controller = AppearanceController(
       SqliteAppearanceStore(database),
       deviceSettings: settings,
@@ -249,13 +257,7 @@ void main() {
     expect(() => controller.setUiScale(1.53), throwsArgumentError);
 
     settings.purge();
-    expect(
-      AppearanceController(
-        SqliteAppearanceStore(database),
-        deviceSettings: settings,
-      ).uiScale,
-      1.5,
-    );
+    expect(settingsFile.existsSync(), isFalse);
   });
 
   testWidgets('settings page edits theme without a dropdown', (tester) async {
