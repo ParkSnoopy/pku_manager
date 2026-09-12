@@ -7,6 +7,8 @@ import '../timetable/timetable_color.dart';
 import 'appearance_controller.dart';
 import 'color_picker_dialog.dart';
 
+typedef AppDataAction = Future<bool> Function();
+
 const appearanceAccents = <Color>[
   Color(0xffffb3ba),
   Color(0xffffd3b6),
@@ -22,11 +24,15 @@ class SettingsPage extends StatelessWidget {
     required this.controller,
     this.colorPicker = showAppColorPicker,
     this.showCloseAction = false,
+    this.exportAppData,
+    this.importAppData,
   });
 
   final AppearanceController controller;
   final ColorPickerLauncher colorPicker;
   final bool showCloseAction;
+  final AppDataAction? exportAppData;
+  final AppDataAction? importAppData;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -347,10 +353,116 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
           ],
+          if (exportAppData != null && importAppData != null) ...[
+            const SizedBox(height: 32),
+            _AppDataControls(
+              exportAppData: exportAppData!,
+              importAppData: importAppData!,
+            ),
+          ],
         ],
       ),
     ),
   );
+}
+
+class _AppDataControls extends StatefulWidget {
+  const _AppDataControls({
+    required this.exportAppData,
+    required this.importAppData,
+  });
+
+  final AppDataAction exportAppData;
+  final AppDataAction importAppData;
+
+  @override
+  State<_AppDataControls> createState() => _AppDataControlsState();
+}
+
+class _AppDataControlsState extends State<_AppDataControls> {
+  bool _busy = false;
+
+  Future<void> _run(AppDataAction action, AppText success) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final completed = await action();
+      if (!mounted || !completed) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.of(context).text(success))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppStrings.of(context).text(AppText.appDataTransferFailed),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _import() async {
+    final strings = AppStrings.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(strings.text(AppText.importAppData)),
+        content: Text(strings.text(AppText.importAppDataWarning)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(strings.text(AppText.cancel)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(strings.text(AppText.importAppData)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed ?? false) {
+      await _run(widget.importAppData, AppText.appDataImported);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          strings.text(AppText.appData),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            OutlinedButton.icon(
+              key: const ValueKey('export-app-data'),
+              onPressed: _busy
+                  ? null
+                  : () => _run(widget.exportAppData, AppText.appDataExported),
+              icon: const Icon(Icons.file_upload_outlined),
+              label: Text(strings.text(AppText.exportAppData)),
+            ),
+            FilledButton.tonalIcon(
+              key: const ValueKey('import-app-data'),
+              onPressed: _busy ? null : _import,
+              icon: const Icon(Icons.file_download_outlined),
+              label: Text(strings.text(AppText.importAppData)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 class _PaletteSwatches extends StatelessWidget {

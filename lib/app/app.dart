@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../data/app_data_transfer.dart';
 import '../data/app_database.dart';
 import '../data/calendar_schedule_repository.dart';
 import '../data/schedule_picker.dart';
@@ -46,6 +47,7 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
   AppDatabase? _database;
   TimetableController? _controller;
   CalendarScheduleController? _calendar;
+  AppDataTransfer? _dataTransfer;
   late AppearanceController _appearance;
   late final TimetableExporter _exporter;
   late final AppWindowController _windowController;
@@ -79,6 +81,10 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       if (!mounted) return;
       final database = AppDatabase('${directory.path}/pku_manager.sqlite3');
       _database = database;
+      _dataTransfer = AppDataTransfer(
+        database,
+        const NativeAppDataFileAccess(),
+      );
       _appearance.removeListener(_syncWindowCloseAction);
       _appearance = AppearanceController(SqliteAppearanceStore(database));
       _appearance.addListener(_syncWindowCloseAction);
@@ -131,6 +137,35 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
     }
   }
 
+  Future<bool> _exportAppData() async {
+    final transfer = _dataTransfer;
+    return transfer == null ? false : transfer.exportData();
+  }
+
+  Future<bool> _importAppData() async {
+    final transfer = _dataTransfer;
+    if (transfer == null ||
+        !await transfer.importData(
+          validateReplacement: _validateAndReloadAppData,
+        )) {
+      return false;
+    }
+    return true;
+  }
+
+  void _validateAndReloadAppData() {
+    final database = _database;
+    if (database == null) throw StateError('Application data is not open');
+    SqliteAppearanceStore(database)
+      ..load()
+      ..loadCourseAppearances();
+    CalendarScheduleRepository(database).load();
+    ScheduleRepository(database).load();
+    _appearance.reload();
+    _calendar?.reload();
+    _controller?.reload();
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: _appearance,
@@ -171,6 +206,8 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
               exporter: _exporter,
               browserLauncher: widget.browserLauncher ?? launchInDefaultBrowser,
               windowController: _windowController,
+              exportAppData: _exportAppData,
+              importAppData: _importAppData,
             )
           : Scaffold(
               body: Center(

@@ -2,16 +2,28 @@ import 'dart:typed_data';
 
 import 'package:sqlite3/sqlite3.dart';
 
+const appDatabaseSchemaVersion = 1;
+
 /// Owns one connection. All publication changes share its transaction boundary.
 class AppDatabase {
   AppDatabase(String path) : database = sqlite3.open(path) {
-    database.execute('PRAGMA foreign_keys = ON');
-    database.execute('PRAGMA busy_timeout = 5000');
-    database.execute('PRAGMA synchronous = FULL');
-    final version =
-        database.select('PRAGMA user_version').first.values.first as int;
-    if (version != 0) {
+    try {
+      database.execute('PRAGMA foreign_keys = ON');
+      database.execute('PRAGMA busy_timeout = 5000');
+      database.execute('PRAGMA synchronous = FULL');
+      _initializeOrMigrate();
+      validate();
+    } catch (_) {
       database.close();
+      rethrow;
+    }
+  }
+
+  final Database database;
+
+  void _initializeOrMigrate() {
+    final version = database.userVersion;
+    if (version < 0 || version > appDatabaseSchemaVersion) {
       throw const FormatException('Unsupported database version');
     }
     final initialized = database.select('''
@@ -19,8 +31,25 @@ SELECT 1 FROM sqlite_master
 WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
 LIMIT 1''').isNotEmpty;
     if (!initialized) {
+      if (version != 0) {
+        throw const FormatException('Unsupported database schema');
+      }
       transaction(() {
-        database.execute('''
+        _createSchema(database);
+        database.execute('PRAGMA user_version = $appDatabaseSchemaVersion');
+      });
+      return;
+    }
+    if (version == 0) {
+      _validateSchema();
+      transaction(
+        () =>
+            database.execute('PRAGMA user_version = $appDatabaseSchemaVersion'),
+      );
+    }
+  }
+
+  void _createSchema(Database target) => target.execute('''
 CREATE TABLE sources(id INTEGER PRIMARY KEY, bytes BLOB NOT NULL, period_count INTEGER NOT NULL CHECK(period_count > 0));
 CREATE TRIGGER immutable_source BEFORE UPDATE OF bytes ON sources
 BEGIN SELECT RAISE(ABORT, 'Source bytes are immutable'); END;
@@ -95,37 +124,37 @@ CREATE TABLE calendar_schedules(
  note TEXT NOT NULL,
  color INTEGER NOT NULL);
 ''');
-      });
+
+  void validate() {
+    if (database.userVersion != appDatabaseSchemaVersion) {
+      throw const FormatException('Unsupported database version');
     }
-    final requiredTables = {
-      'sources',
-      'meetings',
-      'completions',
-      'issues',
-      'active_schedule',
-      'week_cache',
-      'appearance',
-      'user_meetings',
-      'course_appearance',
-      'calendar_schedules',
-    };
-    final tables = database
-        .select("SELECT name FROM sqlite_master WHERE type = 'table'")
-        .map((row) => row['name'] as String)
-        .toSet();
-    if (!tables.containsAll(requiredTables)) {
-      database.close();
-      throw const FormatException('Unsupported database schema');
+    _validateSchema();
+  }
+
+  void _validateSchema() {
+    final reference = sqlite3.openInMemory();
+    try {
+      _createSchema(reference);
+      for (final table in _requiredTables) {
+        if (_schemaSql(database, 'table', table) !=
+            _schemaSql(reference, 'table', table)) {
+          throw const FormatException('Unsupported database schema');
+        }
+      }
+      if (_schemaSql(database, 'trigger', 'immutable_source') !=
+          _schemaSql(reference, 'trigger', 'immutable_source')) {
+        throw const FormatException('Unsupported database schema');
+      }
+    } finally {
+      reference.close();
     }
     final integrity = database.select('PRAGMA quick_check').first.values.first;
     if (integrity != 'ok' ||
         database.select('PRAGMA foreign_key_check').isNotEmpty) {
-      database.close();
       throw const FormatException('Database integrity check failed');
     }
   }
-
-  final Database database;
 
   T transaction<T>(T Function() operation) {
     database.execute('BEGIN IMMEDIATE');
@@ -150,4 +179,28 @@ JOIN active_schedule ON sources.id = active_schedule.source WHERE active_schedul
   }
 
   void close() => database.close();
+}
+
+const _requiredTables = {
+  'sources',
+  'meetings',
+  'completions',
+  'issues',
+  'active_schedule',
+  'week_cache',
+  'appearance',
+  'user_meetings',
+  'course_appearance',
+  'calendar_schedules',
+};
+
+String _schemaSql(Database database, String type, String name) {
+  final rows = database.select(
+    'SELECT sql FROM sqlite_master WHERE type = ? AND name = ?',
+    [type, name],
+  );
+  if (rows.length != 1 || rows.single['sql'] is! String) return '';
+  return (rows.single['sql'] as String)
+      .replaceAll(RegExp(r'\s+'), '')
+      .toLowerCase();
 }

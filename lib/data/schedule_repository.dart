@@ -110,7 +110,10 @@ ORDER BY u.rowid''');
       for (final r in candidate.records) {
         final m = r.meeting;
         db.execute(
-          'INSERT INTO meetings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          '''INSERT INTO meetings(
+source, identity, name, weekday, first_period, last_period,
+room, frequency, note, exam, raw)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
           [
             source,
             m.sourceId,
@@ -126,16 +129,18 @@ ORDER BY u.rowid''');
           ],
         );
         if (r.issue != null) {
-          db.execute('INSERT INTO issues VALUES (?, ?, ?)', [
-            source,
-            m.sourceId,
-            r.issue,
-          ]);
+          db.execute(
+            'INSERT INTO issues(source, identity, message) VALUES (?, ?, ?)',
+            [source, m.sourceId, r.issue],
+          );
         }
         final c = completions[m.sourceId];
         if (c != null) {
           db.execute(
-            'INSERT INTO completions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            '''INSERT INTO completions(
+source, identity, name, short_name, room, frequency,
+weekday, first_period, last_period, note, exam)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
             [
               source,
               m.sourceId,
@@ -153,7 +158,8 @@ ORDER BY u.rowid''');
         }
       }
       db.execute(
-        'INSERT INTO active_schedule VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET source=excluded.source',
+        '''INSERT INTO active_schedule(id, source) VALUES (1, ?)
+ON CONFLICT(id) DO UPDATE SET source=excluded.source''',
         [source],
       );
       _publishFinalExams(
@@ -223,7 +229,10 @@ VALUES (?, ?, 0, ?, ?, 0)''',
     ];
     if (meeting.sourceId.startsWith('user:')) {
       store.database.execute(
-        '''INSERT INTO user_meetings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        '''INSERT INTO user_meetings(
+source, identity, name, short_name, weekday, first_period,
+last_period, room, frequency, note, exam)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(source, identity) DO UPDATE SET name=excluded.name,
 short_name=excluded.short_name,
 weekday=excluded.weekday, first_period=excluded.first_period,

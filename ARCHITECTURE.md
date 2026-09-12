@@ -99,7 +99,9 @@ Legacy one-row and paired-row layouts produce the same domain contract. New layo
 | Week configuration | Last completely validated public response | Replace atomically; retain last-known-good data on failure |
 | Appearance/settings | Typed application-owned values | Persist immediately through serialized writes |
 
-Application-owned durable schema uses typed SQLite columns rather than JSON blobs. During the `0.0.x` development line, `PRAGMA user_version` remains `0` and no compatibility migration layer is retained.
+Application-owned durable schema uses typed SQLite columns rather than JSON blobs. Version `0.1.0` establishes schema version `1`; valid schema-zero databases migrate in place without rewriting domain rows. Schema version `1` remains backward-compatible throughout the `0.1.x` line. A breaking schema change requires a user-authorized minor-version release and a forward migration from version `1`.
+
+`app_data_transfer.dart` exports a consistent SQLite snapshot through the online backup API. Import writes and validates a bounded candidate, migrates legacy schema zero, snapshots the current database for rollback, and replaces the live database through the same backup API. Controllers reload only after replacement validates. The `.pkudata` container is the SQLite database itself, so `PRAGMA user_version` remains the sole format authority.
 
 ### Public configuration
 

@@ -50,6 +50,8 @@ class TimetablePage extends StatefulWidget {
     required this.exporter,
     this.browserLauncher = launchInDefaultBrowser,
     required this.windowController,
+    this.exportAppData,
+    this.importAppData,
   });
   final TimetableController controller;
   final CalendarScheduleController calendar;
@@ -57,6 +59,8 @@ class TimetablePage extends StatefulWidget {
   final TimetableExporter exporter;
   final BrowserLauncher browserLauncher;
   final AppWindowController windowController;
+  final AppDataAction? exportAppData;
+  final AppDataAction? importAppData;
   @override
   State<TimetablePage> createState() => _TimetablePageState();
 }
@@ -155,6 +159,23 @@ class _TimetablePageState extends State<TimetablePage>
       if (value == 0) _day = _initialDay;
       _pageGeneration++;
     });
+  }
+
+  Future<bool> _importAppData() async {
+    final action = widget.importAppData;
+    if (action == null) return false;
+    final imported = await action();
+    if (imported && mounted) {
+      _focusTimer?.cancel();
+      setState(() {
+        _editor = null;
+        _focusedScheduleId = null;
+        _focusedCourseSourceIds = const {};
+        _day = _initialDay;
+        _pageGeneration++;
+      });
+    }
+    return imported;
   }
 
   void _navigateToSchedule(CalendarSchedule schedule) {
@@ -486,6 +507,10 @@ class _TimetablePageState extends State<TimetablePage>
                       key: ValueKey('settings-page-$_pageGeneration'),
                       controller: widget.appearance,
                       showCloseAction: widget.windowController.supported,
+                      exportAppData: widget.exportAppData,
+                      importAppData: widget.importAppData == null
+                          ? null
+                          : _importAppData,
                     )
                   : _destination == 1
                   ? _calendarBody(c)

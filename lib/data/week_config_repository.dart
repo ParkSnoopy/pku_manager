@@ -61,7 +61,7 @@ class WeekConfigRepository implements WeekSource {
       database.transaction(
         () => database.database.execute(
           '''
-INSERT INTO week_cache VALUES (1, ?, ?) ON CONFLICT(id)
+INSERT INTO week_cache(id, content, fetched_at) VALUES (1, ?, ?) ON CONFLICT(id)
 DO UPDATE SET content=excluded.content, fetched_at=excluded.fetched_at''',
           [text, clock().toUtc().toIso8601String()],
         ),

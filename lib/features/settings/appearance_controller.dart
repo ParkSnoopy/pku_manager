@@ -229,6 +229,12 @@ final class AppearanceController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void reload() {
+    _settings = store.load();
+    _courseAppearances = Map.unmodifiable(store.loadCourseAppearances());
+    notifyListeners();
+  }
+
   void rollPalette() {
     final updated = <String, CourseAppearance>{};
     for (final entry in _courseAppearances.entries) {

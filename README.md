@@ -87,6 +87,12 @@ NSIS updates do not require a credential. Installer continuity comes from the st
 
 Parser acceptance requires a sanitized real PKU BIFF8 workbook in addition to synthetic matrices. Keep local workbook samples ignored; never commit personal timetable data.
 
+## App-data transfer contract
+
+`lib/data/app_data_transfer.dart` exports all persisted application state as a consistent SQLite backup with the `.pkudata` extension. Import is bounded, validates database version, canonical schema definitions, SQLite integrity, foreign keys, and application-level decoding before acceptance, and keeps a rollback snapshot until the live data reloads. Android imports stream through a bounded app-cache file from a narrow `ACTION_GET_CONTENT` bridge with MIME `*/*`; other platforms use the existing native file interfaces.
+
+Schema version `1` is the compatibility authority for the `0.1.x` release line. Valid schema-zero databases migrate automatically. Do not make breaking schema changes or advance `PRAGMA user_version` until the user manually authorizes the next minor release.
+
 ## External technical references
 
 - Week Parity source: `https://github.com/parksnoopy-undergraduate/week-parity`

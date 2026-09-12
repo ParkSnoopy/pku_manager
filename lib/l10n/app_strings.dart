@@ -123,6 +123,13 @@ enum AppText {
   serif,
   sans,
   timetableFontScale,
+  appData,
+  exportAppData,
+  importAppData,
+  importAppDataWarning,
+  appDataExported,
+  appDataImported,
+  appDataTransferFailed,
 }
 
 class AppStrings {
@@ -319,6 +326,13 @@ class AppStrings {
       AppText.serif: '세리프',
       AppText.sans: '산세리프',
       AppText.timetableFontScale: '시간표 글자 크기',
+      AppText.appData: '앱 데이터',
+      AppText.exportAppData: '앱 데이터 내보내기',
+      AppText.importAppData: '앱 데이터 가져오기',
+      AppText.importAppDataWarning: '현재 앱 데이터를 선택한 데이터로 바꿉니다.',
+      AppText.appDataExported: '앱 데이터를 내보냈습니다',
+      AppText.appDataImported: '앱 데이터를 가져왔습니다',
+      AppText.appDataTransferFailed: '앱 데이터를 전송할 수 없습니다',
     },
     'en': {
       AppText.appTitle: 'PKU Manager',
@@ -428,6 +442,14 @@ class AppStrings {
       AppText.serif: 'Serif',
       AppText.sans: 'Sans serif',
       AppText.timetableFontScale: 'Timetable font scale',
+      AppText.appData: 'App data',
+      AppText.exportAppData: 'Export app data',
+      AppText.importAppData: 'Import app data',
+      AppText.importAppDataWarning:
+          'Replace current app data with the selected data.',
+      AppText.appDataExported: 'App data exported',
+      AppText.appDataImported: 'App data imported',
+      AppText.appDataTransferFailed: 'App data could not be transferred',
     },
     'zh': {
       AppText.appTitle: 'PKU Manager',
@@ -536,6 +558,13 @@ class AppStrings {
       AppText.serif: '衬线体',
       AppText.sans: '无衬线体',
       AppText.timetableFontScale: '课表字体大小',
+      AppText.appData: '应用数据',
+      AppText.exportAppData: '导出应用数据',
+      AppText.importAppData: '导入应用数据',
+      AppText.importAppDataWarning: '使用所选数据替换当前应用数据。',
+      AppText.appDataExported: '应用数据已导出',
+      AppText.appDataImported: '应用数据已导入',
+      AppText.appDataTransferFailed: '无法传输应用数据',
     },
   };
 }

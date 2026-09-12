@@ -38,15 +38,21 @@ class TimetableController extends ChangeNotifier {
 
   void start() {
     _timer?.cancel();
+    reload();
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) => _notify());
+    unawaited(refresh());
+  }
+
+  void reload() {
+    candidate = null;
     try {
       timetable = schedules.load();
+      week = weeks.cached();
+      error = null;
     } catch (_) {
       error = 'Timetable could not be loaded.';
     }
-    week = weeks.cached();
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) => _notify());
     _notify();
-    unawaited(refresh());
   }
 
   Future<void> refresh() async {

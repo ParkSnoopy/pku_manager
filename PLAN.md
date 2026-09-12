@@ -105,6 +105,7 @@ Synthetic matrices protect format branches but cannot establish BIFF8 compatibil
 A release is eligible only when:
 
 - the package version comes from `pubspec.yaml` and changes only with related executable source changes;
+- schema version `1` remains backward-compatible for every `0.1.x` release, and any breaking successor waits for a manually authorized minor-version update;
 - all source checks pass;
 - each published target provides its required platform evidence;
 - artifact names and release target refer to the same source revision;

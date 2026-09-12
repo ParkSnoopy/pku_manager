@@ -42,7 +42,9 @@ This file defines project vocabulary and cross-layer invariants. Structural owne
 - Publication and class-wide mutation are transactional. Advisory refresh or presentation failures cannot partially mutate authoritative state.
 - Relationships persist stable IDs only; labels and mutable state are derived from authoritative records.
 - Application-owned schema-like data uses typed SQLite columns, Protobuf, or XML rather than JSON.
-- Throughout the `0.0.x` development line, `PRAGMA user_version` remains `0` and compatibility migrations are omitted until explicitly authorized.
+- Version `0.1.0` establishes `PRAGMA user_version = 1` and migrates valid schema-zero databases without data loss.
+- Schema version `1` remains backward-compatible throughout `0.1.x`. Breaking schema changes require the user to authorize the next minor version manually and must include a forward migration.
+- App-data export uses a consistent SQLite snapshot. Import validates and migrates a bounded candidate before replacing current data, and restores the prior database if replacement fails.
 - Runtime data never belongs beside the executable, inside the repository, in installer-owned directories, or in an external workbook path.
 
 ## Presentation invariants

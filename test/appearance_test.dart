@@ -14,21 +14,57 @@ import 'package:pku_manager/l10n/app_strings.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 void main() {
-  test('0.0.x keeps its development database schema at version zero', () {
+  test('schema zero migrates to version one without losing data', () {
     final directory = Directory.systemTemp.createTempSync('pku-schema-test-');
     addTearDown(() => directory.deleteSync(recursive: true));
     final path = '${directory.path}/legacy.sqlite3';
-    final legacy = sqlite3.open(path);
-    legacy.execute('PRAGMA user_version = 6');
-    legacy.close();
-    expect(() => AppDatabase(path), throwsFormatException);
-
-    final current = AppDatabase(':memory:');
-    addTearDown(current.close);
-    expect(
-      current.database.select('PRAGMA user_version').single.values.single,
-      0,
+    var database = AppDatabase(path);
+    database.database.execute(
+      'INSERT INTO week_cache(id, content, fetched_at) VALUES (1, ?, ?)',
+      ['legacy', '2026-09-12T00:00:00Z'],
     );
+    database.database.userVersion = 0;
+    database.close();
+
+    database = AppDatabase(path);
+    addTearDown(database.close);
+    expect(database.database.userVersion, appDatabaseSchemaVersion);
+    expect(
+      database.database
+          .select('SELECT content FROM week_cache')
+          .single['content'],
+      'legacy',
+    );
+  });
+
+  test('future and malformed legacy schemas fail without mutation', () {
+    final directory = Directory.systemTemp.createTempSync('pku-schema-test-');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final futurePath = '${directory.path}/future.sqlite3';
+    var raw = sqlite3.open(futurePath);
+    raw.userVersion = appDatabaseSchemaVersion + 1;
+    raw.close();
+    expect(() => AppDatabase(futurePath), throwsFormatException);
+
+    final malformedPath = '${directory.path}/malformed.sqlite3';
+    raw = sqlite3.open(malformedPath);
+    raw.execute('CREATE TABLE sources(id INTEGER PRIMARY KEY)');
+    raw.close();
+    expect(() => AppDatabase(malformedPath), throwsFormatException);
+
+    raw = sqlite3.open(malformedPath);
+    expect(raw.userVersion, 0);
+    raw.close();
+
+    final triggerPath = '${directory.path}/missing-trigger.sqlite3';
+    final database = AppDatabase(triggerPath);
+    database.database.execute('DROP TRIGGER immutable_source');
+    database.database.userVersion = 0;
+    database.close();
+    expect(() => AppDatabase(triggerPath), throwsFormatException);
+    raw = sqlite3.open(triggerPath);
+    expect(raw.userVersion, 0);
+    raw.close();
   });
 
   test('theme and repeated palette rolls persist as typed SQLite values', () {
@@ -372,4 +408,66 @@ void main() {
     );
     expect(find.text('Exit to system tray'), findsOneWidget);
   });
+
+  testWidgets(
+    'settings exports and confirms replacement before app data import',
+    (tester) async {
+      tester.view.physicalSize = const Size(900, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final controller = AppearanceController(MemoryAppearanceStore());
+      var exports = 0;
+      var imports = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppStrings.supportedLocales,
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          home: Scaffold(
+            body: SettingsPage(
+              controller: controller,
+              exportAppData: () async {
+                exports++;
+                return true;
+              },
+              importAppData: () async {
+                imports++;
+                return true;
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.dragUntilVisible(
+        find.byKey(const ValueKey('export-app-data')),
+        find.byType(ListView),
+        const Offset(0, -500),
+      );
+      await tester.tap(find.byKey(const ValueKey('export-app-data')));
+      await tester.pumpAndSettle();
+      expect(exports, 1);
+      expect(find.text('App data exported'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('import-app-data')));
+      await tester.pumpAndSettle();
+      expect(imports, 0);
+      expect(
+        find.text('Replace current app data with the selected data.'),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, 'Import app data'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(imports, 1);
+      expect(find.text('App data imported'), findsOneWidget);
+    },
+  );
 }

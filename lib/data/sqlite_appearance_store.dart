@@ -133,7 +133,9 @@ UNION SELECT identity FROM user_meetings WHERE source = ? AND identity = ?''',
       for (final entry in courseAppearances.entries) {
         final appearance = entry.value;
         database.database.execute(
-          'INSERT INTO course_appearance VALUES (?, ?, ?, ?, ?, ?, ?)',
+          '''INSERT INTO course_appearance(
+source, identity, color, lock_color, outlined, outline_color, outline_width)
+VALUES (?, ?, ?, ?, ?, ?, ?)''',
           [
             source,
             entry.key,
