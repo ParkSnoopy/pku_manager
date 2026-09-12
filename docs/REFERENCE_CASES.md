@@ -10,7 +10,7 @@ This document records external technical provenance and the independently author
 | `ParkSnoopy/pku-elective-prettify` | `eaacca788e246a18c36ea013ced2bed6b62bd995` | Workbook field parsing, timetable structure, palette source, XLSX output, and CLI behavior |
 | `ParkSnoopy/pku-elective-prettify` `pages` tree | `1fb0610248b8c3975fc82f8aa5248f90f4156d3e` | Render geometry, export scale, and multi-room tutorial recovery interaction |
 
-Source trees were inspected through authenticated GitHub API reads without cloning or executing upstream programs. The development process made no request to `elective.pku.edu.cn`.
+Source trees were inspected through GitHub API reads without cloning or executing upstream programs. The development process made no request to `elective.pku.edu.cn`.
 
 The inspected Week Parity tree includes GPL license text; elective-prettify includes AGPL license text. Project tests use invented values and call native Dart domain/parser APIs. They contain no copied implementation, upstream test body, upstream fixture, or ignored local workbook data.
 

@@ -139,7 +139,7 @@ Application-owned durable schema uses typed SQLite columns rather than JSON blob
 
 | Target | Boundary |
 |---|---|
-| Android | Flutter host, stable application identity, retained release signer, derived numeric version code, Internet permission, and system document interface |
+| Android | Flutter host, stable application identity, derived numeric version code, Internet permission, and system document interface |
 | iOS | Flutter host, system document interface, and application-support persistence |
 | Linux | GTK runner plus AppImage packaging with executable-relative tray dependencies and runtime-staged tray icon |
 | macOS | Flutter host, application bundle, native document selection, window management, and tray integration |
