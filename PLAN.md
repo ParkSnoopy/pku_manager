@@ -58,7 +58,8 @@ When authorities disagree, inspect source and tests, then update every affected 
 - Regenerate plugin registrants through Flutter tooling after dependency changes; never add application logic to generated files.
 - Resolve desktop resources executable-relative and verify packaged, not source-tree, paths.
 - For Linux AppImage changes, verify bundled non-baseline libraries, `$ORIGIN` lookup, extracted AppImage launch, direct AppDir launch, and runtime tray-icon staging.
-- For Windows installer changes, verify install, reinstall/upgrade, installed launch, and uninstall against the complete release bundle.
+- For Android release changes, verify a retained release signer, a monotonically increasing derived version code, packaged identity, and signature.
+- For Windows installer changes, verify install, stale-payload replacement during upgrade, registered version/location metadata, installed launch, and uninstall against the complete release bundle.
 - For Apple changes, build macOS, iOS device, and iOS simulator outputs and exercise runtime behavior on macOS hardware or CI where required.
 
 ## Validation contract
@@ -82,11 +83,11 @@ flutter test
 
 | Target | Required evidence |
 |---|---|
-| Android | Release APK build and packaged metadata inspection |
+| Android | Stable-key release APK, increasing derived version code, application-ID inspection, and signature verification |
 | iOS | Unsigned device build, simulator build, and runtime exercise on an Apple runner/device |
 | Linux | Release bundle, AppImage assembly, bounded packaged launch, direct AppDir dependency resolution, and user-data reload |
 | macOS | Release application bundle and runtime exercise on macOS |
-| Windows | Release bundle, NSIS build, install/reinstall, installed launch, and uninstall |
+| Windows | Release bundle, versioned NSIS build, install/upgrade with stale-payload removal, registry inspection, installed launch, and uninstall |
 
 Compilation, packaging, launch, and feature-path verification are separate assertions. Record only evidence produced from the same source revision.
 
@@ -107,6 +108,7 @@ A release is eligible only when:
 - all source checks pass;
 - each published target provides its required platform evidence;
 - artifact names and release target refer to the same source revision;
+- Android releases use the retained signing key and a version code derived from the regular package version;
 - AppImage and NSIS outputs come from source-controlled packaging definitions;
 - runtime storage remains in platform application-support paths across install/upgrade/restart;
 - no source, test, workflow, artifact, or document contains secrets or unsanitized schedule data; and

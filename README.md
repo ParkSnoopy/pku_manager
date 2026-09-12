@@ -59,6 +59,32 @@ flutter build windows --release
 
 Run Apple commands on macOS and the Windows command on Windows. A raw Flutter build does not establish distribution support: AppImage, application-bundle, simulator/device, and installed-NSIS checks remain separate release evidence. Use the source-controlled workflow and packaging definitions rather than ad hoc artifact assembly.
 
+## Release credentials and update continuity
+
+Android accepts an APK update only when the application ID is unchanged, the new version code is greater, and the signing certificate is compatible. The workflow derives Android's internal version code from the regular `major.minor.patch` package version as `major × 1,000,000 + minor × 1,000 + patch`; `pubspec.yaml` therefore remains a three-component version without build metadata. Minor and patch components must each remain below 1,000.
+
+Generate the long-lived Android release key once on a trusted machine. The command prompts for the keystore password, certificate identity, and key password, so none enters shell history:
+
+```sh
+keytool -genkeypair -keystore pku-manager-release.jks -storetype JKS -alias pku-manager -keyalg RSA -keysize 4096 -validity 10000
+openssl base64 -A -in pku-manager-release.jks -out /tmp/pku-manager-release.jks.base64
+gh secret set ANDROID_KEYSTORE_BASE64 < /tmp/pku-manager-release.jks.base64
+rm /tmp/pku-manager-release.jks.base64
+gh secret set ANDROID_KEYSTORE_PASSWORD
+gh secret set ANDROID_KEY_ALIAS
+gh secret set ANDROID_KEY_PASSWORD
+```
+
+Enter `pku-manager` for `ANDROID_KEY_ALIAS` when using the command above. Store the original JKS and its passwords in an independent offline backup or password manager; GitHub secrets cannot be recovered and are not a backup. Never commit the JKS, its Base64 representation, or `android/key.properties`.
+
+The same secrets can be created in GitHub under repository **Settings → Secrets and variables → Actions → New repository secret**. The Android workflow fails before building when any signing input is absent or invalid, and verifies the resulting APK identity, version code, and APK signature before upload.
+
+`RELEASE_TOKEN` is also required because this is a private repository and a release target may modify workflow files. Use either a classic personal access token with `repo` and `workflow` scopes or a fine-grained token restricted to this repository with Contents and Workflows read/write access. The token owner must have repository write access. Add the token as the `RELEASE_TOKEN` Actions secret; do not place it in source or workflow literals.
+
+The published `v0.0.13` APK has version code `1` and was signed by an ephemeral CI debug certificate. Its private key is unavailable, so no differently signed APK can cryptographically update that installation. Existing `v0.0.13` Android installations require one uninstall before installing the first stable-key release. Releases signed with the new retained key can update one another normally.
+
+NSIS updates do not require a credential. Installer continuity comes from the stable per-user install directory and uninstall registry key. The installer reuses a previously selected directory, removes the prior application bundle, writes the complete new bundle, and updates registered version metadata while leaving application-support data outside the install directory intact. Authenticode signing may improve Windows trust prompts but is separate from in-place update behavior.
+
 Parser acceptance requires a sanitized real PKU BIFF8 workbook in addition to synthetic matrices. Keep local workbook samples ignored; never commit personal timetable data.
 
 ## External technical references

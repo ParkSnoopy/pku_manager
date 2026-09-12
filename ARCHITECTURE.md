@@ -137,11 +137,11 @@ Application-owned durable schema uses typed SQLite columns rather than JSON blob
 
 | Target | Boundary |
 |---|---|
-| Android | Flutter host, application identity, Internet permission, and system document interface |
+| Android | Flutter host, stable application identity, retained release signer, derived numeric version code, Internet permission, and system document interface |
 | iOS | Flutter host, system document interface, and application-support persistence |
 | Linux | GTK runner plus AppImage packaging with executable-relative tray dependencies and runtime-staged tray icon |
 | macOS | Flutter host, application bundle, native document selection, window management, and tray integration |
-| Windows | Win32 runner plus complete release-bundle NSIS installation, upgrade, launch, and uninstall |
+| Windows | Win32 runner plus versioned per-user NSIS installation, complete payload replacement on upgrade, launch, and uninstall |
 
 Desktop plugin calls stay behind `lib/ui/app_window_controller.dart`. Tray setup occurs before window hiding; failure leaves the window recoverable. Linux packages non-baseline AppIndicator dependencies with `$ORIGIN` lookup and stages tray artwork under the shared runtime directory so an external indicator process can read it.
 
