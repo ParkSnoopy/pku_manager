@@ -35,6 +35,15 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('일정 색상'), findsWidgets);
+    final picker = find.byType(AlertDialog).last;
+    expect(
+      find.descendant(of: picker, matching: find.text('저장')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: picker, matching: find.text('확인')),
+      findsNothing,
+    );
   });
 
   testWidgets('schedule editor saves or cancels a blank colorable draft', (

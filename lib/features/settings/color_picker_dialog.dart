@@ -31,4 +31,7 @@ Future<Color> showAppColorPicker(
   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
   clipBehavior: Clip.hardEdge,
   constraints: const BoxConstraints(maxWidth: 520, maxHeight: 720),
+  actionButtons: ColorPickerActionButtons(
+    dialogOkButtonLabel: MaterialLocalizations.of(context).saveButtonLabel,
+  ),
 );
