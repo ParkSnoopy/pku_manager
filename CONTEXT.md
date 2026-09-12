@@ -1,98 +1,71 @@
 # Context
 
+This file defines project vocabulary and cross-layer invariants. Structural ownership belongs in `ARCHITECTURE.md`; development sequencing and release evidence belong in `PLAN.md`.
+
 ## Vocabulary
 
-- `school life management application`: the whole Flutter product. Timetable and week parity are its first feature set, not the permanent limit of its scope.
-- `supported platforms`: ship Android and iOS application builds, one Linux AppImage, one macOS application bundle, and one Windows NSIS installer. Web is not a supported target. A successful raw Flutter desktop build alone does not satisfy desktop support.
-- `week parity`: semester-relative week number and odd/even status calculated using Beijing calendar dates and validated semester starts from the public Week Parity configuration.
-- `Week Parity source`: `https://parksnoopy-undergraduate.github.io/week/config.toml` for runtime data. Hosted HTML and WASM are reference presentation, not application dependencies.
-- `schedule.xls`: the file manually exported and supplied by the user. Its exact bytes are immutable source evidence retained as a SQLite BLOB; neither import nor later completion may rewrite them.
-- `store timetable`: retain immutable source bytes, parsed records, parse issues, and user-supplied completion fields in the application SQLite database. Parsed and completed records remain traceable to stable source-record identities.
-- `import schedule`: acquire one user-selected local file through the platform file picker, validate and parse it completely, then transactionally publish its immutable bytes and parsed structure.
-- `schedule`: the product term for a user-controlled Calendar item; use `schedule`, not `event`.
-- File selection is unrestricted by extension. Content detection determines compatibility. Catastrophic parsing failures show a concise message without internal details and preserve the current timetable.
-- `elective site`: `elective.pku.edu.cn`. The app and development process must never fetch, scrape, probe, authenticate to, or embed it.
-- `pretty timetable`: a native Flutter timetable informed by elective-prettifier behavior. Logic and tests are independently reimplemented in Dart; AGPL code and fixtures are not copied without an approved compatible license strategy.
-- `dynamic timetable`: derive visible meetings from current semester parity at display time; never delete odd-week or even-week meetings from stored data.
-- `每周`: meeting is visible in both odd and even weeks.
-- `单周`: meeting is visible only in odd-numbered semester weeks.
-- `双周`: meeting is visible only in even-numbered semester weeks.
-- Frequency text outside `每周`, `单周`, and `双周` maps to `每周`.
-- `current week`: week selected from current Beijing date and latest applicable validated semester start.
-- `offline-first`: stored timetable remains fully usable without network access. Week configuration refresh may improve parity data but cannot gate local timetable access.
-- `reference repo`: source used to understand behavior and file shapes. It is not automatically approved for code copying, dependency inclusion, or runtime access.
+- `school life management application`: the complete Flutter product. Timetable and Calendar are feature modules, not architectural boundaries for future scope.
+- `supported platforms`: Android, iOS, Linux AppImage, macOS application bundle, and Windows NSIS installer. Web is excluded. Platform support requires packaged-runtime evidence, not compilation alone.
+- `schedule.xls`: a user-supplied BIFF8 workbook. Its selected bytes are immutable source evidence stored as a SQLite BLOB.
+- `import schedule`: acquire bounded bytes through the platform picker, parse every nonempty in-scope record, resolve typed failures, and publish atomically.
+- `schedule`: a user-controlled Calendar record. Do not substitute `event` in product-owned names or copy.
+- `source identity`: stable workbook sheet/row/column identity used to bind parsed records, corrections, appearance, and optional Calendar relationships.
+- `source class name`: immutable workbook-parsed class name used for grouping, deterministic color identity, and class-wide relationships. Editable display or short names do not replace it.
+- `week parity`: semester-relative week number and odd/even status calculated from Beijing dates and validated semester starts.
+- `dynamic timetable`: retain all meetings and derive current-week emphasis at presentation time.
+- `Week Parity source`: runtime TOML at `https://parksnoopy-undergraduate.github.io/week/config.toml`.
+- `elective site`: `elective.pku.edu.cn`; prohibited for application and development-process access.
+- `reference repo`: source inspected for behavior or file shape, without permission to copy implementation or fixtures.
 
-## Project Concepts
+## Source and import invariants
 
-- Semester: ordered start date, Beijing timezone interpretation, current week number, and parity.
-- Week configuration: small validated public configuration cached only after a complete successful parse.
-- Course meeting: one normalized Monday–Friday course occurrence with period range, room, frequency, note, and exam information.
-- Timetable: ordered collection of course meetings derived from the stored spreadsheet.
-- Timetable visibility: every meeting block is shown by default. Current-week meetings remain opaque; meetings outside the current week render at quarter opacity without cell text.
-- Timetable conflict: two class records conflict when their weekday and period ranges overlap and their weekly frequencies can occur together. Every conflicting class block uses a red outline; odd/even-only alternation is valid.
-- Schedule repository: sole authority for importing immutable workbook bytes and publishing parsed timetable records through one SQLite transaction.
-- Imported final exam: a dated exam with `上午`, `下午`, or `晚上` creates one related Calendar schedule during timetable publication at the first, fifth, or tenth class start time respectively. Its title follows the selected application language.
-- Spreadsheet parser: infrastructure adapter that converts supported PKU workbook layouts into domain meetings while reporting every unsupported nonempty record.
-- Source record identity: stable workbook location identity used to associate parsed records and user completion fields without changing source bytes.
-- Application database: one SQLite database in private platform-managed application-support storage containing source BLOBs, parsed records, completion fields, issues, week configuration, and freshness metadata.
-- Application-support storage: private platform-managed durable directory, not Downloads, current working directory, or a path beside the executable.
-- AppImage: distributable Linux application bundle built from the release bundle and verified by launching the exact packaged artifact.
-- NSIS installer: Windows installer around the complete Flutter release output, with explicit install, upgrade, retained-data, and uninstall behavior.
+- File compatibility follows content, not filename or extension.
+- Selected workbook bytes remain byte-for-byte unchanged. Parsed rows, failed-field metadata, corrections, user meetings, and appearance are separate records.
+- Parsing is complete before authoritative writes. Unsupported nonempty records become explicit typed issues and are never silently omitted.
+- Cancellation, rejection, acquisition failure, parse failure, incomplete review, and transaction failure preserve the active timetable.
+- Corrections apply only to parser-identified failed fields. Issues sharing one source class name may share one answer without overwriting successfully parsed occurrence data.
+- Saturday and Sunday source columns are outside the timetable; unsupported weekday records must still fail explicitly rather than disappear.
+- Imported meetings may be edited through overlays, and user meetings remain separate from immutable source rows.
+- A complete dated final exam may create one related Calendar schedule during the same publication transaction. Incomplete date evidence is never guessed.
+- Real parser acceptance requires an approved sanitized workbook; synthetic matrices alone establish only isolated parser behavior.
 
-## Invariants
+## Time and parity invariants
 
-- No automated access to `elective.pku.edu.cn` under any circumstance.
-- Candidate schedule must parse successfully before replacing existing data.
-- Import cancellation, rejection, and failure leave existing schedule unchanged.
-- Original spreadsheet bytes remain byte-for-byte unchanged and authoritative. Parsed records and user completion fields are separate, traceable application data.
-- An incomplete candidate reports every discovered issue. The user may complete required information and import, or reject the whole candidate. Unsupported records are never silently omitted.
-- Week refresh failure never blocks viewing a stored timetable.
-- Only validated Week Parity configuration can replace the last valid cache.
-- Parity uses Beijing calendar dates, not an arbitrary device-local midnight.
-- Unsupported weekday source records cause an explicit import issue and are never silently discarded; unsupported frequency tokens alone map to `每周`. Saturday and Sunday source columns are intentionally outside the product timetable.
-- UI is native Flutter, responsive, flat, readable, accessible, and uses no gradients.
-- Mobile timetable view shows one fixed period-index column and one day column; horizontal swipes change the visible day.
-- A left vertical navigation rail owns Timetable, Calendar, and Settings destinations plus a **教学网** action that opens the fixed PKU Teaching Network page in the default browser.
-- Timetable geometry, typefaces, alignment, class times, meal breaks, aspect fitting, and export dimensions follow the `pages` branch of `ParkSnoopy/pku-elective-prettify`. Period-index cells show only the period number; complete start/end times appear in class hover details. Course colors fill complete course blocks. Class equality and color identity use the immutable class name parsed from the original `schedule.xls`, never a user-edited display name. Vertically touching same-name source classes on one weekday render as one group without losing their source identities.
-- Landscape Timetable layouts show upcoming personal schedules with exact dates/times and their related class; selecting a course changes that pane into the editor. Schedule groups have visible separation. Hovering an upcoming schedule opens a pointer-following detail card, selecting it reveals it in Calendar, and secondary-click or press-and-hold opens its editor. Landscape Calendar layouts show every class scheduled tomorrow, related upcoming schedules beneath each class, and unassociated schedules last after a separator. Portrait timetable selection uses a modal editor.
-- Pointer hover for 100 ms opens a detail box positioned beside and following the pointer until exit. Every selectable pointer target uses the link cursor.
-- Course editors apply every valid change immediately and expose no Save action. Their destructive class-delete action sits at the bottom of the scrollable form, requires warning confirmation, deletes every source row represented by the edited class, clears its appearance, and detaches related schedules. The fixed footer contains only **Close**. The larger schedule editor owns a local draft with a blank new title, note, color, all-day/time, and optional class association; **Cancel** discards it and **Save** applies it.
-- Settings provide immediate 80%–150% application text scaling, 100%–200% timetable text scaling, Serif/Sans Serif selection applied to course, weekday, and period-index cells, and Thin–Black weight controls. Timetable classroom text matches class-name size and starts with two spaces.
-- New Calendar schedules are all-day by default and may reference one timetable class by stable source ID. A class hover detail lists schedules related to any source occurrence with the same immutable source class name.
-- Calendar displays five vertically scrollable week rows, labels today as `TODAY`, and derives its current heading from the month owning the most visible date cells. Primary activation of a related schedule reveals its source class in Timetable; press-and-hold edits the schedule.
-- Escape restores the active Timetable, Calendar, or Settings page to its freshly entered presentation state while retaining persisted data and immediately applied settings.
-- Navigation entries reveal their target with a flashing outline that clears automatically and never opens an editor or leaves permanent selection state.
-- Importance outlines default to red at 1.5 px.
-- Roll uses a user-selectable palette identified in the UI by name and colors, never by an ordinal index. The Custom palette exposes five independently editable colors. Remaining palette names and valid colors come from `palette.json` at `ParkSnoopy/pku-elective-prettify` revision `eaacca788e246a18c36ea013ced2bed6b62bd995`; the upstream palette containing the malformed literal `##ffafcc` is not normalized or offered.
-- Import review prompts only for fields that parsing could not determine. Parse issues sharing one immutable source class name use one prompt whose corrections apply to every matching failed field. A multi-room exercise-class issue uses the direct classroom-choice prompt from the `pages` branch at revision `1fb0610248b8c3975fc82f8aa5248f90f4156d3e`: class name, weekday, period range, and one vertically listed room choice including an unavailable option.
-- Week configuration refresh runs at startup and whenever the application returns to foreground; no manual refresh control is shown.
-- Korean is the default interface language. One Settings button displays only the active language and cycles Korean → English → Simplified Chinese on successive clicks; the selection and accent color persist.
-- Light and dark application themes are user-selectable and persist. Theme accents provide pastel choices plus arbitrary custom color selection, with an independent option to blend the accent into the whole theme. Manual course colors accept arbitrary palette choices. A custom course color is visibly marked and remains fixed across palette rolls until one immediate **Use automatic color** action removes it and itself disappears. Important-class outlines persist their independently selected color and thickness. Settings may hide the Roll colors rail action.
-- Timetable blocks display a short class name when supplied, otherwise the full editable name. Class names use bold weight while classroom and remark text retain the configured timetable weight; PNG and XLSX exports preserve that class-name emphasis. Every text line has 1.5× line height and all-around padding; classroom text starts with two spaces, and a full blank line separates it from remarks. Remarks omit a label prefix and wrap within the course block. A structured remark successfully projected as a separate class is removed from both source and projected display records. Hover details separate every element with a horizontal divider.
-- The timetable grid has no explicit canvas fill. Its weekday row and period-index column share one persisted configurable color. Dark mode blends the weekday row, index column, and class-cell colors into the dark application surface and uses readable light text. Course text remains black by default in light mode; a default-off setting enables automatic white text on dark course colors.
-- Calendar presents an independent, color-coded personal month view for user-created schedules. All date cells share one background, with foreground vertical and partial horizontal divider lines marking intrinsic month boundaries independently of the superior visible month. Schedule boxes span the full cell width without left or right margins. All-day schedules normalize their deadline to 23:59 Beijing time on the selected day. Schedules derive their default color from the active theme; selecting a custom color fixes it until **Use theme color** clears it. Schedule note and optional selected color persist with its title, date/time, all-day flag, and optional class relation.
-- Right-pane schedules and classes are separate styled cells rather than mixed text in one cell. Timetable schedule cells show time remaining through a right-aligned `DDL` span, with the remaining time at 1.25× the label size; course cells never show `DDL`.
-- The application version is `0.0.12`. Throughout `0.0.x`, the development database keeps `PRAGMA user_version = 0`; no backward-compatibility or migration code is retained until an explicit schema-version bump is requested.
-- Flutter packages one Sans and one Serif Static Super OTC CJK collection, each containing Korean, Japanese, Chinese, and every static weight. Separate regional and weight-specific CJK font assets are forbidden. Both families are active user-selectable application fonts.
-- Imported meetings can be edited and empty weekday cells can create user meetings. These overlays are stored separately from immutable workbook bytes.
-- A persistent color-roll seed lets users generate another deterministic timetable color combination repeatedly after import.
-- The complete Monday–Friday timetable exports locally as PNG or XLSX with the displayed theme, colors, typography, outlines, and class content. Export deliberately renders every class fully opaque instead of reproducing non-current-week transparency.
-- Product identity must be consistent across Flutter, Android, iOS, Linux, macOS, Windows, AppImage, and NSIS metadata.
-- Platform support means packaged-runtime verification, not compilation alone.
-- Desktop windows launch at the configured desktop size, remain resizable, and support full-screen entry and exit from both the application control and keyboard.
-- A system-tray icon is created at desktop launch, restores the window, and offers an explicit app-close action. Desktop Settings persist one close action: close the app by default, or hide the window to the existing tray icon. If tray creation fails, the window remains visible.
-- Product behavior stays in Dart. Flutter plugins or narrow Dart wrappers may bridge native platform or SQLite facilities, but native code does not own timetable or parity rules.
-- Application-owned schema-like interchange uses Protobuf or XML instead of JSON. External source formats remain unchanged at their boundaries.
-- AGPL-licensed source, tests, and fixtures are not copied until licensing obligations are explicitly accepted or permission is obtained. Every relevant reference behavior and test scenario is independently represented in Dart tests.
-- Real parser compatibility requires a user-provided sanitized fixture; synthetic examples alone are insufficient.
-- Semester applicability ends after the build-configured week count or at the next configured semester start, whichever comes first.
+- `每周`, `单周`, and `双周` map to every, odd, and even weeks. Other frequency text maps to `每周`.
+- Semester calculations use Beijing calendar dates, the latest applicable validated start, the next-start boundary, and the configured week bound.
+- Week configuration refresh is independent of local timetable availability. Invalid or unavailable responses retain the last validated cache.
+- No parity failure may block, delete, or rewrite stored timetable data.
 
-## Known Boundaries
+## Persistence invariants
 
-- Product identity is PKU Manager, published by ParkSnoopy. Android/Linux use `com.parksnoopy.pku_manager`; Apple uses `com.parksnoopy.pku-manager` because Apple identifiers prohibit underscores.
-- Flutter domain, SQLite adapters, import review, responsive timetable, and native packaging/workflow definitions are implemented. Platform distribution acceptance is separate from application logic verification.
-- User-provided workbooks under ignored `.sample/` may be used locally but are never copied into tracked tests. Tests opt in using `SCHEDULE_FIXTURE`; fixture content is not a license grant or publication permission.
-- The pure-Dart `excel2003` reader parses the local BIFF8 source. Paired-row layout coverage also uses independently authored cases.
-- Reference repositories are `parksnoopy-undergraduate/week-parity` and `ParkSnoopy/pku-elective-prettify`; provenance is recorded in `docs/REFERENCE_CASES.md`.
-- Semester configuration exposes start dates but no explicit semester end dates.
-- Apple runtime verification requires macOS CI or Apple hardware; Windows installer verification requires Windows CI or a Windows machine.
+- One SQLite database in platform application-support storage owns workbook BLOBs, parsed and user meetings, issues/corrections, Calendar schedules, week cache, and appearance/settings.
+- Publication and class-wide mutation are transactional. Advisory refresh or presentation failures cannot partially mutate authoritative state.
+- Relationships persist stable IDs only; labels and mutable state are derived from authoritative records.
+- Application-owned schema-like data uses typed SQLite columns, Protobuf, or XML rather than JSON.
+- Throughout the `0.0.x` development line, `PRAGMA user_version` remains `0` and compatibility migrations are omitted until explicitly authorized.
+- Runtime data never belongs beside the executable, inside the repository, in installer-owned directories, or in an external workbook path.
+
+## Presentation invariants
+
+- UI is native Flutter, responsive, flat, accessible, and contains no gradients.
+- In-app copy contains only information required to decide, act, correct, recover, or understand current state. Implementation details and defensive assurances are excluded.
+- Wide timetable layouts render Monday through Friday; narrow layouts retain one period-index column and one selected weekday projection.
+- All meetings retain their grid footprint. Non-current meetings use reduced emphasis without cell text; conflict calculation remains domain-owned and excludes odd/even-only alternation.
+- Vertically adjacent meetings with the same source class name and weekday share one visual block while preserving every source identity.
+- Screen, PNG, and XLSX use one geometry, grouping, color, outline, content-role, and typography authority. Export renders the complete timetable fully opaque.
+- Class names are bold across screen and exports. Room and remark text retain configured timetable weight.
+- Calendar schedules remain independent records. Optional class association is ID-based and must be cleared, not delete the schedule, when its class disappears.
+- Timetable and Calendar cross-navigation changes transient presentation only. Escape-style restoration must not revert persisted state.
+- Appearance settings persist typed values and apply through one shared projection. Manual course colors and outlines are source-identity-bound; generated labels/colors are derived.
+- Korean, English, and Simplified Chinese localization must cover every application-owned visible string.
+
+## Platform and security invariants
+
+- Product identity is PKU Manager by ParkSnoopy. Android/Linux use `com.parksnoopy.pku_manager`; Apple uses `com.parksnoopy.pku-manager` because Apple bundle identifiers prohibit underscores.
+- Native runners and plugins bridge platform facilities only; product behavior remains in Dart.
+- Desktop close behavior is typed and persisted. Tray creation precedes hiding, explicit tray exit destroys the application, and tray failure leaves the window visible.
+- Linux AppImage libraries resolve executable-relative. Tray artwork is staged under a shared runtime path readable outside AppImage/Firejail mount namespaces.
+- Runtime network access is limited to the validated Week Parity endpoint. Timetable content, filenames, and usage data never leave the process.
+- No application or development command may request, scrape, probe, authenticate to, or embed `elective.pku.edu.cn`.
+- Reference code and fixtures remain independently reimplemented unless license compatibility or explicit permission is established. Provenance is recorded in `docs/REFERENCE_CASES.md`.
+- Ignored local workbook samples are not publication assets or license grants.
