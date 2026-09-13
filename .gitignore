@@ -4,8 +4,6 @@
 *.png
 !/linux/runner/resources/pku_manager.png
 *.xlsx
-/*.md
-!/README.md
 
 # Miscellaneous
 *.class
