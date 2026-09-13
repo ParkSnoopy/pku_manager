@@ -41,7 +41,7 @@ lib/main.dart ──► lib/app/
 | `lib/ui/` | Isolate desktop window/tray plugins, shared overlays, focus effects, and Super OTC registration |
 | `test/` | Mirror domain, adapter, repository, controller, reference, and rendered-widget ownership |
 | `packaging/linux/` | Assemble the Linux release bundle and non-baseline AppIndicator libraries into an AppImage |
-| `packaging/windows/` | Package the Windows release bundle as a per-user NSIS installer |
+| `pubspec.yaml` | Configure the Windows release bundle as a per-user MSIX package |
 | `.github/workflows/native.yml` | Build, test, package, smoke-test, upload, and release all supported targets |
 
 Web is not supported. Generated platform registrants contain integration glue only.
@@ -143,7 +143,7 @@ Application-owned durable schema uses typed SQLite columns rather than JSON blob
 | iOS | Flutter host, system document interface, and application-support persistence |
 | Linux | GTK runner plus AppImage packaging with executable-relative tray dependencies and runtime-staged tray icon |
 | macOS | Flutter host, application bundle, native document selection, window management, and tray integration |
-| Windows | Win32 runner plus versioned per-user NSIS installation, complete payload replacement on upgrade, launch, and uninstall |
+| Windows | Win32 runner plus versioned per-user MSIX registration, package-managed updates, launch, and uninstall |
 
 Desktop plugin calls stay behind `lib/ui/app_window_controller.dart`. Tray setup occurs before window hiding; failure leaves the window recoverable. Linux packages non-baseline AppIndicator dependencies with `$ORIGIN` lookup and stages tray artwork under the shared runtime directory so an external indicator process can read it.
 
