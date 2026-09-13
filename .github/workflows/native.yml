@@ -359,7 +359,7 @@ jobs:
           try {
             $trustedCertificate = Import-Certificate `
               -FilePath $publicCertificate `
-              -CertStoreLocation Cert:\CurrentUser\TrustedPeople
+              -CertStoreLocation Cert:\LocalMachine\TrustedPeople
             $signTools = Get-ChildItem `
               -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" `
               -File
@@ -393,7 +393,7 @@ jobs:
               }
             } finally {
               if ($null -ne $trustedCertificate) {
-                Remove-Item "Cert:\CurrentUser\TrustedPeople\$($trustedCertificate.Thumbprint)" -Force
+                Remove-Item "Cert:\LocalMachine\TrustedPeople\$($trustedCertificate.Thumbprint)" -Force
               }
               $certificate.Dispose()
               Remove-Item $publicCertificate -Force -ErrorAction SilentlyContinue
