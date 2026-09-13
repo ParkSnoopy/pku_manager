@@ -356,6 +356,7 @@ jobs:
           )
           $trustedCertificate = $null
           $installed = $null
+          $app = $null
           try {
             $trustedCertificate = Import-Certificate `
               -FilePath $publicCertificate `
@@ -381,13 +382,35 @@ jobs:
             if ($installed.Version -ne [Version]"${env:VERSION}.0") {
               throw "Installed version '$($installed.Version)' does not match '${env:VERSION}.0'."
             }
-            $executable = Resolve-Path (Join-Path $installed.InstallLocation 'pku_manager.exe')
-            $app = Start-Process -FilePath $executable -PassThru
+            $manifest = Get-AppxPackageManifest -Package $installed.PackageFullName
+            $applications = @($manifest.Package.Applications.Application)
+            if ($applications.Count -ne 1) {
+              throw 'Expected exactly one application in the installed MSIX manifest.'
+            }
+            $application = $applications[0]
+            $executable = (Resolve-Path (Join-Path $installed.InstallLocation $application.Executable)).Path
+            $aumid = "$($installed.PackageFamilyName)!$($application.Id)"
+            Start-Process -FilePath "$env:WINDIR\explorer.exe" -ArgumentList "shell:AppsFolder\$aumid"
+            $deadline = [DateTime]::UtcNow.AddSeconds(30)
+            do {
+              Start-Sleep -Seconds 1
+              $app = Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($executable)) -ErrorAction SilentlyContinue |
+                Where-Object { $_.Path -eq $executable } | Select-Object -First 1
+            } until ($null -ne $app -or [DateTime]::UtcNow -ge $deadline)
+            if ($null -eq $app) {
+              throw "Registered application '$aumid' did not start within 30 seconds."
+            }
             Start-Sleep -Seconds 10
-            Get-Process -Id $app.Id -ErrorAction Stop | Out-Null
-            Stop-Process -Id $app.Id
+            $app.Refresh()
+            if ($app.HasExited) {
+              throw "Installed application exited during the smoke test with code $($app.ExitCode)."
+            }
           } finally {
             try {
+              if ($null -ne $app -and !$app.HasExited) {
+                Stop-Process -InputObject $app -Force
+                $app.WaitForExit()
+              }
               if ($null -ne $installed) {
                 Remove-AppxPackage -Package $installed.PackageFullName
               }
