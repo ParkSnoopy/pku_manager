@@ -1,6 +1,6 @@
 # PKU Manager
 
-PKU Manager is an offline-first Flutter application for PKU timetable and personal-schedule data. It targets Android, iOS, Linux AppImage, macOS, and Windows MSIX; Web is intentionally unsupported.
+PKU Manager is an offline-first Flutter application for PKU timetable and personal-schedule data. It targets Android, iOS, Linux AppImage, macOS, and Windows NSIS; Web is intentionally unsupported.
 
 ## Development scope
 
@@ -24,7 +24,7 @@ See `CONTEXT.md` for terminology and invariants, `ARCHITECTURE.md` for ownership
 | `test/` | Domain, adapter, persistence, controller, reference, and widget coverage |
 | `android/`, `ios/`, `linux/`, `macos/`, `windows/` | Flutter platform runners and metadata |
 | `packaging/linux/` | AppImage assembly and executable-relative library packaging |
-| `pubspec.yaml` | MSIX package configuration |
+| `packaging/windows/` | NSIS installer definition |
 | `.github/workflows/native.yml` | Cross-platform build, package, runtime-smoke, and release workflow |
 
 ## Toolchain
@@ -57,7 +57,7 @@ flutter build ios --release --no-codesign
 flutter build windows --release
 ```
 
-Run Apple commands on macOS and the Windows command on Windows. A raw Flutter build does not establish distribution support: AppImage, application-bundle, simulator/device, and installed-MSIX checks remain separate release evidence. Use the source-controlled workflow and packaging definitions rather than ad hoc artifact assembly.
+Run Apple commands on macOS and the Windows command on Windows. A raw Flutter build does not establish distribution support: AppImage, application-bundle, simulator/device, and installed-NSIS checks remain separate release evidence. Use the source-controlled workflow and packaging definitions rather than ad hoc artifact assembly.
 
 ## Release and update continuity
 
@@ -65,7 +65,7 @@ The workflow derives Android's internal version code from the regular `major.min
 
 Existing `v0.0.13` Android installations require one uninstall before installing a current release. Subsequent releases update normally when the application ID remains stable and the version code increases.
 
-MSIX update continuity comes from stable package identity and increasing package versions. Windows owns package installation, update, and removal while application-support data remains outside the immutable package.
+NSIS update continuity comes from the stable per-user install directory and uninstall registry key. The installer reuses a previously selected directory, removes the prior application bundle, writes the complete new bundle, and updates registered version metadata while leaving application-support data outside the install directory intact.
 
 Parser acceptance requires a sanitized real PKU BIFF8 workbook in addition to synthetic matrices. Keep local workbook samples ignored; never commit personal timetable data.
 

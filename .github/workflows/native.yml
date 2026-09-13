@@ -277,18 +277,6 @@ jobs:
         with:
           lfs: false
           token: ${{ env.GITHUB_TOKEN }}
-      - name: Verify Windows package inputs
-        env:
-          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_BASE64)) {
-            throw 'Windows package certificate is unavailable.'
-          }
-          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
-            throw 'Windows package certificate password is unavailable.'
-          }
       - name: Download Noto CJK fonts
         shell: bash
         run: |
@@ -305,138 +293,59 @@ jobs:
         with:
           flutter-version: '3.47.2'
           channel: stable
-      - run: flutter pub get
       - run: flutter build windows --release
       - run: flutter test
-      - name: Restore Windows package certificate
-        env:
-          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $certificate = Join-Path $env:RUNNER_TEMP 'pku-manager-release.pfx'
-          [IO.File]::WriteAllBytes(
-            $certificate,
-            [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64)
-          )
-          if ((Get-Item $certificate).Length -eq 0) {
-            throw 'Windows package certificate is empty.'
-          }
-          "WINDOWS_CERTIFICATE_PATH=$certificate" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Build signed MSIX
-        env:
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      - run: choco install nsis --version=3.11 -y --no-progress
+      - name: Build installer
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
-          New-Item -ItemType Directory -Force build/msix | Out-Null
-          dart run msix:create `
-            --certificate-path $env:WINDOWS_CERTIFICATE_PATH `
-            --certificate-password $env:WINDOWS_CERTIFICATE_PASSWORD `
-            --output-name "PKU_Manager-v${env:VERSION}-windows"
-      - name: Install, launch, and uninstall MSIX
-        env:
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        shell: powershell
+          & 'C:\Program Files (x86)\NSIS\makensis.exe' "/DVERSION=${env:VERSION}" packaging/windows/installer.nsi
+          Move-Item packaging/windows/pku-manager-setup.exe "packaging/windows/PKU_Manager-v${env:VERSION}-windows.exe"
+      - name: Install, upgrade, launch, uninstall
+        shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          Import-Module Appx -ErrorAction Stop
-          $package = Resolve-Path "build/msix/PKU_Manager-v${env:VERSION}-windows.msix"
-          $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new(
-            $env:WINDOWS_CERTIFICATE_PATH,
-            $env:WINDOWS_CERTIFICATE_PASSWORD,
-            [Security.Cryptography.X509Certificates.X509KeyStorageFlags]::EphemeralKeySet
-          )
-          $publicCertificate = Join-Path $env:RUNNER_TEMP 'pku-manager-release.cer'
-          [IO.File]::WriteAllBytes(
-            $publicCertificate,
-            $certificate.Export([Security.Cryptography.X509Certificates.X509ContentType]::Cert)
-          )
-          $trustedCertificate = $null
-          $installed = $null
-          $app = $null
-          try {
-            $trustedCertificate = Import-Certificate `
-              -FilePath $publicCertificate `
-              -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-            $signTools = Get-ChildItem `
-              -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" `
-              -File
-            $signTool = $signTools | Sort-Object {
-              [Version]$_.Directory.Parent.Name
-            } -Descending | Select-Object -First 1
-            if ($null -eq $signTool) {
-              throw 'Windows SDK SignTool was not found.'
-            }
-            & $signTool.FullName verify /pa /v $package
-            if ($LASTEXITCODE -ne 0) {
-              throw "MSIX signature verification failed with exit code $LASTEXITCODE."
-            }
-            Add-AppxPackage -Path $package
-            $installed = Get-AppxPackage -Name 'ParkSnoopy.PKUManager'
-            if ($null -eq $installed) {
-              throw 'Installed MSIX package was not registered.'
-            }
-            if ($installed.Version -ne [Version]"${env:VERSION}.0") {
-              throw "Installed version '$($installed.Version)' does not match '${env:VERSION}.0'."
-            }
-            $manifest = Get-AppxPackageManifest -Package $installed.PackageFullName
-            $applications = @($manifest.Package.Applications.Application)
-            if ($applications.Count -ne 1) {
-              throw 'Expected exactly one application in the installed MSIX manifest.'
-            }
-            $application = $applications[0]
-            $executable = (Resolve-Path (Join-Path $installed.InstallLocation $application.Executable)).Path
-            $aumid = "$($installed.PackageFamilyName)!$($application.Id)"
-            Start-Process -FilePath "$env:WINDIR\explorer.exe" -ArgumentList "shell:AppsFolder\$aumid"
-            $deadline = [DateTime]::UtcNow.AddSeconds(30)
-            do {
-              Start-Sleep -Seconds 1
-              $app = Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($executable)) -ErrorAction SilentlyContinue |
-                Where-Object { $_.Path -eq $executable } | Select-Object -First 1
-            } until ($null -ne $app -or [DateTime]::UtcNow -ge $deadline)
-            if ($null -eq $app) {
-              throw "Registered application '$aumid' did not start within 30 seconds."
-            }
-            Start-Sleep -Seconds 10
-            $app.Refresh()
-            if ($app.HasExited) {
-              throw "Installed application exited during the smoke test with code $($app.ExitCode)."
-            }
-          } finally {
-            try {
-              if ($null -ne $app -and !$app.HasExited) {
-                Stop-Process -InputObject $app -Force
-                $app.WaitForExit()
-              }
-              if ($null -ne $installed) {
-                Remove-AppxPackage -Package $installed.PackageFullName
-              }
-            } finally {
-              if ($null -ne $trustedCertificate) {
-                Remove-Item "Cert:\LocalMachine\TrustedPeople\$($trustedCertificate.Thumbprint)" -Force
-              }
-              $certificate.Dispose()
-              Remove-Item $publicCertificate -Force -ErrorAction SilentlyContinue
-            }
+          $PSNativeCommandUseErrorActionPreference = $true
+          $installer = Resolve-Path "packaging/windows/PKU_Manager-v${env:VERSION}-windows.exe"
+          $installed = Join-Path $env:LOCALAPPDATA 'Programs\PKU Manager'
+          $firstInstall = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
+          if ($firstInstall.ExitCode -ne 0) {
+            throw "Initial install failed with exit code $($firstInstall.ExitCode)."
           }
-          if ($null -ne (Get-AppxPackage -Name 'ParkSnoopy.PKUManager')) {
-            throw 'MSIX package remained registered after removal.'
+          $stalePayload = Join-Path $installed 'data\stale-from-previous-install'
+          Set-Content -Path $stalePayload -Value 'stale'
+          $upgrade = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
+          if ($upgrade.ExitCode -ne 0) {
+            throw "Upgrade failed with exit code $($upgrade.ExitCode)."
+          }
+          if (Test-Path $stalePayload) {
+            throw 'Upgrade retained stale application payload.'
+          }
+          $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\PKU Manager'
+          $registration = Get-ItemProperty $uninstallKey
+          if ($registration.DisplayVersion -ne $env:VERSION) {
+            throw "Installed version '$($registration.DisplayVersion)' does not match '$env:VERSION'."
+          }
+          if ($registration.InstallLocation -ne $installed) {
+            throw "Registered install location '$($registration.InstallLocation)' does not match '$installed'."
+          }
+          $executable = Resolve-Path "$installed\pku_manager.exe"
+          $uninstaller = Resolve-Path "$installed\Uninstall.exe"
+          $app = Start-Process -FilePath $executable -PassThru
+          Start-Sleep -Seconds 10
+          Get-Process -Id $app.Id -ErrorAction Stop | Out-Null
+          Stop-Process -Id $app.Id
+          $uninstall = Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) {
+            throw "Uninstall failed with exit code $($uninstall.ExitCode)."
           }
       - uses: actions/upload-artifact@v4
         with:
-          name: PKU_Manager-v${{ needs.prepare.outputs.version }}-windows.msix
-          path: build/msix/PKU_Manager-v${{ needs.prepare.outputs.version }}-windows.msix
+          name: PKU_Manager-v${{ needs.prepare.outputs.version }}-windows.exe
+          path: packaging/windows/PKU_Manager-v${{ needs.prepare.outputs.version }}-windows.exe
           if-no-files-found: error
-      - name: Remove Windows package certificate
-        if: always()
-        shell: pwsh
-        run: |
-          if (![string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PATH)) {
-            Remove-Item $env:WINDOWS_CERTIFICATE_PATH -Force -ErrorAction SilentlyContinue
-          }
 
   release:
     needs: [prepare, linux, android, apple, windows]

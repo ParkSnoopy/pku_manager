@@ -5,7 +5,7 @@ This file defines project vocabulary and cross-layer invariants. Structural owne
 ## Vocabulary
 
 - `school life management application`: the complete Flutter product. Timetable and Calendar are feature modules, not architectural boundaries for future scope.
-- `supported platforms`: Android, iOS, Linux AppImage, macOS application bundle, and Windows MSIX package. Web is excluded. Platform support requires packaged-runtime evidence, not compilation alone.
+- `supported platforms`: Android, iOS, Linux AppImage, macOS application bundle, and Windows NSIS installer. Web is excluded. Platform support requires packaged-runtime evidence, not compilation alone.
 - `schedule.xls`: a user-supplied BIFF8 workbook. Its selected bytes are immutable source evidence stored as a SQLite BLOB.
 - `import schedule`: acquire bounded bytes through the platform picker, parse every nonempty in-scope record, resolve typed failures, and publish atomically.
 - `schedule`: a user-controlled Calendar record. Do not substitute `event` in product-owned names or copy.
