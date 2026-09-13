@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
@@ -16,6 +18,23 @@ enum AppFontFamily {
       values.firstWhere((family) => family.code == value, orElse: () => serif);
 }
 
+enum TimetableFontFamily {
+  app('app', null),
+  songTi('songti', 'SimSun'),
+  heiTi('heiti', 'SimHei');
+
+  const TimetableFontFamily(this.code, this.family);
+  final String code;
+  final String? family;
+
+  static TimetableFontFamily parse(String value) => switch (value) {
+    'app' => app,
+    'songti' => songTi,
+    'heiti' => heiTi,
+    _ => throw const FormatException('Invalid timetable font family'),
+  };
+}
+
 final class AppearanceSettings {
   const AppearanceSettings({
     this.accent = const Color(0xffff5722),
@@ -29,7 +48,6 @@ final class AppearanceSettings {
     this.fontWeightValue = 400,
     this.timetableFontScale = 1,
     this.timetableIndexColor = const Color(0xffe8e0d2),
-    this.autoTextColor = false,
     this.darkMode = false,
     this.blendAccentIntoTheme = false,
     this.customPalette = defaultCustomPalette,
@@ -46,7 +64,6 @@ final class AppearanceSettings {
   final int fontWeightValue;
   final double timetableFontScale;
   final Color timetableIndexColor;
-  final bool autoTextColor;
   final bool darkMode;
   final bool blendAccentIntoTheme;
   final List<Color> customPalette;
@@ -63,7 +80,6 @@ final class AppearanceSettings {
     int? fontWeightValue,
     double? timetableFontScale,
     Color? timetableIndexColor,
-    bool? autoTextColor,
     bool? darkMode,
     bool? blendAccentIntoTheme,
     List<Color>? customPalette,
@@ -80,7 +96,6 @@ final class AppearanceSettings {
     fontWeightValue: fontWeightValue ?? this.fontWeightValue,
     timetableFontScale: timetableFontScale ?? this.timetableFontScale,
     timetableIndexColor: timetableIndexColor ?? this.timetableIndexColor,
-    autoTextColor: autoTextColor ?? this.autoTextColor,
     darkMode: darkMode ?? this.darkMode,
     blendAccentIntoTheme: blendAccentIntoTheme ?? this.blendAccentIntoTheme,
     customPalette: customPalette ?? this.customPalette,
@@ -98,7 +113,9 @@ abstract interface class AppearanceStore {
 
 abstract interface class DeviceSettingsStore {
   double loadUiScale();
+  TimetableFontFamily loadTimetableFontFamily();
   void saveUiScale(double value);
+  void saveTimetableFontFamily(TimetableFontFamily value);
   void purge();
 }
 
@@ -106,15 +123,24 @@ const defaultUiScale = 1.0;
 
 final class MemoryDeviceSettingsStore implements DeviceSettingsStore {
   double _uiScale = defaultUiScale;
+  TimetableFontFamily _timetableFontFamily = TimetableFontFamily.app;
 
   @override
   double loadUiScale() => _uiScale;
+  @override
+  TimetableFontFamily loadTimetableFontFamily() => _timetableFontFamily;
 
   @override
   void saveUiScale(double value) => _uiScale = value;
+  @override
+  void saveTimetableFontFamily(TimetableFontFamily value) =>
+      _timetableFontFamily = value;
 
   @override
-  void purge() => _uiScale = defaultUiScale;
+  void purge() {
+    _uiScale = defaultUiScale;
+    _timetableFontFamily = TimetableFontFamily.app;
+  }
 }
 
 final class MemoryAppearanceStore implements AppearanceStore {
@@ -141,6 +167,7 @@ final class AppearanceController extends ChangeNotifier {
       _courseAppearances = store.loadCourseAppearances(),
       deviceSettings = deviceSettings ?? MemoryDeviceSettingsStore() {
     _uiScale = this.deviceSettings.loadUiScale();
+    _timetableFontFamily = this.deviceSettings.loadTimetableFontFamily();
   }
 
   final AppearanceStore store;
@@ -148,6 +175,7 @@ final class AppearanceController extends ChangeNotifier {
   AppearanceSettings _settings;
   Map<String, CourseAppearance> _courseAppearances;
   late double _uiScale;
+  late TimetableFontFamily _timetableFontFamily;
 
   Color get accent => _settings.accent;
   int get paletteSeed => _settings.paletteSeed;
@@ -159,11 +187,11 @@ final class AppearanceController extends ChangeNotifier {
   AppFontFamily get fontFamily => _settings.fontFamily;
   double get fontScale => _settings.fontScale;
   double get uiScale => _uiScale;
+  TimetableFontFamily get timetableFontFamily => _timetableFontFamily;
   int get fontWeightValue => _settings.fontWeightValue;
   FontWeight get fontWeight => FontWeight.values[fontWeightValue ~/ 100 - 1];
   double get timetableFontScale => _settings.timetableFontScale;
   Color get timetableIndexColor => _settings.timetableIndexColor;
-  bool get autoTextColor => _settings.autoTextColor;
   bool get darkMode => _settings.darkMode;
   bool get blendAccentIntoTheme => _settings.blendAccentIntoTheme;
   List<Color> get customPalette => List.unmodifiable(_settings.customPalette);
@@ -212,6 +240,19 @@ final class AppearanceController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setTimetableFontFamily(TimetableFontFamily value) {
+    deviceSettings.saveTimetableFontFamily(value);
+    _timetableFontFamily = value;
+    notifyListeners();
+  }
+
+  void cycleTimetableFontFamily() =>
+      setTimetableFontFamily(switch (timetableFontFamily) {
+        TimetableFontFamily.app => TimetableFontFamily.songTi,
+        TimetableFontFamily.songTi => TimetableFontFamily.heiTi,
+        TimetableFontFamily.heiTi => TimetableFontFamily.app,
+      });
+
   void setTimetableFontScale(double value) {
     if (value < 1 || value > 2) throw RangeError.range(value, 1, 2);
     _set(_settings.copyWith(timetableFontScale: value));
@@ -226,9 +267,6 @@ final class AppearanceController extends ChangeNotifier {
 
   void setTimetableIndexColor(Color value) =>
       _set(_settings.copyWith(timetableIndexColor: value));
-
-  void setAutoTextColor(bool value) =>
-      _set(_settings.copyWith(autoTextColor: value));
 
   void setDarkMode(bool value) => _set(_settings.copyWith(darkMode: value));
 
@@ -272,6 +310,7 @@ final class AppearanceController extends ChangeNotifier {
     _settings = store.load();
     _courseAppearances = Map.unmodifiable(store.loadCourseAppearances());
     _uiScale = deviceSettings.loadUiScale();
+    _timetableFontFamily = deviceSettings.loadTimetableFontFamily();
     notifyListeners();
   }
 
@@ -284,10 +323,8 @@ final class AppearanceController extends ChangeNotifier {
           : appearance;
       if (!next.isEmpty) updated[entry.key] = next;
     }
-    _set(
-      _settings.copyWith(paletteSeed: (_settings.paletteSeed + 1) & 0x7fffffff),
-      courseAppearances: updated,
-    );
+    final nextSeed = _settings.paletteSeed + Random.secure().nextInt(4) + 1;
+    _set(_settings.copyWith(paletteSeed: nextSeed), courseAppearances: updated);
   }
 
   void _set(

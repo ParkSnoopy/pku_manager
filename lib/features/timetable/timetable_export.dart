@@ -43,7 +43,6 @@ abstract interface class TimetablePngEncoder {
     String fontFamily = timetableSansFont,
     ui.FontWeight fontWeight = ui.FontWeight.w400,
     ui.Color indexColor = timetableIndexSurface,
-    bool autoTextColor = false,
     ui.Brightness brightness = ui.Brightness.light,
     ui.Color surfaceColor = timetableCanvas,
   });
@@ -105,7 +104,6 @@ final class TimetableExporter {
     String fontFamily = timetableSansFont,
     ui.FontWeight fontWeight = ui.FontWeight.w400,
     ui.Color indexColor = timetableIndexSurface,
-    bool autoTextColor = false,
     ui.Brightness brightness = ui.Brightness.light,
     ui.Color surfaceColor = timetableCanvas,
   }) async {
@@ -121,7 +119,6 @@ final class TimetableExporter {
         fontFamily,
         fontWeight,
         indexColor,
-        autoTextColor,
         brightness,
         surfaceColor,
       ),
@@ -136,7 +133,6 @@ final class TimetableExporter {
         fontFamily: fontFamily,
         fontWeight: fontWeight,
         indexColor: indexColor,
-        autoTextColor: autoTextColor,
         brightness: brightness,
         surfaceColor: surfaceColor,
       ),
@@ -166,7 +162,6 @@ final class TimetableExporter {
     String fontFamily,
     ui.FontWeight fontWeight,
     ui.Color indexColor,
-    bool autoTextColor,
     ui.Brightness brightness,
     ui.Color surfaceColor,
   ) {
@@ -174,6 +169,11 @@ final class TimetableExporter {
     excel.rename(excel.getDefaultSheet()!, 'Timetable');
     final sheet = excel['Timetable'];
     final conflictingSourceIds = timetable.conflictingSourceIds;
+    final blockIdentities = {
+      for (var day = 1; day <= 5; day++)
+        for (final group in timetable.groupsForDay(day))
+          for (final meeting in group.meetings) meeting.sourceId: group.key,
+    };
     final effectiveIndexColor = themedTimetableColor(
       indexColor,
       brightness: brightness,
@@ -244,6 +244,7 @@ final class TimetableExporter {
                   meetings.first,
                   paletteSeed,
                   appearance: courseAppearance,
+                  blockIdentity: blockIdentities[meetings.first.sourceId],
                   paletteIndex: paletteIndex,
                   customPalette: customPalette,
                 ),
@@ -256,11 +257,7 @@ final class TimetableExporter {
             ? brightness == ui.Brightness.dark
                   ? const ui.Color(0xffffffff)
                   : const ui.Color(0xff000000)
-            : timetableCourseForeground(
-                courseColor,
-                brightness: brightness,
-                autoTextColor: autoTextColor,
-              );
+            : timetableContrastForeground(courseColor);
         final outer = ExcelColor.fromHexString('#FF92918D');
         final thin = ExcelColor.fromHexString('#FFE6DFD8');
         cell.cellStyle = CellStyle(
@@ -369,7 +366,6 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
     String fontFamily = timetableSansFont,
     ui.FontWeight fontWeight = ui.FontWeight.w400,
     ui.Color indexColor = timetableIndexSurface,
-    bool autoTextColor = false,
     ui.Brightness brightness = ui.Brightness.light,
     ui.Color surfaceColor = timetableCanvas,
   }) async {
@@ -470,6 +466,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
             meeting,
             paletteSeed,
             appearance: appearance,
+            blockIdentity: span.group.key,
             paletteIndex: paletteIndex,
             customPalette: customPalette,
           ),
@@ -477,11 +474,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           surface: surfaceColor,
         );
         canvas.drawRect(item, ui.Paint()..color = background);
-        final foreground = timetableCourseForeground(
-          background,
-          brightness: brightness,
-          autoTextColor: autoTextColor,
-        );
+        final foreground = timetableContrastForeground(background);
         const inset = timetableCourseContentPadding;
         final nameHeight = timetableCourseNameFontSize * fontScale * 1.5;
         final roomHeight = timetableClassroomFontSize * fontScale * 1.5;

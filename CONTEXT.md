@@ -10,7 +10,7 @@ This file defines project vocabulary and cross-layer invariants. Structural owne
 - `import schedule`: acquire bounded bytes through the platform picker, parse every nonempty in-scope record, resolve typed failures, and publish atomically.
 - `schedule`: a user-controlled Calendar record. Do not substitute `event` in product-owned names or copy.
 - `source identity`: stable workbook sheet/row/column identity used to bind parsed records, corrections, appearance, and optional Calendar relationships.
-- `source class name`: immutable workbook-parsed class name used for grouping, deterministic color identity, and class-wide relationships. Editable display or short names do not replace it.
+- `source class name`: immutable workbook-parsed class name used for grouping and class-wide relationships. Editable display or short names do not replace it.
 - `week parity`: semester-relative week number and odd/even status calculated from Beijing dates and validated semester starts.
 - `dynamic timetable`: retain all meetings and derive current-week emphasis at presentation time.
 - `Week Parity source`: runtime TOML at `https://parksnoopy-undergraduate.github.io/week/config.toml`.
@@ -58,13 +58,14 @@ This file defines project vocabulary and cross-layer invariants. Structural owne
 - Class names are bold across screen and exports. Room and remark text retain configured timetable weight.
 - Calendar schedules remain independent records. Optional class association is ID-based and must be cleared, not delete the schedule, when its class disappears.
 - Timetable and Calendar cross-navigation changes transient presentation only. Escape-style restoration must not revert persisted state.
-- Appearance settings persist typed values and apply through one shared projection. Manual course colors and outlines are source-identity-bound; generated labels/colors are derived.
+- Appearance settings persist typed values and apply through one shared projection. Manual course colors, outlines, and generated block colors are source-identity-bound; every text foreground contrasts with its background.
 - Korean, English, and Simplified Chinese localization must cover every application-owned visible string.
 
 ## Platform and security invariants
 
 - Product identity is PKU Manager by ParkSnoopy. Android/Linux use `com.parksnoopy.pku_manager`; Apple uses `com.parksnoopy.pku-manager` because Apple bundle identifiers prohibit underscores.
 - Native runners and plugins bridge platform facilities only; product behavior remains in Dart.
+- Desktop runners leave initial window geometry to the platform instead of enforcing one application-owned launch size.
 - Desktop close behavior is typed and persisted. Tray creation precedes hiding, explicit tray exit destroys the application, and tray failure leaves the window visible.
 - Linux AppImage libraries resolve executable-relative. Tray artwork is staged under a shared runtime path readable outside AppImage/Firejail mount namespaces.
 - Runtime network access is limited to the validated Week Parity endpoint. Timetable content, filenames, and usage data never leave the process.

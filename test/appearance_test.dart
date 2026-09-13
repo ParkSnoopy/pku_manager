@@ -12,10 +12,46 @@ import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/features/settings/appearance_controller.dart';
 import 'package:pku_manager/features/settings/settings_page.dart';
 import 'package:pku_manager/features/timetable/timetable_color.dart';
+import 'package:pku_manager/features/timetable/timetable_style.dart';
 import 'package:pku_manager/l10n/app_strings.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 void main() {
+  test('palette rolls colors per merged block and keeps text visible', () {
+    Course block(String sourceId, String sourceName) => Course(
+      sourceId: sourceId,
+      sourceName: sourceName,
+      name: sourceName,
+      weekday: 1,
+      firstPeriod: 1,
+      lastPeriod: 2,
+    );
+
+    final first = block('first', 'Algebra');
+    final second = block('second', 'Algebra');
+    final renamed = block('first', 'Renamed');
+    final firstRolls = [
+      for (var seed = 0; seed < defaultCustomPalette.length; seed++)
+        timetableCourseColor(first, seed, blockIdentity: 'first|second'),
+    ];
+    final secondRolls = [
+      for (var seed = 0; seed < defaultCustomPalette.length; seed++)
+        timetableCourseColor(second, seed),
+    ];
+
+    expect(firstRolls.toSet(), hasLength(defaultCustomPalette.length));
+    expect(secondRolls, isNot(firstRolls));
+    expect(
+      timetableCourseColor(second, 0, blockIdentity: 'first|second'),
+      firstRolls.first,
+    );
+    expect(
+      timetableCourseColor(renamed, 0, blockIdentity: 'first|second'),
+      timetableCourseColor(first, 0, blockIdentity: 'first|second'),
+    );
+    expect(timetableContrastForeground(const Color(0xff111111)), Colors.white);
+  });
+
   test('schema zero migrates to version one without losing data', () {
     final directory = Directory.systemTemp.createTempSync('pku-schema-test-');
     addTearDown(() => directory.deleteSync(recursive: true));
@@ -87,7 +123,11 @@ void main() {
         [1, identity, identity, '', 1, 1, 1, '', '每周', '', ''],
       );
     }
-    final controller = AppearanceController(store);
+    final deviceSettings = MemoryDeviceSettingsStore();
+    final controller = AppearanceController(
+      store,
+      deviceSettings: deviceSettings,
+    );
     expect(controller.language, AppLanguage.ko);
     expect(controller.paletteSeed, 0);
     expect(controller.rollPaletteIndex, 0);
@@ -97,8 +137,8 @@ void main() {
 
     expect(controller.fontWeightValue, 400);
     expect(controller.timetableFontScale, 1);
+    expect(controller.timetableFontFamily, TimetableFontFamily.app);
     expect(controller.timetableIndexColor, const Color(0xffe8e0d2));
-    expect(controller.autoTextColor, isFalse);
     expect(controller.darkMode, isFalse);
     expect(controller.blendAccentIntoTheme, isFalse);
     expect(controller.applicationCloseAction, ApplicationCloseAction.closeApp);
@@ -133,8 +173,8 @@ void main() {
     controller.setUiScale(1.75);
     controller.setFontWeight(900);
     controller.setTimetableFontScale(1.6);
+    controller.setTimetableFontFamily(TimetableFontFamily.songTi);
     controller.setTimetableIndexColor(const Color(0xff112233));
-    controller.setAutoTextColor(true);
     controller.setDarkMode(true);
     controller.setBlendAccentIntoTheme(true);
     controller.setApplicationCloseAction(
@@ -160,20 +200,28 @@ void main() {
       ),
     );
     controller.rollPalette();
+    final firstRollSeed = controller.paletteSeed;
     controller.rollPalette();
 
-    final restored = AppearanceController(store);
+    final restored = AppearanceController(
+      store,
+      deviceSettings: deviceSettings,
+    );
     expect(restored.language, AppLanguage.zhHans);
     expect(restored.accent, const Color(0xff00695c));
-    expect(restored.paletteSeed, 2);
+    expect(firstRollSeed, inInclusiveRange(1, 4));
+    expect(
+      restored.paletteSeed,
+      inInclusiveRange(firstRollSeed + 1, firstRollSeed + 4),
+    );
     expect(restored.rollPaletteIndex, 3);
     expect(restored.fontFamily, AppFontFamily.sans);
     expect(restored.fontScale, 1.4);
 
     expect(restored.fontWeightValue, 900);
     expect(restored.timetableFontScale, 1.6);
+    expect(restored.timetableFontFamily, TimetableFontFamily.songTi);
     expect(restored.timetableIndexColor, const Color(0xff112233));
-    expect(restored.autoTextColor, isTrue);
     expect(restored.darkMode, isTrue);
     expect(restored.blendAccentIntoTheme, isTrue);
     expect(
@@ -235,6 +283,7 @@ void main() {
     expect(jsonDecode(settingsFile.readAsStringSync()), {
       'formatVersion': 1,
       'uiScale': 1,
+      'timetableFontFamily': 'app',
     });
 
     final controller = AppearanceController(
@@ -243,12 +292,20 @@ void main() {
     );
 
     controller.setUiScale(1.75);
+    controller.setTimetableFontFamily(TimetableFontFamily.heiTi);
     expect(
       AppearanceController(
         SqliteAppearanceStore(database),
         deviceSettings: settings,
       ).uiScale,
       1.75,
+    );
+    expect(
+      AppearanceController(
+        SqliteAppearanceStore(database),
+        deviceSettings: settings,
+      ).timetableFontFamily,
+      TimetableFontFamily.heiTi,
     );
     controller.setUiScale(1.8);
     expect(settings.loadUiScale(), 1.8);
@@ -331,6 +388,17 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('custom-accent-color')));
     await tester.pump();
     expect(controller.accent, const Color(0xff234567));
+    expect(
+      tester
+          .widget<Icon>(
+            find.descendant(
+              of: find.byKey(const ValueKey('custom-accent-color')),
+              matching: find.byIcon(Icons.palette_outlined),
+            ),
+          )
+          .color,
+      Colors.white,
+    );
     expect(find.text('Custom'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('custom-palette-color-0')),
@@ -357,6 +425,8 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.byKey(const ValueKey('font-scale')));
+    await tester.pumpAndSettle();
     await tester.drag(
       find.byKey(const ValueKey('font-scale')),
       const Offset(80, 0),
@@ -377,12 +447,24 @@ void main() {
     expect(controller.fontScale, .8);
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('font-family-cycle')),
-      300,
+      -300,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.byKey(const ValueKey('font-family-cycle')));
     await tester.pump();
     expect(controller.fontFamily, AppFontFamily.sans);
+    await tester.tap(find.byKey(const ValueKey('timetable-font-family-cycle')));
+    await tester.pump();
+    expect(controller.timetableFontFamily, TimetableFontFamily.songTi);
+    expect(find.text('SongTi (SimSun)'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('timetable-font-family-cycle')));
+    await tester.pump();
+    expect(controller.timetableFontFamily, TimetableFontFamily.heiTi);
+    expect(find.text('HeiTi (SimHei)'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('timetable-font-family-cycle')));
+    await tester.pump();
+    expect(controller.timetableFontFamily, TimetableFontFamily.app);
+    expect(find.text('Use app font'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('font-weight')),
       300,
@@ -412,16 +494,6 @@ void main() {
     await tester.pump();
     expect(controller.timetableFontScale, 2);
     await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('auto-text-color')),
-      -300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(find.byKey(const ValueKey('auto-text-color')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('auto-text-color')));
-    await tester.pump();
-    expect(controller.autoTextColor, isTrue);
-    await tester.scrollUntilVisible(
       find.byKey(const ValueKey('timetable-index-color')),
       -300,
       scrollable: find.byType(Scrollable).first,
@@ -430,6 +502,7 @@ void main() {
       find.byKey(const ValueKey('timetable-index-color')),
     );
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('auto-text-color')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('timetable-index-color')));
     await tester.pump();
     expect(controller.timetableIndexColor, const Color(0xff234567));

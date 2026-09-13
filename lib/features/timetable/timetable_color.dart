@@ -133,16 +133,19 @@ Color timetableCourseColor(
   Course meeting,
   int paletteSeed, {
   CourseAppearance? appearance,
+  String? blockIdentity,
   int paletteIndex = 0,
   List<Color> customPalette = defaultCustomPalette,
 }) {
   if (appearance?.color case final color?) return color;
-  final hash = meeting.sourceName.runes.fold(
+  final hash = (blockIdentity ?? meeting.sourceId).runes.fold(
     0,
     (value, rune) => (value * 31 + rune) & 0x7fffffff,
   );
   final palette = paletteIndex == 0
       ? customPalette
       : rollPalettes[paletteIndex].colors;
-  return palette[(hash + paletteSeed) % palette.length];
+  if (palette.length == 1) return palette.single;
+  final step = 1 + (hash ~/ palette.length) % (palette.length - 1);
+  return palette[(hash + paletteSeed * step) % palette.length];
 }

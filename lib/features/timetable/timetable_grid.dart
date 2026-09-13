@@ -25,7 +25,6 @@ class TimetableGrid extends StatelessWidget {
     required this.onEdit,
     this.focusedCourseSourceIds = const {},
     this.indexColor = timetableIndexSurface,
-    this.autoTextColor = false,
     this.schedules = const [],
     this.courseAppearances = const {},
     this.parity,
@@ -41,7 +40,6 @@ class TimetableGrid extends StatelessWidget {
   final double fontScale;
   final Set<String> focusedCourseSourceIds;
   final Color indexColor;
-  final bool autoTextColor;
   final List<CalendarSchedule> schedules;
   final Map<String, CourseAppearance> courseAppearances;
   final void Function(int weekday, int period, List<Course> meetings) onEdit;
@@ -79,7 +77,6 @@ class TimetableGrid extends StatelessWidget {
                   fontWeight: fontWeight,
                   focusedCourseSourceIds: focusedCourseSourceIds,
                   indexColor: effectiveIndexColor,
-                  autoTextColor: autoTextColor,
                   schedules: schedules,
                   courseAppearances: courseAppearances,
                   parity: parity,
@@ -106,7 +103,6 @@ class TimetableGrid extends StatelessWidget {
                 fontWeight: fontWeight,
                 focusedCourseSourceIds: focusedCourseSourceIds,
                 indexColor: effectiveIndexColor,
-                autoTextColor: autoTextColor,
                 schedules: schedules,
                 courseAppearances: courseAppearances,
                 parity: parity,
@@ -133,7 +129,6 @@ class _ReferenceTable extends StatelessWidget {
     required this.fontWeight,
     required this.focusedCourseSourceIds,
     required this.indexColor,
-    required this.autoTextColor,
     required this.schedules,
     required this.courseAppearances,
     required this.parity,
@@ -151,7 +146,6 @@ class _ReferenceTable extends StatelessWidget {
   final FontWeight fontWeight;
   final Set<String> focusedCourseSourceIds;
   final Color indexColor;
-  final bool autoTextColor;
   final List<CalendarSchedule> schedules;
   final Map<String, CourseAppearance> courseAppearances;
   final WeekParity? parity;
@@ -210,7 +204,6 @@ class _ReferenceTable extends StatelessWidget {
               customPalette: customPalette,
               fontWeight: fontWeight,
               focusedCourseSourceIds: focusedCourseSourceIds,
-              autoTextColor: autoTextColor,
               schedules: schedules,
               courseAppearances: courseAppearances,
               parity: parity,
@@ -414,7 +407,6 @@ class _DayGroups extends StatelessWidget {
     required this.customPalette,
     required this.fontWeight,
     required this.focusedCourseSourceIds,
-    required this.autoTextColor,
     required this.schedules,
     required this.courseAppearances,
     required this.parity,
@@ -429,7 +421,6 @@ class _DayGroups extends StatelessWidget {
   final List<Color> customPalette;
   final FontWeight fontWeight;
   final Set<String> focusedCourseSourceIds;
-  final bool autoTextColor;
   final List<CalendarSchedule> schedules;
   final Map<String, CourseAppearance> courseAppearances;
   final WeekParity? parity;
@@ -465,10 +456,10 @@ class _DayGroups extends StatelessWidget {
                 (meeting) => conflictingSourceIds.contains(meeting.sourceId),
               ),
               paletteSeed: paletteSeed,
+              blockIdentity: group.group.key,
               paletteIndex: paletteIndex,
               customPalette: customPalette,
               fontWeight: fontWeight,
-              autoTextColor: autoTextColor,
               focused: group.group.meetings.any(
                 (meeting) => focusedCourseSourceIds.contains(meeting.sourceId),
               ),
@@ -512,10 +503,10 @@ class _MeetingTile extends StatefulWidget {
     required this.isCurrent,
     required this.conflicting,
     required this.paletteSeed,
+    required this.blockIdentity,
     required this.paletteIndex,
     required this.customPalette,
     required this.fontWeight,
-    required this.autoTextColor,
     required this.focused,
     required this.schedules,
     required this.appearance,
@@ -528,10 +519,10 @@ class _MeetingTile extends StatefulWidget {
   final bool isCurrent;
   final bool conflicting;
   final int paletteSeed;
+  final String blockIdentity;
   final int paletteIndex;
   final List<Color> customPalette;
   final FontWeight fontWeight;
-  final bool autoTextColor;
   final bool focused;
   final List<CalendarSchedule> schedules;
   final CourseAppearance? appearance;
@@ -551,17 +542,14 @@ class _MeetingTileState extends State<_MeetingTile> {
         meeting,
         widget.paletteSeed,
         appearance: widget.appearance,
+        blockIdentity: widget.blockIdentity,
         paletteIndex: widget.paletteIndex,
         customPalette: widget.customPalette,
       ),
       brightness: theme.brightness,
       surface: theme.colorScheme.surface,
     );
-    final foreground = timetableCourseForeground(
-      background,
-      brightness: theme.brightness,
-      autoTextColor: widget.autoTextColor,
-    );
+    final foreground = timetableContrastForeground(background);
     final outline = widget.conflicting
         ? Border.all(
             color: timetableConflictColor,

@@ -2,19 +2,13 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tray_manager/tray_manager.dart' as tray;
 import 'package:window_manager/window_manager.dart';
 
 import '../domain/application_close_action.dart';
 
-const desktopLaunchSize = Size(1600, 900);
-const desktopWindowOptions = WindowOptions(
-  size: desktopLaunchSize,
-  center: true,
-  title: 'PKU Manager',
-);
+const desktopWindowOptions = WindowOptions(title: 'PKU Manager');
 const _linuxDesktopTrayPng = 'linux/runner/resources/pku_manager.png';
 const _macosDesktopTrayPng =
     'macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png';

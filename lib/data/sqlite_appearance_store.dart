@@ -15,7 +15,7 @@ final class SqliteAppearanceStore implements AppearanceStore {
   AppearanceSettings load() {
     final rows = database.database.select('''SELECT accent, palette_seed, roll_palette, language, show_roll_nav, close_action,
 font_family, font_scale, font_weight, timetable_font_scale,
-timetable_index_color, auto_text_color, dark_mode, blend_accent_theme,
+timetable_index_color, dark_mode, blend_accent_theme,
 custom_palette_0, custom_palette_1, custom_palette_2, custom_palette_3,
 custom_palette_4
 FROM appearance WHERE id = 1''');
@@ -35,7 +35,6 @@ FROM appearance WHERE id = 1''');
       fontWeightValue: row['font_weight'] as int,
       timetableFontScale: (row['timetable_font_scale'] as num).toDouble(),
       timetableIndexColor: Color(row['timetable_index_color'] as int),
-      autoTextColor: (row['auto_text_color'] as int) != 0,
       darkMode: (row['dark_mode'] as int) != 0,
       blendAccentIntoTheme: (row['blend_accent_theme'] as int) != 0,
       customPalette: List.unmodifiable([
@@ -103,7 +102,7 @@ custom_palette_4=excluded.custom_palette_4''',
           settings.fontWeightValue,
           settings.timetableFontScale,
           settings.timetableIndexColor.toARGB32(),
-          settings.autoTextColor ? 1 : 0,
+          1,
           settings.darkMode ? 1 : 0,
           settings.blendAccentIntoTheme ? 1 : 0,
           ...settings.customPalette.map((color) => color.toARGB32()),

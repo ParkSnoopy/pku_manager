@@ -305,6 +305,9 @@ class _TimetablePageState extends State<TimetablePage>
                 appearance: widget.appearance.courseAppearanceFor(
                   meetings.first.sourceId,
                 ),
+                blockIdentity: meetings
+                    .map((meeting) => meeting.sourceId)
+                    .join('|'),
                 paletteIndex: widget.appearance.rollPaletteIndex,
                 customPalette: widget.appearance.customPalette,
               ),
@@ -366,10 +369,12 @@ class _TimetablePageState extends State<TimetablePage>
         timetableFontScale:
             MediaQuery.textScalerOf(context).scale(1) *
             widget.appearance.timetableFontScale,
-        fontFamily: theme.textTheme.bodyMedium?.fontFamily ?? timetableSansFont,
+        fontFamily:
+            widget.appearance.timetableFontFamily.family ??
+            theme.textTheme.bodyMedium?.fontFamily ??
+            timetableSansFont,
         fontWeight: widget.appearance.fontWeight,
         indexColor: widget.appearance.timetableIndexColor,
-        autoTextColor: widget.appearance.autoTextColor,
         brightness: theme.brightness,
         surfaceColor: theme.colorScheme.surface,
         courseAppearances: widget.appearance.courseAppearances,
@@ -636,6 +641,9 @@ class _TimetablePageState extends State<TimetablePage>
                               appearance: widget.appearance.courseAppearanceFor(
                                 _editor!.meetings.first.sourceId,
                               ),
+                              blockIdentity: _editor!.meetings
+                                  .map((meeting) => meeting.sourceId)
+                                  .join('|'),
                               paletteIndex: widget.appearance.rollPaletteIndex,
                               customPalette: widget.appearance.customPalette,
                             ),
@@ -690,7 +698,7 @@ class _TimetablePageState extends State<TimetablePage>
   }
 
   Widget _grid(Timetable timetable, WeekParity? parity, bool allDays) {
-    final grid = TimetableGrid(
+    Widget grid = TimetableGrid(
       key: ValueKey('timetable-grid-$_pageGeneration'),
       timetable: timetable,
       days: allDays ? List.generate(5, (index) => index + 1) : [_day],
@@ -703,12 +711,24 @@ class _TimetablePageState extends State<TimetablePage>
       fontScale: widget.appearance.timetableFontScale,
       focusedCourseSourceIds: _focusedCourseSourceIds,
       indexColor: widget.appearance.timetableIndexColor,
-      autoTextColor: widget.appearance.autoTextColor,
       schedules: widget.calendar.schedules,
       courseAppearances: widget.appearance.courseAppearances,
       parity: parity,
       onEdit: _editCell,
     );
+    if (widget.appearance.timetableFontFamily.family case final family?) {
+      final theme = Theme.of(context);
+      final appFamily = theme.textTheme.bodyMedium?.fontFamily;
+      grid = Theme(
+        data: theme.copyWith(
+          textTheme: theme.textTheme.apply(
+            fontFamily: family,
+            fontFamilyFallback: appFamily == null ? null : [appFamily],
+          ),
+        ),
+        child: grid,
+      );
+    }
     if (allDays) return grid;
     return GestureDetector(
       onHorizontalDragStart: (_) => _dragDistance = 0,

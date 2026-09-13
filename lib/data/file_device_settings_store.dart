@@ -12,7 +12,26 @@ final class FileDeviceSettingsStore implements DeviceSettingsStore {
 
   @override
   double loadUiScale() {
-    if (!file.existsSync()) return defaultUiScale;
+    final settings = _load();
+    if (settings.legacy) {
+      _save(defaultUiScale, TimetableFontFamily.app);
+      return defaultUiScale;
+    }
+    return settings.uiScale;
+  }
+
+  @override
+  TimetableFontFamily loadTimetableFontFamily() => _load().timetableFontFamily;
+
+  ({double uiScale, TimetableFontFamily timetableFontFamily, bool legacy})
+  _load() {
+    if (!file.existsSync()) {
+      return (
+        uiScale: defaultUiScale,
+        timetableFontFamily: TimetableFontFamily.app,
+        legacy: false,
+      );
+    }
     final decoded = jsonDecode(file.readAsStringSync());
     if (decoded is! Map<String, dynamic> || decoded['uiScale'] is! num) {
       throw const FormatException('Invalid device settings');
@@ -26,18 +45,32 @@ final class FileDeviceSettingsStore implements DeviceSettingsStore {
     if (value < .5 || value > 2 || (steps / 20 - value).abs() > 0.000001) {
       throw const FormatException('Invalid UI scale');
     }
-    if (formatVersion == null) {
-      saveUiScale(defaultUiScale);
-      return defaultUiScale;
+    final fontValue = decoded['timetableFontFamily'] ?? 'app';
+    if (fontValue is! String) {
+      throw const FormatException('Invalid timetable font family');
     }
-    return steps / 20;
+    return (
+      uiScale: steps / 20,
+      timetableFontFamily: TimetableFontFamily.parse(fontValue),
+      legacy: formatVersion == null,
+    );
   }
 
   @override
-  void saveUiScale(double value) {
+  void saveUiScale(double value) => _save(value, loadTimetableFontFamily());
+
+  @override
+  void saveTimetableFontFamily(TimetableFontFamily value) =>
+      _save(loadUiScale(), value);
+
+  void _save(double uiScale, TimetableFontFamily timetableFontFamily) {
     file.parent.createSync(recursive: true);
     file.writeAsStringSync(
-      jsonEncode({'formatVersion': _formatVersion, 'uiScale': value}),
+      jsonEncode({
+        'formatVersion': _formatVersion,
+        'uiScale': uiScale,
+        'timetableFontFamily': timetableFontFamily.code,
+      }),
       flush: true,
     );
   }

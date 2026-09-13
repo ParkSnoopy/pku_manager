@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../l10n/app_strings.dart';
 import '../../domain/application_close_action.dart';
 import '../timetable/timetable_color.dart';
+import '../timetable/timetable_style.dart';
 import 'appearance_controller.dart';
 import 'color_picker_dialog.dart';
 
@@ -105,7 +106,11 @@ class SettingsPage extends StatelessWidget {
                     alignment: Alignment.center,
                     children: [
                       Icon(Icons.circle, color: controller.accent, size: 32),
-                      const Icon(Icons.palette_outlined, size: 18),
+                      Icon(
+                        Icons.palette_outlined,
+                        color: timetableContrastForeground(controller.accent),
+                        size: 18,
+                      ),
                     ],
                   ),
                 ),
@@ -242,13 +247,6 @@ class SettingsPage extends StatelessWidget {
               label: Text(AppStrings.of(context).text(AppText.chooseColor)),
             ),
           ),
-          SwitchListTile(
-            key: const ValueKey('auto-text-color'),
-            contentPadding: EdgeInsets.zero,
-            title: Text(AppStrings.of(context).text(AppText.autoTextColor)),
-            value: controller.autoTextColor,
-            onChanged: controller.setAutoTextColor,
-          ),
           const SizedBox(height: 32),
           Text(
             AppStrings.of(context).text(AppText.font),
@@ -267,6 +265,25 @@ class SettingsPage extends StatelessWidget {
                       ? AppText.serif
                       : AppText.sans,
                 ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(AppStrings.of(context).text(AppText.timetableFont)),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: const ValueKey('timetable-font-family-cycle'),
+              onPressed: controller.cycleTimetableFontFamily,
+              icon: const Icon(Icons.font_download_outlined),
+              label: Text(
+                AppStrings.of(context)
+                    .text(switch (controller.timetableFontFamily) {
+                      TimetableFontFamily.app => AppText.useAppFont,
+                      TimetableFontFamily.songTi => AppText.songTi,
+                      TimetableFontFamily.heiTi => AppText.heiTi,
+                    }),
               ),
             ),
           ),

@@ -53,11 +53,11 @@ W01–W09 correspond to the upstream Rust test semantics. W10–W15 are project-
 ### Deliberate divergences
 
 - Source identity is sheet/row/column based; upstream title equality is not used as durable identity.
-- Immutable source class name governs grouping and generated color identity. Room, note, frequency, exam, and edited display name do not redefine it.
+- Immutable source class name governs grouping. Generated colors use the merged block's stable source identity; room, note, frequency, exam, and edited display name do not redefine either rule.
 - Unknown frequency maps to `每周` rather than retaining an unsupported state.
 - Tutorial inference never makes an arbitrary room choice, overwrites an occupied destination, or silently drops an out-of-range/weekend destination.
 - Saturday and Sunday are outside the product timetable.
-- Course color selection is deterministic application-owned presentation state rather than the upstream random adjacency algorithm.
+- Course color rolls randomize each merged block independently rather than using the upstream vertical-adjacency algorithm.
 - Source text preserves human-readable spacing instead of removing every ASCII space.
 
 ## Render and export contract

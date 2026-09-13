@@ -49,16 +49,6 @@ Color themedTimetableColor(
 Color timetableContrastForeground(Color background) =>
     background.computeLuminance() > .5 ? Colors.black : Colors.white;
 
-Color timetableCourseForeground(
-  Color background, {
-  required Brightness brightness,
-  required bool autoTextColor,
-}) =>
-    brightness == Brightness.dark ||
-        autoTextColor && background.computeLuminance() <= .5
-    ? Colors.white
-    : Colors.black;
-
 final class TimetableGeometry {
   const TimetableGeometry(this.periodCount);
 

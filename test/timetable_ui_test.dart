@@ -109,7 +109,6 @@ final class _PngEncoder implements TimetablePngEncoder {
   String? fontFamily;
   FontWeight? fontWeight;
   Color? indexColor;
-  bool? autoTextColor;
   Brightness? brightness;
   Color? surfaceColor;
 
@@ -125,7 +124,6 @@ final class _PngEncoder implements TimetablePngEncoder {
     String fontFamily = timetableSansFont,
     FontWeight fontWeight = FontWeight.w400,
     Color indexColor = timetableIndexSurface,
-    bool autoTextColor = false,
     Brightness brightness = Brightness.light,
     Color surfaceColor = timetableCanvas,
   }) async {
@@ -133,7 +131,6 @@ final class _PngEncoder implements TimetablePngEncoder {
     this.fontFamily = fontFamily;
     this.fontWeight = fontWeight;
     this.indexColor = indexColor;
-    this.autoTextColor = autoTextColor;
     this.brightness = brightness;
     this.surfaceColor = surfaceColor;
     return Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -269,6 +266,25 @@ void main() {
         moreOrLessEquals(10),
       );
       appearance.setTimetableFontScale(1);
+      appearance.setTimetableFontFamily(TimetableFontFamily.songTi);
+      await tester.pumpAndSettle();
+      expect(
+        Theme.of(tester.element(find.text('Calendar')))
+            .textTheme
+            .bodyMedium
+            ?.fontFamily,
+        'PKU Noto Serif CJK SC',
+      );
+      expect(
+        tester
+            .widget<DefaultTextStyle>(
+              find.byKey(const ValueKey('meeting-text-style-first')),
+            )
+            .style
+            .fontFamily,
+        'SimSun',
+      );
+      appearance.setTimetableFontFamily(TimetableFontFamily.app);
       appearance.cycleFontFamily();
       await tester.pumpAndSettle();
       expect(
@@ -455,8 +471,11 @@ void main() {
       final thirdColor = tester
           .widget<Material>(find.byKey(const ValueKey('meeting-color-first')))
           .color;
-      expect({firstColor, secondColor, thirdColor}, hasLength(3));
+      expect(secondColor, isNot(firstColor));
+      expect(thirdColor, isNot(secondColor));
 
+      appearance.setTimetableFontFamily(TimetableFontFamily.songTi);
+      await tester.pump();
       await tester.tap(find.byTooltip('Export'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Export XLSX'));
@@ -472,10 +491,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(writer.file?.extension, 'png');
       expect(pngEncoder.fontScale, 1);
-      expect(pngEncoder.fontFamily, 'PKU Noto Serif CJK SC');
+      expect(pngEncoder.fontFamily, 'SimSun');
       expect(pngEncoder.fontWeight, FontWeight.w400);
       expect(pngEncoder.indexColor, timetableIndexSurface);
-      expect(pngEncoder.autoTextColor, isFalse);
       expect(pngEncoder.brightness, Brightness.light);
       expect(pngEncoder.surfaceColor, displayedSurface);
 
@@ -888,17 +906,6 @@ void main() {
             .color,
         const Color(0xffabcdef),
       );
-      expect(
-        tester
-            .widget<DefaultTextStyle>(
-              find.byKey(const ValueKey('meeting-text-style-first')),
-            )
-            .style
-            .color,
-        Colors.black,
-      );
-      appearance.setAutoTextColor(true);
-      await tester.pump();
       expect(
         tester
             .widget<DefaultTextStyle>(

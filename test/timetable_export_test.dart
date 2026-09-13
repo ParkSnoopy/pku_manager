@@ -27,7 +27,6 @@ final class _PngEncoder implements TimetablePngEncoder {
   String? fontFamily;
   ui.FontWeight? fontWeight;
   Color? indexColor;
-  bool? autoTextColor;
   ui.Brightness? brightness;
   Color? surfaceColor;
 
@@ -43,7 +42,6 @@ final class _PngEncoder implements TimetablePngEncoder {
     String fontFamily = 'Noto Sans CJK SC',
     ui.FontWeight fontWeight = ui.FontWeight.w400,
     Color indexColor = const Color(0xffe8e0d2),
-    bool autoTextColor = false,
     ui.Brightness brightness = ui.Brightness.light,
     Color surfaceColor = const Color(0xfffaf9f5),
   }) async {
@@ -54,7 +52,6 @@ final class _PngEncoder implements TimetablePngEncoder {
     this.fontFamily = fontFamily;
     this.fontWeight = fontWeight;
     this.indexColor = indexColor;
-    this.autoTextColor = autoTextColor;
     this.brightness = brightness;
     this.surfaceColor = surfaceColor;
     return Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -286,7 +283,6 @@ void main() {
       fontFamily: 'PKU Noto Serif CJK SC',
       fontWeight: ui.FontWeight.w700,
       indexColor: const Color(0xff123123),
-      autoTextColor: true,
       brightness: ui.Brightness.dark,
       surfaceColor: const Color(0xff101010),
       courseAppearances: const {
@@ -305,7 +301,6 @@ void main() {
     expect(encoder.fontFamily, 'PKU Noto Serif CJK SC');
     expect(encoder.fontWeight, ui.FontWeight.w700);
     expect(encoder.indexColor, const Color(0xff123123));
-    expect(encoder.autoTextColor, isTrue);
     expect(encoder.brightness, ui.Brightness.dark);
     expect(encoder.surfaceColor, const Color(0xff101010));
   });
