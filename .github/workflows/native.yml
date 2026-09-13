@@ -360,9 +360,18 @@ jobs:
             $trustedCertificate = Import-Certificate `
               -FilePath $publicCertificate `
               -CertStoreLocation Cert:\CurrentUser\TrustedPeople
-            $signature = Get-AuthenticodeSignature $package
-            if ($signature.Status -ne 'Valid') {
-              throw "MSIX signature is '$($signature.Status)'."
+            $signTools = Get-ChildItem `
+              -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" `
+              -File
+            $signTool = $signTools | Sort-Object {
+              [Version]$_.Directory.Parent.Name
+            } -Descending | Select-Object -First 1
+            if ($null -eq $signTool) {
+              throw 'Windows SDK SignTool was not found.'
+            }
+            & $signTool.FullName verify /pa /v $package
+            if ($LASTEXITCODE -ne 0) {
+              throw "MSIX signature verification failed with exit code $LASTEXITCODE."
             }
             Add-AppxPackage -Path $package
             $installed = Get-AppxPackage -Name 'ParkSnoopy.PKUManager'
