@@ -339,10 +339,10 @@ jobs:
       - name: Install, launch, and uninstall MSIX
         env:
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        shell: pwsh
+        shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $PSNativeCommandUseErrorActionPreference = $true
+          Import-Module Appx -ErrorAction Stop
           $package = Resolve-Path "build/msix/PKU_Manager-v${env:VERSION}-windows.msix"
           $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new(
             $env:WINDOWS_CERTIFICATE_PATH,
