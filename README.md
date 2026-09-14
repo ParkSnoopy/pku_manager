@@ -57,6 +57,19 @@ flutter build ios --release --no-codesign
 flutter build windows --release
 ```
 
+### Build Linux AppImage
+
+After `flutter build linux --release`, download and verify the workflow-pinned `appimagetool` and runtime in `build/tools/`, then run:
+
+```sh
+mkdir -p build/tools
+curl -fsSL -o build/tools/appimagetool https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+curl -fsSL -o build/tools/runtime-x86_64 https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64
+chmod +x build/tools/appimagetool
+cmake -S packaging/linux -B build/appimage -G Ninja -DAPPIMAGETOOL="$PWD/build/tools/appimagetool" -DRUNTIME="$PWD/build/tools/runtime-x86_64"
+cmake --build build/appimage --target appimage
+```
+
 Run Apple commands on macOS and the Windows command on Windows. A raw Flutter build does not establish distribution support: AppImage, application-bundle, simulator/device, and installed-NSIS checks remain separate release evidence. Use the source-controlled workflow and packaging definitions rather than ad hoc artifact assembly.
 
 ## Release and update continuity
