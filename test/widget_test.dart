@@ -92,13 +92,39 @@ void main() {
       appearance.setAccent(nearWhite);
       await tester.pumpAndSettle();
       final themedContext = tester.element(find.text('Calendar'));
-      expect(Theme.of(themedContext).colorScheme.primary, nearWhite);
-      expect(Theme.of(themedContext).colorScheme.onPrimary, Colors.black);
+      var theme = Theme.of(themedContext);
+      expect(theme.colorScheme.primary, nearWhite);
+      expect(theme.colorScheme.onPrimary, Colors.black);
+      expect(
+        theme.outlinedButtonTheme.style!.foregroundColor!.resolve({}),
+        Colors.black,
+      );
+      expect(
+        theme.textButtonTheme.style!.foregroundColor!.resolve({}),
+        Colors.black,
+      );
+      expect(
+        theme.filledButtonTheme.style!.foregroundColor!.resolve({}),
+        Colors.black,
+      );
       appearance.setDarkMode(true);
       await tester.pumpAndSettle();
+      theme = Theme.of(tester.element(find.text('Calendar')));
+      expect(theme.colorScheme.primary, nearWhite);
       expect(
-        Theme.of(tester.element(find.text('Calendar'))).colorScheme.primary,
-        nearWhite,
+        theme.outlinedButtonTheme.style!.foregroundColor!.resolve({}),
+        Colors.white,
+      );
+      expect(
+        theme.textButtonTheme.style!.foregroundColor!.resolve({}),
+        Colors.white,
+      );
+      appearance.setAccent(const Color(0xff006b50));
+      await tester.pumpAndSettle();
+      theme = Theme.of(tester.element(find.text('Calendar')));
+      expect(
+        theme.filledButtonTheme.style!.foregroundColor!.resolve({}),
+        Colors.white,
       );
       appearance.setDarkMode(false);
       await tester.pumpAndSettle();

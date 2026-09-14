@@ -58,7 +58,7 @@ This file defines project vocabulary and cross-layer invariants. Structural owne
 - Class names are bold across screen and exports. Room and remark text retain configured timetable weight.
 - Calendar schedules remain independent records. Optional class association is ID-based and must be cleared, not delete the schedule, when its class disappears.
 - Timetable and Calendar cross-navigation changes transient presentation only. Escape-style restoration must not revert persisted state.
-- Appearance settings persist typed values and apply through one shared projection. Manual course colors, outlines, and generated block colors are source-identity-bound; every text foreground contrasts with its background.
+- Appearance settings persist typed values and apply through one shared projection. Manual course colors, outlines, and generated block colors are source-identity-bound; every text foreground contrasts with its background. Button labels and icons use black or white for their actual background, never the theme accent.
 - Korean, English, and Simplified Chinese localization must cover every application-owned visible string.
 
 ## Platform and security invariants

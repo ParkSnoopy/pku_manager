@@ -449,9 +449,6 @@ class _AppDataControlsState extends State<_AppDataControls> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-            ),
             child: Text(strings.text(AppText.cancel)),
           ),
           FilledButton(
@@ -476,16 +473,15 @@ class _AppDataControlsState extends State<_AppDataControls> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-            ),
             child: Text(strings.text(AppText.cancel)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
+              foregroundColor: timetableContrastForeground(
+                Theme.of(context).colorScheme.error,
+              ),
             ),
             child: Text(strings.text(AppText.purgeAppData)),
           ),
@@ -528,6 +524,11 @@ class _AppDataControlsState extends State<_AppDataControls> {
             FilledButton.tonalIcon(
               key: const ValueKey('import-app-data'),
               onPressed: _busy ? null : _import,
+              style: FilledButton.styleFrom(
+                foregroundColor: timetableContrastForeground(
+                  Theme.of(context).colorScheme.secondaryContainer,
+                ),
+              ),
               icon: const Icon(Icons.file_download_outlined),
               label: Text(strings.text(AppText.importAppData)),
             ),

@@ -299,11 +299,35 @@ class _PkuManagerAppState extends State<PkuManagerApp> {
       scaffoldBackgroundColor: scheme.surface,
       appBarTheme: AppBarTheme(backgroundColor: scheme.surface, elevation: 0),
     );
+    final surfaceForeground =
+        ThemeData.estimateBrightnessForColor(scheme.surface) == Brightness.dark
+        ? Colors.white
+        : Colors.black;
     return base.copyWith(
       textTheme: _weightedTextTheme(base.textTheme, _appearance.fontWeight),
       primaryTextTheme: _weightedTextTheme(
         base.primaryTextTheme,
         _appearance.fontWeight,
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(surfaceForeground),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(surfaceForeground),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(accentScheme.onPrimary),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(surfaceForeground),
+        ),
       ),
     );
   }
@@ -407,9 +431,6 @@ final class _LanguageSelectionPage extends StatelessWidget {
                       onPressed: () => onSelected(language),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(56),
-                        foregroundColor: Theme.of(context)
-                            .colorScheme
-                            .onSurface,
                         textStyle: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
