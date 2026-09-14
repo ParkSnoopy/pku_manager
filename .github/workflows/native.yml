@@ -2,6 +2,9 @@ name: Native release
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - dev
 
 permissions:
   contents: read
