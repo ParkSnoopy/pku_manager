@@ -1,12 +1,11 @@
-import '../../domain/course.dart';
 import '../../domain/semester.dart';
 import '../../domain/timetable.dart';
 import 'timetable_style.dart';
 
 final class UpcomingCourse {
-  const UpcomingCourse({required this.meeting, required this.startsAt});
+  const UpcomingCourse({required this.group, required this.startsAt});
 
-  final Course meeting;
+  final CourseGroup group;
   final DateTime startsAt;
 }
 
@@ -18,8 +17,8 @@ List<UpcomingCourse> upcomingCourses(
   final result = <UpcomingCourse>[];
   final beijingNow = now.toUtc().add(const Duration(hours: 8));
   for (var day = 1; day <= 5; day++) {
-    for (final meeting in timetable.forDay(day)) {
-      final start = timetableClassStarts[meeting.firstPeriod];
+    for (final group in timetable.groupsForDay(day)) {
+      final start = timetableClassStarts[group.firstPeriod];
       if (start == null) continue;
       final parts = start.split(':').map(int.parse).toList(growable: false);
       for (var offset = 0; offset <= 14; offset++) {
@@ -28,7 +27,7 @@ List<UpcomingCourse> upcomingCourses(
           beijingNow.month,
           beijingNow.day + offset,
         );
-        if (beijingDate.weekday != meeting.weekday) continue;
+        if (beijingDate.weekday != group.weekday) continue;
         final startsAt = DateTime.utc(
           beijingDate.year,
           beijingDate.month,
@@ -39,8 +38,8 @@ List<UpcomingCourse> upcomingCourses(
         if (!startsAt.isAfter(now)) continue;
         final semesterWeek = calendar?.weekAt(startsAt);
         if (calendar != null && semesterWeek == null) continue;
-        if (!meeting.frequency.isCurrent(semesterWeek?.parity)) continue;
-        result.add(UpcomingCourse(meeting: meeting, startsAt: startsAt));
+        if (!group.primary.frequency.isCurrent(semesterWeek?.parity)) continue;
+        result.add(UpcomingCourse(group: group, startsAt: startsAt));
         break;
       }
     }

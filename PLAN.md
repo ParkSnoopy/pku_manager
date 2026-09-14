@@ -23,7 +23,7 @@ When authorities disagree, inspect source and tests, then update every affected 
 
 ### 2. Change domain policy
 
-- Put timetable ordering, source-cell separation, conflict, parity, date, and relationship rules in `lib/domain/`.
+- Put timetable ordering, continued-class grouping, conflict, parity, date, and relationship rules in `lib/domain/`.
 - Keep domain values immutable and independent from Flutter and infrastructure packages.
 - Represent finite states with typed values instead of string checks or nullable-field bags.
 - Add focused domain coverage for normal, boundary, and invalid cases.

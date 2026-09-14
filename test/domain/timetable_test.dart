@@ -152,20 +152,22 @@ void main() {
     expect(value.exam, '待定');
   });
 
-  test('source cells remain separate and immutable', () {
+  test('continued classes merge without losing source identities', () {
     final table = Timetable([
       meeting('a'),
       meeting('b', first: 3, last: 4),
       meeting('gap', first: 6, last: 6),
       meeting('different-room', first: 7, last: 7, room: '二教'),
     ]);
-    final cells = table.forDay(1);
-    expect(cells.map((meeting) => meeting.sourceId), [
-      'a',
-      'b',
-      'gap',
-      'different-room',
+    final groups = table.groupsForDay(1, breakAfter: const {4, 9});
+    expect(groups, hasLength(2));
+    expect(groups.map((group) => group.meetings.map((m) => m.sourceId)), [
+      ['a', 'b'],
+      ['gap', 'different-room'],
     ]);
-    expect(() => cells.clear(), throwsUnsupportedError);
+    expect(groups.first.firstPeriod, 1);
+    expect(groups.first.lastPeriod, 4);
+    expect(() => groups.clear(), throwsUnsupportedError);
+    expect(() => groups.first.meetings.clear(), throwsUnsupportedError);
   });
 }

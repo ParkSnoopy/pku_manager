@@ -53,7 +53,7 @@ This file defines project vocabulary and cross-layer invariants. Structural owne
 - In-app copy contains only information required to decide, act, correct, recover, or understand current state. Implementation details and defensive assurances are excluded.
 - Wide timetable layouts render Monday through Friday; narrow layouts retain one period-index column and one selected weekday projection.
 - All meetings retain their grid footprint. Non-current meetings use reduced emphasis without cell text; conflict calculation remains domain-owned and excludes odd/even-only alternation.
-- Every source cell remains a separate visual block; adjacency and matching class names never merge cells.
+- Vertically adjacent source cells with the same immutable source class name merge into one visual block without losing their source identities; meal breaks split blocks.
 - Screen, PNG, and XLSX use one geometry, color, outline, content-role, and typography authority. Export renders the complete timetable fully opaque.
 - Class names are bold across screen and exports. Room and remark text retain configured timetable weight.
 - Calendar schedules remain independent records. Optional class association is ID-based and must be cleared, not delete the schedule, when its class disappears.
@@ -65,7 +65,7 @@ This file defines project vocabulary and cross-layer invariants. Structural owne
 
 - Product identity is PKU Manager by ParkSnoopy. Android/Linux use `com.parksnoopy.pku_manager`; Apple uses `com.parksnoopy.pku-manager` because Apple bundle identifiers prohibit underscores.
 - Native runners and plugins bridge platform facilities only; product behavior remains in Dart.
-- Desktop runners leave initial window geometry to the platform instead of enforcing one application-owned launch size.
+- Desktop windows restore the last ordinary user-resized size. With no saved size, the first launch is centered at 80% of the primary screen work area; maximized and fullscreen dimensions are not saved.
 - Desktop close behavior is typed and persisted. Tray creation precedes hiding, explicit tray exit destroys the application, and tray failure leaves the window visible.
 - Linux AppImage libraries resolve executable-relative. Tray artwork is staged under a shared runtime path readable outside AppImage/Firejail mount namespaces.
 - Runtime network access is limited to the validated Week Parity endpoint. Timetable content, filenames, and usage data never leave the process.

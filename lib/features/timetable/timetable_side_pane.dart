@@ -38,11 +38,16 @@ class UpcomingClassPane extends StatelessWidget {
     final upcomingSchedules = schedules
         .where((schedule) => isUpcomingSchedule(schedule, now))
         .toList(growable: false);
+    final sourceNames = {
+      for (final course in timetable.meetings)
+        course.sourceId: course.sourceName,
+    };
     List<CalendarSchedule> schedulesFor(UpcomingCourse course) =>
         upcomingSchedules
             .where(
               (schedule) =>
-                  schedule.relatedClassSourceId == course.meeting.sourceId,
+                  sourceNames[schedule.relatedClassSourceId] ==
+                  course.group.primary.sourceName,
             )
             .toList(growable: false);
     final unrelated = upcomingSchedules
@@ -79,10 +84,10 @@ class UpcomingClassPane extends StatelessWidget {
                             onDoubleTap: () => onSelected(item),
                             child: ListTile(
                               key: ValueKey(
-                                'upcoming-class-${item.meeting.sourceId}',
+                                'upcoming-class-${item.group.primary.sourceId}',
                               ),
                               title: Text(
-                                item.meeting.displayName,
+                                item.group.primary.displayName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -91,8 +96,8 @@ class UpcomingClassPane extends StatelessWidget {
                                 ),
                               ),
                               subtitle: Text(
-                                '${timetableClassStarts[item.meeting.firstPeriod]}'
-                                '${item.meeting.room.isEmpty ? '' : ' · ${item.meeting.room}'}',
+                                '${timetableClassStarts[item.group.firstPeriod]}'
+                                '${item.group.primary.room.isEmpty ? '' : ' · ${item.group.primary.room}'}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontSize: 14),

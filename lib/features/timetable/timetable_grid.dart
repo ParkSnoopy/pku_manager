@@ -451,22 +451,28 @@ class _DayGroups extends StatelessWidget {
                 (span.lastPeriod - span.firstPeriod + 1) *
                 timetablePeriodHeight,
             child: _MeetingTile(
-              span.meeting,
+              span.group.primary,
               firstPeriod: span.firstPeriod,
               lastPeriod: span.lastPeriod,
-              isCurrent: span.meeting.frequency.isCurrent(parity),
-              conflicting: conflictingSourceIds.contains(span.meeting.sourceId),
-              color: courseColors[span.meeting.sourceId]!,
+              isCurrent: span.group.primary.frequency.isCurrent(parity),
+              conflicting: span.group.meetings.any(
+                (meeting) => conflictingSourceIds.contains(meeting.sourceId),
+              ),
+              color: courseColors[span.group.primary.sourceId]!,
               fontWeight: fontWeight,
-              focused: focusedCourseSourceIds.contains(span.meeting.sourceId),
+              focused: span.group.meetings.any(
+                (meeting) => focusedCourseSourceIds.contains(meeting.sourceId),
+              ),
               schedules: schedules
                   .where(
-                    (schedule) =>
-                        schedule.relatedClassSourceId == span.meeting.sourceId,
+                    (schedule) => span.group.meetings.any(
+                      (meeting) =>
+                          schedule.relatedClassSourceId == meeting.sourceId,
+                    ),
                   )
                   .toList(growable: false),
-              appearance: courseAppearances[span.meeting.sourceId],
-              onEdit: () => onEdit(day, span.firstPeriod, [span.meeting]),
+              appearance: courseAppearances[span.group.primary.sourceId],
+              onEdit: () => onEdit(day, span.firstPeriod, span.group.meetings),
             ),
           ),
       ],
@@ -541,12 +547,7 @@ class _MeetingTileState extends State<_MeetingTile> {
             color: widget.appearance!.outlineColor,
             width: widget.appearance!.outlineWidth,
           )
-        : const Border(
-            bottom: BorderSide(
-              color: timetableDivider,
-              width: timetableDividerWidth,
-            ),
-          );
+        : null;
     return FollowingHoverCard(
       cardKey: ValueKey('meeting-hover-${widget.meeting.sourceId}'),
       cursor: SystemMouseCursors.click,

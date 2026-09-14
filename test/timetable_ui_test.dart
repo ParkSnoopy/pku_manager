@@ -365,7 +365,7 @@ void main() {
       expect(find.text('Show all'), findsNothing);
       expect(find.text('Refresh'), findsNothing);
       expect(find.text('Current'), findsNothing);
-      expect(find.text('Algebra'), findsNWidgets(2));
+      expect(find.text('Algebra'), findsOneWidget);
       expect(find.textContaining('continued'), findsNothing);
       expect(find.text('Physics'), findsNothing);
       expect(
@@ -415,18 +415,12 @@ void main() {
       );
       expect(
         tester.getSize(find.byKey(const ValueKey('meeting-cell-first'))).height,
-        100,
+        200,
       );
-      final separateCellDecoration =
-          tester
-                  .widget<DecoratedBox>(
-                    find.byKey(const ValueKey('meeting-outline-second')),
-                  )
-                  .decoration
-              as BoxDecoration;
-      final separateCellBorder = separateCellDecoration.border! as Border;
-      expect(separateCellBorder.bottom.color, timetableDivider);
-      expect(separateCellBorder.bottom.width, timetableDividerWidth);
+      expect(
+        find.byKey(const ValueKey('meeting-outline-second')),
+        findsNothing,
+      );
 
       final opacity = tester.widget<Opacity>(
         find.ancestor(
@@ -456,55 +450,34 @@ void main() {
             .border,
         isNotNull,
       );
-      final evenDecoration =
-          tester
-                  .widget<DecoratedBox>(
-                    find.byKey(const ValueKey('meeting-outline-even')),
-                  )
-                  .decoration
-              as BoxDecoration;
-      final evenBorder = evenDecoration.border! as Border;
-      expect(evenBorder.top.style, BorderStyle.none);
-      expect(evenBorder.bottom.color, timetableDivider);
+      expect(
+        (tester
+                    .widget<DecoratedBox>(
+                      find.byKey(const ValueKey('meeting-outline-even')),
+                    )
+                    .decoration
+                as BoxDecoration)
+            .border,
+        isNull,
+      );
       expect(find.byTooltip('Roll colors'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
       final firstColor = tester
           .widget<Material>(find.byKey(const ValueKey('meeting-color-first')))
           .color;
-      expect(
-        tester
-            .widget<Material>(
-              find.byKey(const ValueKey('meeting-color-second')),
-            )
-            .color,
-        firstColor,
-      );
+      expect(find.byKey(const ValueKey('meeting-color-second')), findsNothing);
       await tester.tap(find.byTooltip('Roll colors'));
       await tester.pump();
       final secondColor = tester
           .widget<Material>(find.byKey(const ValueKey('meeting-color-first')))
           .color;
-      expect(
-        tester
-            .widget<Material>(
-              find.byKey(const ValueKey('meeting-color-second')),
-            )
-            .color,
-        secondColor,
-      );
+
       await tester.tap(find.byTooltip('Roll colors'));
       await tester.pump();
       final thirdColor = tester
           .widget<Material>(find.byKey(const ValueKey('meeting-color-first')))
           .color;
-      expect(
-        tester
-            .widget<Material>(
-              find.byKey(const ValueKey('meeting-color-second')),
-            )
-            .color,
-        thirdColor,
-      );
+
       expect([firstColor, secondColor, thirdColor], everyElement(isNotNull));
 
       appearance.setTimetableFontFamily(TimetableFontFamily.songTi);
@@ -561,7 +534,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1));
       final hover = find.byKey(const ValueKey('meeting-hover-first'));
       expect(hover, findsOneWidget);
-      expect(find.text('08:00–08:50'), findsOneWidget);
+      expect(find.text('08:00–09:50'), findsOneWidget);
       expect(
         find.descendant(of: hover, matching: find.byType(Divider)),
         findsNWidgets(5),
@@ -1011,7 +984,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('upcoming-class-pane')), findsOneWidget);
       expect(find.text("Tomorrow's classes"), findsOneWidget);
-      expect(find.text('Algebra'), findsNWidgets(2));
+      expect(find.text('Algebra'), findsOneWidget);
       expect(find.text('Chemistry'), findsOneWidget);
       expect(
         find.descendant(
@@ -1118,7 +1091,7 @@ void main() {
               (meeting) => const {'first', 'second'}.contains(meeting.sourceId),
             )
             .map((meeting) => meeting.name),
-        ['Grouped course', 'Algebra'],
+        ['Grouped course', 'Grouped course'],
       );
       expect(find.byKey(const ValueKey('course-editor-pane')), findsOneWidget);
       await tester.tap(find.text('Close'));

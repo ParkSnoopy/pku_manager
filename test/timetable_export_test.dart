@@ -216,45 +216,38 @@ void main() {
     },
   );
 
-  test(
-    'XLSX keeps adjacent source cells separate with one class color',
-    () async {
-      final writer = _Writer();
-      await TimetableExporter(writer).export(
-        TimetableExportFormat.xlsx,
-        Timetable([
-          Course(
-            sourceId: 'first-cell',
-            sourceName: 'Shared class',
-            name: 'First cell',
-            weekday: 1,
-            firstPeriod: 1,
-            lastPeriod: 1,
-          ),
-          Course(
-            sourceId: 'second-cell',
-            sourceName: 'Shared class',
-            name: 'Second cell',
-            weekday: 1,
-            firstPeriod: 2,
-            lastPeriod: 2,
-          ),
-        ], periodCount: 2),
-        strings: strings,
-        paletteSeed: 11,
-      );
+  test('XLSX merges adjacent source cells from one class', () async {
+    final writer = _Writer();
+    await TimetableExporter(writer).export(
+      TimetableExportFormat.xlsx,
+      Timetable([
+        Course(
+          sourceId: 'first-cell',
+          sourceName: 'Shared class',
+          name: 'First cell',
+          weekday: 1,
+          firstPeriod: 1,
+          lastPeriod: 1,
+        ),
+        Course(
+          sourceId: 'second-cell',
+          sourceName: 'Shared class',
+          name: 'Second cell',
+          weekday: 1,
+          firstPeriod: 2,
+          lastPeriod: 2,
+        ),
+      ], periodCount: 2),
+      strings: strings,
+      paletteSeed: 11,
+    );
 
-      final sheet = Excel.decodeBytes(writer.file!.bytes)['Timetable'];
-      final first = sheet.cell(CellIndex.indexByString('B2'));
-      final second = sheet.cell(CellIndex.indexByString('B6'));
-      expect(first.value.toString(), startsWith('First cell'));
-      expect(second.value.toString(), startsWith('Second cell'));
-      expect(
-        first.cellStyle!.backgroundColor.colorHex,
-        second.cellStyle!.backgroundColor.colorHex,
-      );
-    },
-  );
+    final sheet = Excel.decodeBytes(writer.file!.bytes)['Timetable'];
+    final first = sheet.cell(CellIndex.indexByString('B2'));
+    final second = sheet.cell(CellIndex.indexByString('B6'));
+    expect(first.value.toString(), startsWith('First cell'));
+    expect(second.value, isNull);
+  });
 
   test('conflicting classes use red outlines in XLSX and PNG', () async {
     final conflicting = Timetable([

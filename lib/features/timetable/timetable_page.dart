@@ -196,7 +196,10 @@ class _TimetablePageState extends State<TimetablePage>
   }
 
   void _selectUpcomingClass(UpcomingCourse course) {
-    _focusClass(course.meeting.weekday, {course.meeting.sourceId});
+    final sourceIds = course.group.meetings
+        .map((meeting) => meeting.sourceId)
+        .toSet();
+    _focusClass(course.group.weekday, sourceIds);
   }
 
   void _editUpcomingClass(UpcomingCourse course) {
@@ -204,21 +207,23 @@ class _TimetablePageState extends State<TimetablePage>
       _focusTimer?.cancel();
       setState(() {
         _destination = 0;
-        _day = course.meeting.weekday;
+        _day = course.group.weekday;
         _focusedScheduleId = null;
         _focusedCourseSourceIds = const {};
         _editor = _EditorSelection(
-          course.meeting.weekday,
-          course.meeting.firstPeriod,
-          [course.meeting],
+          course.group.weekday,
+          course.group.firstPeriod,
+          course.group.meetings,
         );
       });
       return;
     }
     unawaited(
-      _editCell(course.meeting.weekday, course.meeting.firstPeriod, [
-        course.meeting,
-      ]),
+      _editCell(
+        course.group.weekday,
+        course.group.firstPeriod,
+        course.group.meetings,
+      ),
     );
   }
 

@@ -326,7 +326,7 @@ final class TimetableExporter {
       final layout = TimetableDayLayout.from(timetable, day);
       if (layout.laneCount != 1) continue;
       for (final span in layout.spans) {
-        final meeting = span.meeting;
+        final meeting = span.group.primary;
         final startRow = 1 + (span.firstPeriod - 1) * 4;
         final endRow = span.lastPeriod * 4;
         final start = CellIndex.indexByColumnRow(
@@ -453,7 +453,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
       final layout = TimetableDayLayout.from(timetable, day);
       final laneWidth = geometry.courseWidth / layout.laneCount;
       for (final span in layout.spans) {
-        final meeting = span.meeting;
+        final meeting = span.group.primary;
         final appearance = courseAppearances[meeting.sourceId];
         final item = ui.Rect.fromLTWH(
           timetableIndexWidth +
@@ -473,7 +473,9 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
         const inset = timetableCourseContentPadding;
         final nameHeight = timetableCourseNameFontSize * fontScale * 1.5;
         final roomHeight = timetableClassroomFontSize * fontScale * 1.5;
-        final conflicting = conflictingSourceIds.contains(meeting.sourceId);
+        final conflicting = span.group.meetings.any(
+          (meeting) => conflictingSourceIds.contains(meeting.sourceId),
+        );
         if (conflicting || (appearance?.outlined ?? false)) {
           final outlineWidth = conflicting
               ? timetableConflictWidth
@@ -487,8 +489,6 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
               ..style = ui.PaintingStyle.stroke
               ..strokeWidth = outlineWidth,
           );
-        } else {
-          canvas.drawLine(item.bottomLeft, item.bottomRight, border);
         }
         _drawReferenceText(
           canvas,

@@ -85,6 +85,36 @@ final class Timetable {
     );
   }
 
+  List<CourseGroup> groupsForDay(
+    int weekday, {
+    Set<int> breakAfter = const {},
+    bool showAll = true,
+    WeekParity? currentParity,
+  }) {
+    final groups = <CourseGroup>[];
+    for (final meeting in forDay(
+      weekday,
+      showAll: showAll,
+      currentParity: currentParity,
+    )) {
+      final matchingIndex = groups.lastIndexWhere(
+        (group) =>
+            group.matches(meeting) &&
+            meeting.firstPeriod <= group.lastPeriod + 1 &&
+            !_crossesBreak(group.lastPeriod, meeting.firstPeriod, breakAfter),
+      );
+      if (matchingIndex < 0) {
+        groups.add(CourseGroup._([meeting]));
+      } else {
+        groups[matchingIndex] = CourseGroup._([
+          ...groups[matchingIndex].meetings,
+          meeting,
+        ]);
+      }
+    }
+    return List.unmodifiable(groups);
+  }
+
   static List<Course> _ordered(Iterable<Course> input) {
     final indexed = input.indexed.toList();
     indexed.sort((a, b) {
@@ -100,6 +130,31 @@ final class Timetable {
     });
     return List.unmodifiable(indexed.map((entry) => entry.$2));
   }
+}
+
+final class CourseGroup {
+  CourseGroup._(Iterable<Course> meetings)
+    : meetings = List.unmodifiable(meetings);
+
+  final List<Course> meetings;
+
+  Course get primary => meetings.first;
+  int get weekday => primary.weekday;
+  int get firstPeriod => meetings.first.firstPeriod;
+  int get lastPeriod => meetings.fold(
+    primary.lastPeriod,
+    (value, meeting) => meeting.lastPeriod > value ? meeting.lastPeriod : value,
+  );
+
+  bool matches(Course meeting) =>
+      weekday == meeting.weekday && primary.sourceName == meeting.sourceName;
+}
+
+bool _crossesBreak(int previousLast, int nextFirst, Set<int> breakAfter) {
+  for (var period = previousLast; period < nextFirst; period++) {
+    if (breakAfter.contains(period)) return true;
+  }
+  return false;
 }
 
 bool _frequenciesCanCoincide(WeekFrequency left, WeekFrequency right) =>

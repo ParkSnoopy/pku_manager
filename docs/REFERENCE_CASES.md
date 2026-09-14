@@ -44,7 +44,7 @@ W01–W09 correspond to the upstream Rust test semantics. W10–W15 are project-
 | E05–E09 | Empty/missing remarks, malformed records, trailing fields, and unknown-frequency fallback |
 | E10–E11 | Tutorial extraction remains explicit and cannot replace the main occurrence frequency |
 | E12–E16 | Header/index structure, blank rows, weekday scope, all periods, and Chinese period labels |
-| E17–E20 | Stable source identities, separate source cells, class-shared colors, parity coexistence, and header-driven weekday coordinates |
+| E17–E20 | Stable source identities, continued-class grouping, class-shared colors, parity coexistence, and header-driven weekday coordinates |
 | E21–E22 | Paired detail rows and unsupported populated columns preserve data or fail closed |
 | E23–E24 | Immutable candidate-byte snapshots and non-BIFF rejection |
 | E25 | Tutorial inference preserves original records and either expands safely or remains reviewable |
@@ -53,7 +53,7 @@ W01–W09 correspond to the upstream Rust test semantics. W10–W15 are project-
 ### Deliberate divergences
 
 - Source identity is sheet/row/column based; upstream title equality is not used as durable identity.
-- Source cells are never visually merged. Immutable source class name alone governs shared generated color; room, note, frequency, exam, and edited display name do not redefine it.
+- Vertically adjacent source cells merge only when their immutable source class names match. The group retains every source identity; room, note, frequency, exam, and edited display name neither split the group nor redefine its shared generated color.
 - Unknown frequency maps to `每周` rather than retaining an unsupported state.
 - Tutorial inference never makes an arbitrary room choice, overwrites an occupied destination, or silently drops an out-of-range/weekend destination.
 - Saturday and Sunday are outside the product timetable.

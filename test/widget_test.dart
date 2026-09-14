@@ -128,7 +128,10 @@ void main() {
       );
       appearance.setDarkMode(false);
       await tester.pumpAndSettle();
-      expect(desktopWindowOptions.size, isNull);
+      expect(
+        desktopWindowOptions(const Size(800, 600), center: true).size,
+        const Size(800, 600),
+      );
       expect(windowController.closeAction, ApplicationCloseAction.closeApp);
       expect(windowController.showLabel, 'Show application');
       await tester.tap(find.byTooltip('Full screen'));

@@ -6,7 +6,7 @@ import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/features/timetable/upcoming_course.dart';
 
 void main() {
-  test('tomorrow list includes every source cell in start order', () {
+  test('tomorrow list merges continued classes in start order', () {
     final timetable = Timetable([
       Course(
         sourceId: 'first',
@@ -43,9 +43,8 @@ void main() {
       now,
       calendar: SemesterCalendar(starts: [DateTime.utc(2026, 9, 7)]),
     );
-    expect(upcoming.map((item) => item.meeting.sourceId), [
+    expect(upcoming.map((item) => item.group.primary.sourceId), [
       'first',
-      'second',
       'later',
     ]);
     expect(upcoming.first.startsAt, DateTime.utc(2026, 9, 7));

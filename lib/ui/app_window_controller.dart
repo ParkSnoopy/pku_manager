@@ -1,14 +1,19 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:screen_retriever/screen_retriever.dart';
 import 'package:tray_manager/tray_manager.dart' as tray;
 import 'package:window_manager/window_manager.dart';
 
 import '../domain/application_close_action.dart';
 
-const desktopWindowOptions = WindowOptions(title: 'PKU Manager');
+const desktopInitialSizeFraction = .8;
+
+WindowOptions desktopWindowOptions(Size size, {required bool center}) =>
+    WindowOptions(title: 'PKU Manager', size: size, center: center);
 const _linuxDesktopTrayPng = 'linux/runner/resources/pku_manager.png';
 const _macosDesktopTrayPng =
     'macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png';
@@ -62,6 +67,8 @@ abstract interface class DesktopWindowBackend {
   void addListener(WindowListener listener);
   void removeListener(WindowListener listener);
   Future<bool> isFullScreen();
+  Future<bool> isMaximized();
+  Future<Size> getSize();
   Future<void> waitUntilReadyToShow(
     WindowOptions options,
     Future<void> Function() callback,
@@ -72,6 +79,63 @@ abstract interface class DesktopWindowBackend {
   Future<void> destroy();
   Future<void> setFullScreen(bool value);
   Future<void> setPreventClose(bool value);
+}
+
+abstract interface class DesktopDisplayBackend {
+  Future<Size> primaryWorkAreaSize();
+}
+
+abstract interface class WindowSizeStore {
+  Future<Size?> load();
+  Future<void> save(Size size);
+}
+
+final class FileWindowSizeStore implements WindowSizeStore {
+  FileWindowSizeStore(this.file);
+
+  final File file;
+
+  @override
+  Future<Size?> load() async {
+    if (!await file.exists()) return null;
+    try {
+      final value = jsonDecode(await file.readAsString());
+      if (value is! Map<String, dynamic> ||
+          value['width'] is! num ||
+          value['height'] is! num) {
+        return null;
+      }
+      final width = (value['width'] as num).toDouble();
+      final height = (value['height'] as num).toDouble();
+      if (!width.isFinite || !height.isFinite || width < 1 || height < 1) {
+        return null;
+      }
+      return Size(width, height);
+    } on FormatException {
+      return null;
+    } on FileSystemException {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> save(Size size) async {
+    await file.parent.create(recursive: true);
+    await file.writeAsString(
+      jsonEncode({'width': size.width, 'height': size.height}),
+      flush: true,
+    );
+  }
+}
+
+final class _ScreenRetrieverBackend implements DesktopDisplayBackend {
+  const _ScreenRetrieverBackend();
+
+  @override
+  Future<Size> primaryWorkAreaSize() async {
+    final display = await screenRetriever.getPrimaryDisplay();
+    return display.visibleSize ?? display.size;
+  }
 }
 
 abstract interface class SystemTrayBackend {
@@ -100,6 +164,10 @@ final class _WindowManagerBackend implements DesktopWindowBackend {
   Future<void> hide() => windowManager.hide();
   @override
   Future<bool> isFullScreen() => windowManager.isFullScreen();
+  @override
+  Future<bool> isMaximized() => windowManager.isMaximized();
+  @override
+  Future<Size> getSize() => windowManager.getSize();
   @override
   void removeListener(WindowListener listener) =>
       windowManager.removeListener(listener);
@@ -202,12 +270,18 @@ final class DesktopWindowController extends AppWindowController
     with WindowListener, tray.TrayListener {
   DesktopWindowController({
     DesktopWindowBackend? windowBackend,
+    DesktopDisplayBackend? displayBackend,
+    this.sizeStore,
     SystemTrayBackend? trayBackend,
   }) : _window = windowBackend ?? const _WindowManagerBackend(),
+       _display = displayBackend ?? const _ScreenRetrieverBackend(),
        _tray = trayBackend ?? TrayManagerBackend();
 
   final DesktopWindowBackend _window;
+  final DesktopDisplayBackend _display;
+  final WindowSizeStore? sizeStore;
   final SystemTrayBackend _tray;
+  Timer? _saveSizeTimer;
   bool _isFullScreen = false;
   bool _trayReady = false;
   bool _exiting = false;
@@ -228,7 +302,14 @@ final class DesktopWindowController extends AppWindowController
     await _window.setPreventClose(true);
     _isFullScreen = await _window.isFullScreen();
     await _tryEnsureTray();
-    await _window.waitUntilReadyToShow(desktopWindowOptions, showWindow);
+    final savedSize = await sizeStore?.load();
+    final size =
+        savedSize ??
+        (await _display.primaryWorkAreaSize()) * desktopInitialSizeFraction;
+    await _window.waitUntilReadyToShow(
+      desktopWindowOptions(size, center: savedSize == null),
+      showWindow,
+    );
   }
 
   @override
@@ -258,6 +339,8 @@ final class DesktopWindowController extends AppWindowController
     if (_exiting) return;
     if (_closeAction == ApplicationCloseAction.closeApp) {
       _exiting = true;
+      _saveSizeTimer?.cancel();
+      await _saveWindowSize();
       await _destroyTray();
       await _window.destroy();
       return;
@@ -319,6 +402,8 @@ final class DesktopWindowController extends AppWindowController
   Future<void> _exit() async {
     if (_exiting) return;
     _exiting = true;
+    _saveSizeTimer?.cancel();
+    await _saveWindowSize();
     await _destroyTray();
     await _window.destroy();
   }
@@ -335,6 +420,22 @@ final class DesktopWindowController extends AppWindowController
 
   @override
   void onWindowClose() => _run(handleWindowClose());
+
+  @override
+  void onWindowResize() {
+    _saveSizeTimer?.cancel();
+    _saveSizeTimer = Timer(
+      const Duration(milliseconds: 200),
+      () => _run(_saveWindowSize()),
+    );
+  }
+
+  Future<void> _saveWindowSize() async {
+    final store = sizeStore;
+    if (store == null || _isFullScreen || await _window.isMaximized()) return;
+    final size = await _window.getSize();
+    if (size.width >= 1 && size.height >= 1) await store.save(size);
+  }
 
   @override
   void onTrayIconMouseDown() => _run(showWindow());
@@ -365,6 +466,7 @@ final class DesktopWindowController extends AppWindowController
 
   @override
   void dispose() {
+    _saveSizeTimer?.cancel();
     _window.removeListener(this);
     _tray.removeListener(this);
     _run(_destroyTray());
