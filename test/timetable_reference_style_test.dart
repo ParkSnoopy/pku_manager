@@ -27,7 +27,7 @@ void main() {
     expect(timetableCourseContentPadding, 10);
   });
 
-  test('screen and PNG share grouped span and collision-lane geometry', () {
+  test('screen and PNG keep source cells separate in collision lanes', () {
     final timetable = Timetable([
       Course(
         sourceId: 'first',
@@ -54,10 +54,12 @@ void main() {
     ], periodCount: 3);
     final layout = TimetableDayLayout.from(timetable, 1);
     expect(layout.laneCount, 2);
-    expect(layout.spans, hasLength(2));
+    expect(layout.spans, hasLength(3));
     expect(layout.spans.first.firstPeriod, 1);
-    expect(layout.spans.first.lastPeriod, 2);
-    expect(layout.spans.first.group.meetings, hasLength(2));
+    expect(layout.spans.first.lastPeriod, 1);
+    expect(layout.spans.first.meeting.sourceId, 'first');
+    expect(layout.spans[1].firstPeriod, 2);
+    expect(layout.spans[1].lastPeriod, 2);
     expect(layout.spans.last.lane, 1);
   });
 }

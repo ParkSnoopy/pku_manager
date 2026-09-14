@@ -44,7 +44,7 @@ W01–W09 correspond to the upstream Rust test semantics. W10–W15 are project-
 | E05–E09 | Empty/missing remarks, malformed records, trailing fields, and unknown-frequency fallback |
 | E10–E11 | Tutorial extraction remains explicit and cannot replace the main occurrence frequency |
 | E12–E16 | Header/index structure, blank rows, weekday scope, all periods, and Chinese period labels |
-| E17–E20 | Stable source identities, presentation-only grouping, parity coexistence, and header-driven weekday coordinates |
+| E17–E20 | Stable source identities, separate source cells, class-shared colors, parity coexistence, and header-driven weekday coordinates |
 | E21–E22 | Paired detail rows and unsupported populated columns preserve data or fail closed |
 | E23–E24 | Immutable candidate-byte snapshots and non-BIFF rejection |
 | E25 | Tutorial inference preserves original records and either expands safely or remains reviewable |
@@ -53,11 +53,11 @@ W01–W09 correspond to the upstream Rust test semantics. W10–W15 are project-
 ### Deliberate divergences
 
 - Source identity is sheet/row/column based; upstream title equality is not used as durable identity.
-- Immutable source class name governs grouping. Generated colors use the merged block's stable source identity; room, note, frequency, exam, and edited display name do not redefine either rule.
+- Source cells are never visually merged. Immutable source class name alone governs shared generated color; room, note, frequency, exam, and edited display name do not redefine it.
 - Unknown frequency maps to `每周` rather than retaining an unsupported state.
 - Tutorial inference never makes an arbitrary room choice, overwrites an occupied destination, or silently drops an out-of-range/weekend destination.
 - Saturday and Sunday are outside the product timetable.
-- Course color rolls randomize each merged block independently rather than using the upstream vertical-adjacency algorithm.
+- Course color assignment follows upstream `GroupByClass`: traverse source cells by weekday then period, reuse each source class's random palette slot, and avoid already assigned orthogonal-neighbor slots when possible. The app persists the random seed so screen and exports agree; a roll may randomly keep a class on its prior color.
 - Source text preserves human-readable spacing instead of removing every ASCII space.
 
 ## Render and export contract
@@ -73,7 +73,7 @@ The `pages` reference supplies the observable geometry protected by `test/timeta
 - 12-unit export padding; and
 - 4× PNG output scale.
 
-The application owns color policy and uses one shared geometry/content-role authority across Flutter, PNG, and XLSX. Class names are bold while room and remark roles retain configured timetable weight.
+The application uses one shared color, geometry, and content-role authority across Flutter, PNG, and XLSX. Class names are bold while room and remark roles retain configured timetable weight.
 
 The pinned palette revision supplies named five-color palettes. The malformed upstream `##ffafcc` value is rejected rather than repaired; `CONTEXT.md` owns the resulting palette invariant.
 

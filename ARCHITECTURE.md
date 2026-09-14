@@ -59,8 +59,8 @@ Web is not supported. Generated platform registrants contain integration glue on
 
 - `course.dart` separates immutable source identity/name from editable display data.
 - Meetings cover Monday through Friday and retain ordered, bounded period ranges.
-- `timetable.dart` owns ordering, day/period projection, parity membership, conflict detection, and adjacent same-source-name grouping.
-- Grouping preserves every source identity. Edits and deletes operate atomically over the represented identity set.
+- `timetable.dart` owns ordering, day/period projection, parity membership, conflict detection, and source-cell separation.
+- Every source cell remains independently editable and deletable.
 - Colors and geometry remain presentation data, not timetable fields.
 
 ### Calendar schedules
@@ -158,7 +158,7 @@ Desktop plugin calls stay behind `lib/ui/app_window_controller.dart`. Tray setup
 
 | Test area | Scope |
 |---|---|
-| `test/domain/` | Date, parity, frequency, ordering, grouping, conflict, and visibility policy |
+| `test/domain/` | Date, parity, frequency, ordering, source-cell separation, conflict, and visibility policy |
 | `test/data/` | TOML/HTTP boundaries, BIFF8 parsing, SQLite publication, persistence, and immutable-source equality |
 | `test/reference/` | Independently authored behavior mapped in `docs/REFERENCE_CASES.md` |
 | Root widget/controller tests | Responsive composition, editing, appearance, localization, export, window, and tray behavior |

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/course.dart';
 import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
 import '../../ui/super_otc_font.dart';
@@ -85,13 +86,13 @@ final class TimetableGeometry {
 
 final class TimetableVisualSpan {
   const TimetableVisualSpan({
-    required this.group,
+    required this.meeting,
     required this.firstPeriod,
     required this.lastPeriod,
     required this.lane,
   });
 
-  final CourseGroup group;
+  final Course meeting;
   final int firstPeriod;
   final int lastPeriod;
   final int lane;
@@ -108,20 +109,16 @@ final class TimetableDayLayout {
     int day, {
     WeekParity? parity,
   }) {
-    final pending = <({CourseGroup group, int first, int last})>[];
-    for (final group in timetable.groupsForDay(
-      day,
-      breakAfter: timetableMealBreaks,
-      currentParity: parity,
-    )) {
-      var first = group.firstPeriod;
+    final pending = <({Course meeting, int first, int last})>[];
+    for (final meeting in timetable.forDay(day, currentParity: parity)) {
+      var first = meeting.firstPeriod;
       for (final breakPeriod in timetableMealBreaks) {
-        if (first <= breakPeriod && breakPeriod < group.lastPeriod) {
-          pending.add((group: group, first: first, last: breakPeriod));
+        if (first <= breakPeriod && breakPeriod < meeting.lastPeriod) {
+          pending.add((meeting: meeting, first: first, last: breakPeriod));
           first = breakPeriod + 1;
         }
       }
-      pending.add((group: group, first: first, last: group.lastPeriod));
+      pending.add((meeting: meeting, first: first, last: meeting.lastPeriod));
     }
     pending.sort((a, b) => a.first.compareTo(b.first));
     final laneEnds = <int>[];
@@ -136,7 +133,7 @@ final class TimetableDayLayout {
       }
       spans.add(
         TimetableVisualSpan(
-          group: item.group,
+          meeting: item.meeting,
           firstPeriod: item.first,
           lastPeriod: item.last,
           lane: lane,

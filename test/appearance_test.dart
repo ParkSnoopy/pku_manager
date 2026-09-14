@@ -9,6 +9,7 @@ import 'package:pku_manager/data/file_device_settings_store.dart';
 import 'package:pku_manager/data/sqlite_appearance_store.dart';
 import 'package:pku_manager/domain/application_close_action.dart';
 import 'package:pku_manager/domain/course.dart';
+import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/features/settings/appearance_controller.dart';
 import 'package:pku_manager/features/settings/settings_page.dart';
 import 'package:pku_manager/features/timetable/timetable_color.dart';
@@ -17,38 +18,32 @@ import 'package:pku_manager/l10n/app_strings.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 void main() {
-  test('palette rolls colors per merged block and keeps text visible', () {
-    Course block(String sourceId, String sourceName) => Course(
+  test('palette rolls colors by source class and keeps text visible', () {
+    Course block(
+      String sourceId,
+      String sourceName, {
+      int weekday = 1,
+      int firstPeriod = 1,
+    }) => Course(
       sourceId: sourceId,
       sourceName: sourceName,
       name: sourceName,
-      weekday: 1,
-      firstPeriod: 1,
-      lastPeriod: 2,
+      weekday: weekday,
+      firstPeriod: firstPeriod,
+      lastPeriod: firstPeriod,
     );
 
     final first = block('first', 'Algebra');
-    final second = block('second', 'Algebra');
-    final renamed = block('first', 'Renamed');
-    final firstRolls = [
-      for (var seed = 0; seed < defaultCustomPalette.length; seed++)
-        timetableCourseColor(first, seed, blockIdentity: 'first|second'),
-    ];
-    final secondRolls = [
-      for (var seed = 0; seed < defaultCustomPalette.length; seed++)
-        timetableCourseColor(second, seed),
-    ];
+    final second = block('second', 'Algebra', weekday: 3, firstPeriod: 3);
+    final below = block('below', 'Geometry', firstPeriod: 2);
+    final right = block('right', 'Physics', weekday: 2);
+    final timetable = Timetable([first, second, below, right]);
+    final colors = timetableCourseColors(timetable, 1234);
 
-    expect(firstRolls.toSet(), hasLength(defaultCustomPalette.length));
-    expect(secondRolls, isNot(firstRolls));
-    expect(
-      timetableCourseColor(second, 0, blockIdentity: 'first|second'),
-      firstRolls.first,
-    );
-    expect(
-      timetableCourseColor(renamed, 0, blockIdentity: 'first|second'),
-      timetableCourseColor(first, 0, blockIdentity: 'first|second'),
-    );
+    expect(colors[first.sourceId], colors[second.sourceId]);
+    expect(colors[below.sourceId], isNot(colors[first.sourceId]));
+    expect(colors[right.sourceId], isNot(colors[first.sourceId]));
+    expect(timetableCourseColors(timetable, 1234), colors);
     expect(timetableContrastForeground(const Color(0xff111111)), Colors.white);
   });
 
@@ -200,8 +195,8 @@ void main() {
       ),
     );
     controller.rollPalette();
-    final firstRollSeed = controller.paletteSeed;
     controller.rollPalette();
+    final rolledSeed = controller.paletteSeed;
 
     final restored = AppearanceController(
       store,
@@ -209,11 +204,7 @@ void main() {
     );
     expect(restored.language, AppLanguage.zhHans);
     expect(restored.accent, const Color(0xff00695c));
-    expect(firstRollSeed, inInclusiveRange(1, 4));
-    expect(
-      restored.paletteSeed,
-      inInclusiveRange(firstRollSeed + 1, firstRollSeed + 4),
-    );
+    expect(restored.paletteSeed, rolledSeed);
     expect(restored.rollPaletteIndex, 3);
     expect(restored.fontFamily, AppFontFamily.sans);
     expect(restored.fontScale, 1.4);
@@ -229,18 +220,19 @@ void main() {
       ApplicationCloseAction.exitToSystemTray,
     );
     expect(restored.customPalette[2], const Color(0xffabcdef));
+    final sample = Course(
+      sourceId: 'sample',
+      name: 'Sample',
+      weekday: 1,
+      firstPeriod: 1,
+      lastPeriod: 1,
+    );
     expect(
-      timetableCourseColor(
-        Course(
-          sourceId: 'sample',
-          name: 'Sample',
-          weekday: 1,
-          firstPeriod: 1,
-          lastPeriod: 1,
-        ),
+      timetableCourseColors(
+        Timetable([sample]),
         0,
         customPalette: restored.customPalette,
-      ),
+      )[sample.sourceId],
       isIn(restored.customPalette),
     );
     expect(restored.showRollInNavbar, isFalse);

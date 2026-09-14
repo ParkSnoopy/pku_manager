@@ -432,47 +432,41 @@ class _DayGroups extends StatelessWidget {
     final layout = TimetableDayLayout.from(timetable, day, parity: parity);
     final laneWidth = courseWidth / layout.laneCount;
     final conflictingSourceIds = timetable.conflictingSourceIds;
-    final sourceNames = {
-      for (final course in timetable.meetings)
-        course.sourceId: course.sourceName,
-    };
+    final courseColors = timetableCourseColors(
+      timetable,
+      paletteSeed,
+      courseAppearances: courseAppearances,
+      paletteIndex: paletteIndex,
+      customPalette: customPalette,
+    );
     return Stack(
       clipBehavior: Clip.hardEdge,
       children: [
-        for (final group in layout.spans)
+        for (final span in layout.spans)
           Positioned(
-            left: group.lane * laneWidth,
-            top: geometry.periodTop(group.firstPeriod) - timetableHeaderHeight,
+            left: span.lane * laneWidth,
+            top: geometry.periodTop(span.firstPeriod) - timetableHeaderHeight,
             width: laneWidth,
             height:
-                (group.lastPeriod - group.firstPeriod + 1) *
+                (span.lastPeriod - span.firstPeriod + 1) *
                 timetablePeriodHeight,
             child: _MeetingTile(
-              group.group.primary,
-              firstPeriod: group.firstPeriod,
-              lastPeriod: group.lastPeriod,
-              isCurrent: group.group.primary.frequency.isCurrent(parity),
-              conflicting: group.group.meetings.any(
-                (meeting) => conflictingSourceIds.contains(meeting.sourceId),
-              ),
-              paletteSeed: paletteSeed,
-              blockIdentity: group.group.key,
-              paletteIndex: paletteIndex,
-              customPalette: customPalette,
+              span.meeting,
+              firstPeriod: span.firstPeriod,
+              lastPeriod: span.lastPeriod,
+              isCurrent: span.meeting.frequency.isCurrent(parity),
+              conflicting: conflictingSourceIds.contains(span.meeting.sourceId),
+              color: courseColors[span.meeting.sourceId]!,
               fontWeight: fontWeight,
-              focused: group.group.meetings.any(
-                (meeting) => focusedCourseSourceIds.contains(meeting.sourceId),
-              ),
+              focused: focusedCourseSourceIds.contains(span.meeting.sourceId),
               schedules: schedules
                   .where(
                     (schedule) =>
-                        sourceNames[schedule.relatedClassSourceId] ==
-                        group.group.primary.sourceName,
+                        schedule.relatedClassSourceId == span.meeting.sourceId,
                   )
                   .toList(growable: false),
-              appearance: courseAppearances[group.group.primary.sourceId],
-              onEdit: () =>
-                  onEdit(day, group.firstPeriod, group.group.meetings),
+              appearance: courseAppearances[span.meeting.sourceId],
+              onEdit: () => onEdit(day, span.firstPeriod, [span.meeting]),
             ),
           ),
       ],
@@ -502,10 +496,7 @@ class _MeetingTile extends StatefulWidget {
     required this.lastPeriod,
     required this.isCurrent,
     required this.conflicting,
-    required this.paletteSeed,
-    required this.blockIdentity,
-    required this.paletteIndex,
-    required this.customPalette,
+    required this.color,
     required this.fontWeight,
     required this.focused,
     required this.schedules,
@@ -518,10 +509,7 @@ class _MeetingTile extends StatefulWidget {
   final int lastPeriod;
   final bool isCurrent;
   final bool conflicting;
-  final int paletteSeed;
-  final String blockIdentity;
-  final int paletteIndex;
-  final List<Color> customPalette;
+  final Color color;
   final FontWeight fontWeight;
   final bool focused;
   final List<CalendarSchedule> schedules;
@@ -538,14 +526,7 @@ class _MeetingTileState extends State<_MeetingTile> {
     final meeting = widget.meeting;
     final theme = Theme.of(context);
     final background = themedTimetableColor(
-      timetableCourseColor(
-        meeting,
-        widget.paletteSeed,
-        appearance: widget.appearance,
-        blockIdentity: widget.blockIdentity,
-        paletteIndex: widget.paletteIndex,
-        customPalette: widget.customPalette,
-      ),
+      widget.color,
       brightness: theme.brightness,
       surface: theme.colorScheme.surface,
     );
@@ -560,7 +541,12 @@ class _MeetingTileState extends State<_MeetingTile> {
             color: widget.appearance!.outlineColor,
             width: widget.appearance!.outlineWidth,
           )
-        : null;
+        : const Border(
+            bottom: BorderSide(
+              color: timetableDivider,
+              width: timetableDividerWidth,
+            ),
+          );
     return FollowingHoverCard(
       cardKey: ValueKey('meeting-hover-${widget.meeting.sourceId}'),
       cursor: SystemMouseCursors.click,

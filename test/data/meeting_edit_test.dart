@@ -99,7 +99,7 @@ void main() {
     expect(scheduleRepository.load().single.relatedClassSourceId, isNull);
   });
 
-  test('group edits commit atomically and preserve immutable source bytes', () {
+  test('multi-cell writes are atomic and preserve source bytes', () {
     final database = AppDatabase(':memory:');
     addTearDown(database.close);
     final repository = ScheduleRepository(database);
@@ -112,9 +112,9 @@ void main() {
       ],
     );
     final published = repository.publish(candidate, {});
-    final group = published.groupsForDay(1).single;
+    final meetings = published.meetings;
     repository.saveMeetings([
-      for (final meeting in group.meetings)
+      for (final meeting in meetings)
         Course(
           sourceId: meeting.sourceId,
           name: 'Edited together',
@@ -133,7 +133,7 @@ void main() {
     expect(
       () => repository.saveMeetings([
         Course(
-          sourceId: group.meetings.first.sourceId,
+          sourceId: meetings.first.sourceId,
           name: 'Must roll back',
           weekday: 1,
           firstPeriod: 1,
@@ -155,16 +155,11 @@ void main() {
     );
 
     expect(
-      () => repository.removeMeetings([
-        group.meetings.first.sourceId,
-        'not-active',
-      ]),
+      () => repository.removeMeetings([meetings.first.sourceId, 'not-active']),
       throwsArgumentError,
     );
     expect(repository.load()!.meetings, hasLength(2));
-    repository.removeMeetings(
-      group.meetings.map((meeting) => meeting.sourceId),
-    );
+    repository.removeMeetings(meetings.map((meeting) => meeting.sourceId));
     expect(repository.load()!.meetings, isEmpty);
     expect(database.activeSource, [7, 8, 9]);
   });

@@ -6,7 +6,7 @@ import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/features/timetable/upcoming_course.dart';
 
 void main() {
-  test('tomorrow list includes every grouped class in start order', () {
+  test('tomorrow list includes every source cell in start order', () {
     final timetable = Timetable([
       Course(
         sourceId: 'first',
@@ -43,11 +43,11 @@ void main() {
       now,
       calendar: SemesterCalendar(starts: [DateTime.utc(2026, 9, 7)]),
     );
-    expect(upcoming.map((item) => item.group.primary.sourceId), [
+    expect(upcoming.map((item) => item.meeting.sourceId), [
       'first',
+      'second',
       'later',
     ]);
-    expect(upcoming.first.group.meetings, hasLength(2));
     expect(upcoming.first.startsAt, DateTime.utc(2026, 9, 7));
     expect(upcoming.last.startsAt, DateTime.utc(2026, 9, 7, 2, 10));
   });

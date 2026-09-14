@@ -152,74 +152,20 @@ void main() {
     expect(value.exam, '待定');
   });
 
-  test(
-    'consecutive display grouping keeps source identities and immutable lists',
-    () {
-      final table = Timetable([
-        meeting('a'),
-        meeting('b', first: 3, last: 4),
-        meeting('gap', first: 6, last: 6),
-        meeting('different-room', first: 7, last: 7, room: '二教'),
-      ]);
-      final groups = table.consecutiveGroups();
-      expect(groups.map((g) => g.map((m) => m.sourceId).toList()), [
-        ['a', 'b'],
-        ['gap', 'different-room'],
-      ]);
-      expect(table.meetings, hasLength(4));
-      expect(() => groups.clear(), throwsUnsupportedError);
-      expect(() => groups.first.clear(), throwsUnsupportedError);
-    },
-  );
-
-  test('source class name alone defines class equality', () {
-    final original = meeting('a');
-    final renamed = Course(
-      sourceId: 'b',
-      sourceName: original.sourceName,
-      name: 'User-renamed display',
-      weekday: 1,
-      firstPeriod: 3,
-      lastPeriod: 4,
-      room: 'Another room',
-      frequency: WeekFrequency.odd,
-      frequencyText: '单周',
-      note: 'Different note',
-      exam: 'Different exam',
-    );
-    expect(Timetable([original, renamed]).consecutiveGroups(), hasLength(1));
-    final differentSourceName = Course(
-      sourceId: 'c',
-      sourceName: 'Different original class',
-      name: original.name,
-      weekday: 1,
-      firstPeriod: 3,
-      lastPeriod: 4,
-    );
-    expect(
-      Timetable([original, differentSourceName]).consecutiveGroups(),
-      hasLength(2),
-    );
+  test('source cells remain separate and immutable', () {
+    final table = Timetable([
+      meeting('a'),
+      meeting('b', first: 3, last: 4),
+      meeting('gap', first: 6, last: 6),
+      meeting('different-room', first: 7, last: 7, room: '二教'),
+    ]);
+    final cells = table.forDay(1);
+    expect(cells.map((meeting) => meeting.sourceId), [
+      'a',
+      'b',
+      'gap',
+      'different-room',
+    ]);
+    expect(() => cells.clear(), throwsUnsupportedError);
   });
-
-  test(
-    'same-day touching courses form one editable source-preserving group',
-    () {
-      final table = Timetable([
-        meeting('first', first: 1, last: 2),
-        meeting('second', first: 3, last: 4),
-        meeting('after-break', first: 5, last: 6),
-      ]);
-      final groups = table.groupsForDay(1, breakAfter: const {4, 9});
-      expect(groups, hasLength(2));
-      expect(groups.first.firstPeriod, 1);
-      expect(groups.first.lastPeriod, 4);
-      expect(groups.first.meetings.map((value) => value.sourceId), [
-        'first',
-        'second',
-      ]);
-      expect(groups.last.meetings.single.sourceId, 'after-break');
-      expect(() => groups.first.meetings.clear(), throwsUnsupportedError);
-    },
-  );
 }

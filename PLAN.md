@@ -17,13 +17,13 @@ When authorities disagree, inspect source and tests, then update every affected 
 ### 1. Define the contract
 
 - Express product terminology and cross-layer invariants in `CONTEXT.md` before changing ownership or serialized state.
-- Identify the authoritative identity for every relationship, grouping rule, generated color, and persistence key.
+- Identify the authoritative identity for every relationship, source cell, generated color, and persistence key.
 - Keep in-app copy limited to end-user decisions, actions, correction, recovery, and current state.
 - Keep repository documents limited to developer-relevant interfaces, architecture, structure, workflows, constraints, and evidence.
 
 ### 2. Change domain policy
 
-- Put timetable ordering, grouping, conflict, parity, date, and relationship rules in `lib/domain/`.
+- Put timetable ordering, source-cell separation, conflict, parity, date, and relationship rules in `lib/domain/`.
 - Keep domain values immutable and independent from Flutter and infrastructure packages.
 - Represent finite states with typed values instead of string checks or nullable-field bags.
 - Add focused domain coverage for normal, boundary, and invalid cases.
@@ -46,7 +46,7 @@ When authorities disagree, inspect source and tests, then update every affected 
 
 ### 5. Change presentation and export together
 
-- Reuse one timetable geometry, grouping, appearance, content-role, and typography authority for screen, PNG, and XLSX.
+- Reuse one timetable geometry, appearance, content-role, and typography authority for screen, PNG, and XLSX.
 - Preserve responsive wide/narrow semantics without introducing feature-local data models.
 - Keep manual appearance keyed by stable source identity and derive display labels from authoritative records.
 - Test rendered structure and export semantics at the shared boundary rather than duplicating one-off format logic.

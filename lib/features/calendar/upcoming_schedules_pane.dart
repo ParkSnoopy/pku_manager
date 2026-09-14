@@ -79,11 +79,9 @@ class UpcomingSchedulesPane extends StatelessWidget {
                         final foreground = scheduleForeground(background);
                         final relatedClass = courses
                             .where(
-                              (course) => course.group.meetings.any(
-                                (meeting) =>
-                                    meeting.sourceId ==
-                                    schedule.relatedClassSourceId,
-                              ),
+                              (course) =>
+                                  course.meeting.sourceId ==
+                                  schedule.relatedClassSourceId,
                             )
                             .firstOrNull;
                         return _ScheduleWithClassEntry(
@@ -218,7 +216,7 @@ class _ScheduleWithClassEntry extends StatelessWidget {
                       dense: true,
                       leading: const Icon(Icons.school_outlined),
                       title: Text(
-                        course.group.primary.displayName,
+                        course.meeting.displayName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

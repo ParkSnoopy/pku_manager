@@ -85,55 +85,6 @@ final class Timetable {
     );
   }
 
-  /// Source-name-equivalent classes that touch vertically on one day.
-  /// Source identities remain separate so a group edit can update each record.
-  List<CourseGroup> groupsForDay(
-    int weekday, {
-    Set<int> breakAfter = const {},
-    bool showAll = true,
-    WeekParity? currentParity,
-  }) {
-    final groups = <CourseGroup>[];
-    for (final meeting in forDay(
-      weekday,
-      showAll: showAll,
-      currentParity: currentParity,
-    )) {
-      final matchingIndex = groups.lastIndexWhere(
-        (group) =>
-            group.matches(meeting) &&
-            meeting.firstPeriod <= group.lastPeriod + 1 &&
-            !_crossesBreak(group.lastPeriod, meeting.firstPeriod, breakAfter),
-      );
-      if (matchingIndex < 0) {
-        groups.add(CourseGroup._([meeting]));
-      } else {
-        final previous = groups[matchingIndex];
-        groups[matchingIndex] = CourseGroup._([...previous.meetings, meeting]);
-      }
-    }
-    return List.unmodifiable(groups);
-  }
-
-  /// Presentation-only adjacency grouping; every original identity is retained.
-  /// Matching labels never imply that source records are the same record.
-  List<List<Course>> consecutiveGroups({
-    bool showAll = true,
-    WeekParity? currentParity,
-  }) {
-    final result = <List<Course>>[];
-    for (var day = 1; day <= 5; day++) {
-      for (final group in groupsForDay(
-        day,
-        showAll: showAll,
-        currentParity: currentParity,
-      )) {
-        result.add(group.meetings);
-      }
-    }
-    return List.unmodifiable(result);
-  }
-
   static List<Course> _ordered(Iterable<Course> input) {
     final indexed = input.indexed.toList();
     indexed.sort((a, b) {
@@ -155,33 +106,3 @@ bool _frequenciesCanCoincide(WeekFrequency left, WeekFrequency right) =>
     left == WeekFrequency.every ||
     right == WeekFrequency.every ||
     left == right;
-
-final class CourseGroup {
-  CourseGroup._(Iterable<Course> meetings)
-    : meetings = List.unmodifiable(meetings);
-
-  final List<Course> meetings;
-
-  Course get primary => meetings.first;
-  int get weekday => primary.weekday;
-  int get firstPeriod => meetings.fold(
-    primary.firstPeriod,
-    (value, meeting) =>
-        meeting.firstPeriod < value ? meeting.firstPeriod : value,
-  );
-  int get lastPeriod => meetings.fold(
-    primary.lastPeriod,
-    (value, meeting) => meeting.lastPeriod > value ? meeting.lastPeriod : value,
-  );
-  String get key => meetings.map((meeting) => meeting.sourceId).join('|');
-
-  bool matches(Course meeting) =>
-      weekday == meeting.weekday && primary.sourceName == meeting.sourceName;
-}
-
-bool _crossesBreak(int previousLast, int nextFirst, Set<int> breakAfter) {
-  for (var period = previousLast; period < nextFirst; period++) {
-    if (breakAfter.contains(period)) return true;
-  }
-  return false;
-}

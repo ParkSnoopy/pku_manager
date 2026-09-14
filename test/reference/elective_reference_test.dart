@@ -6,6 +6,7 @@ import 'package:pku_manager/domain/course.dart';
 import 'package:pku_manager/domain/schedule_import.dart';
 import 'package:pku_manager/domain/timetable.dart';
 import 'package:pku_manager/domain/week_frequency.dart';
+import 'package:pku_manager/features/timetable/timetable_color.dart';
 
 const _header = ['节数', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
 const _plain = '示例课程(实验楼A)(备注：携带纸笔)每周考试：另行通知';
@@ -165,34 +166,29 @@ void main() {
     ]);
     expect(c.records.map((r) => r.meeting.firstPeriod), [1, 12]);
   });
-  test(
-    'E17 repeated records retain identities and group only for presentation',
-    () {
-      final c = cells([
-        _header,
-        _row('1', value: _plain),
-        _row('2', value: _plain),
-      ]);
-      final t = Timetable(
-        c.records.map((r) => r.meeting),
-        periodCount: c.periodCount,
-      );
-      expect(t.meetings.map((m) => m.sourceId).toSet(), hasLength(2));
-      expect(t.consecutiveGroups().single, hasLength(2));
-      expect(t.atPeriod(1, 1).single.firstPeriod, 1);
-      expect(t.atPeriod(1, 2).single.firstPeriod, 2);
-    },
-  );
-  test('E18 source-name equality groups touching classes across rooms', () {
+  test('E17 repeated records retain identities and remain separate cells', () {
+    final c = cells([
+      _header,
+      _row('1', value: _plain),
+      _row('2', value: _plain),
+    ]);
+    final t = Timetable(
+      c.records.map((r) => r.meeting),
+      periodCount: c.periodCount,
+    );
+    expect(t.meetings.map((m) => m.sourceId).toSet(), hasLength(2));
+    expect(t.forDay(1), hasLength(2));
+    expect(t.atPeriod(1, 1).single.firstPeriod, 1);
+    expect(t.atPeriod(1, 2).single.firstPeriod, 2);
+  });
+  test('E18 source-name equality shares color across rooms', () {
     final c = cells([
       _header,
       _row('1', value: _plain),
       _row('2', value: _plain.replaceAll('实验楼A', '实验楼B')),
     ]);
-    expect(
-      Timetable(c.records.map((r) => r.meeting)).consecutiveGroups(),
-      hasLength(1),
-    );
+    final timetable = Timetable(c.records.map((r) => r.meeting));
+    expect(timetableCourseColors(timetable, 7).values.toSet(), hasLength(1));
   });
   test('E19 odd and even occurrences coexist at the same coordinate', () {
     final c = cells([

@@ -169,11 +169,13 @@ final class TimetableExporter {
     excel.rename(excel.getDefaultSheet()!, 'Timetable');
     final sheet = excel['Timetable'];
     final conflictingSourceIds = timetable.conflictingSourceIds;
-    final blockIdentities = {
-      for (var day = 1; day <= 5; day++)
-        for (final group in timetable.groupsForDay(day))
-          for (final meeting in group.meetings) meeting.sourceId: group.key,
-    };
+    final courseColors = timetableCourseColors(
+      timetable,
+      paletteSeed,
+      courseAppearances: courseAppearances,
+      paletteIndex: paletteIndex,
+      customPalette: customPalette,
+    );
     final effectiveIndexColor = themedTimetableColor(
       indexColor,
       brightness: brightness,
@@ -240,14 +242,7 @@ final class TimetableExporter {
         final courseColor = meetings.isEmpty
             ? null
             : themedTimetableColor(
-                timetableCourseColor(
-                  meetings.first,
-                  paletteSeed,
-                  appearance: courseAppearance,
-                  blockIdentity: blockIdentities[meetings.first.sourceId],
-                  paletteIndex: paletteIndex,
-                  customPalette: customPalette,
-                ),
+                courseColors[meetings.first.sourceId]!,
                 brightness: brightness,
                 surface: surfaceColor,
               );
@@ -331,7 +326,7 @@ final class TimetableExporter {
       final layout = TimetableDayLayout.from(timetable, day);
       if (layout.laneCount != 1) continue;
       for (final span in layout.spans) {
-        final meeting = span.group.primary;
+        final meeting = span.meeting;
         final startRow = 1 + (span.firstPeriod - 1) * 4;
         final endRow = span.lastPeriod * 4;
         final start = CellIndex.indexByColumnRow(
@@ -447,11 +442,18 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
       }
     }
     final conflictingSourceIds = timetable.conflictingSourceIds;
+    final courseColors = timetableCourseColors(
+      timetable,
+      paletteSeed,
+      courseAppearances: courseAppearances,
+      paletteIndex: paletteIndex,
+      customPalette: customPalette,
+    );
     for (var day = 1; day <= 5; day++) {
       final layout = TimetableDayLayout.from(timetable, day);
       final laneWidth = geometry.courseWidth / layout.laneCount;
       for (final span in layout.spans) {
-        final meeting = span.group.primary;
+        final meeting = span.meeting;
         final appearance = courseAppearances[meeting.sourceId];
         final item = ui.Rect.fromLTWH(
           timetableIndexWidth +
@@ -462,14 +464,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           (span.lastPeriod - span.firstPeriod + 1) * timetablePeriodHeight,
         );
         final background = themedTimetableColor(
-          timetableCourseColor(
-            meeting,
-            paletteSeed,
-            appearance: appearance,
-            blockIdentity: span.group.key,
-            paletteIndex: paletteIndex,
-            customPalette: customPalette,
-          ),
+          courseColors[meeting.sourceId]!,
           brightness: brightness,
           surface: surfaceColor,
         );
@@ -478,9 +473,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
         const inset = timetableCourseContentPadding;
         final nameHeight = timetableCourseNameFontSize * fontScale * 1.5;
         final roomHeight = timetableClassroomFontSize * fontScale * 1.5;
-        final conflicting = span.group.meetings.any(
-          (meeting) => conflictingSourceIds.contains(meeting.sourceId),
-        );
+        final conflicting = conflictingSourceIds.contains(meeting.sourceId);
         if (conflicting || (appearance?.outlined ?? false)) {
           final outlineWidth = conflicting
               ? timetableConflictWidth
@@ -494,6 +487,8 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
               ..style = ui.PaintingStyle.stroke
               ..strokeWidth = outlineWidth,
           );
+        } else {
+          canvas.drawLine(item.bottomLeft, item.bottomRight, border);
         }
         _drawReferenceText(
           canvas,

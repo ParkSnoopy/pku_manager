@@ -10,7 +10,7 @@ This file defines project vocabulary and cross-layer invariants. Structural owne
 - `import schedule`: acquire bounded bytes through the platform picker, parse every nonempty in-scope record, resolve typed failures, and publish atomically.
 - `schedule`: a user-controlled Calendar record. Do not substitute `event` in product-owned names or copy.
 - `source identity`: stable workbook sheet/row/column identity used to bind parsed records, corrections, appearance, and optional Calendar relationships.
-- `source class name`: immutable workbook-parsed class name used for grouping and class-wide relationships. Editable display or short names do not replace it.
+- `source class name`: immutable workbook-parsed class name used only to share generated color. Editable display or short names do not replace it.
 - `week parity`: semester-relative week number and odd/even status calculated from Beijing dates and validated semester starts.
 - `dynamic timetable`: retain all meetings and derive current-week emphasis at presentation time.
 - `Week Parity source`: runtime TOML at `https://parksnoopy-undergraduate.github.io/week/config.toml`.
@@ -53,12 +53,12 @@ This file defines project vocabulary and cross-layer invariants. Structural owne
 - In-app copy contains only information required to decide, act, correct, recover, or understand current state. Implementation details and defensive assurances are excluded.
 - Wide timetable layouts render Monday through Friday; narrow layouts retain one period-index column and one selected weekday projection.
 - All meetings retain their grid footprint. Non-current meetings use reduced emphasis without cell text; conflict calculation remains domain-owned and excludes odd/even-only alternation.
-- Vertically adjacent meetings with the same source class name and weekday share one visual block while preserving every source identity.
-- Screen, PNG, and XLSX use one geometry, grouping, color, outline, content-role, and typography authority. Export renders the complete timetable fully opaque.
+- Every source cell remains a separate visual block; adjacency and matching class names never merge cells.
+- Screen, PNG, and XLSX use one geometry, color, outline, content-role, and typography authority. Export renders the complete timetable fully opaque.
 - Class names are bold across screen and exports. Room and remark text retain configured timetable weight.
 - Calendar schedules remain independent records. Optional class association is ID-based and must be cleared, not delete the schedule, when its class disappears.
 - Timetable and Calendar cross-navigation changes transient presentation only. Escape-style restoration must not revert persisted state.
-- Appearance settings persist typed values and apply through one shared projection. Manual course colors, outlines, and generated block colors are source-identity-bound; every text foreground contrasts with its background. Button labels and icons use black or white for their actual background, never the theme accent.
+- Appearance settings persist typed values and apply through one shared projection. Generated colors are randomized dynamically using the source class name and already assigned neighboring colors; all cells of one source class share a color, and a roll may randomly retain the prior color. Manual course colors and outlines remain source-identity-bound. Every text foreground contrasts with its background. Button labels and icons use black or white for their actual background, never the theme accent.
 - Korean, English, and Simplified Chinese localization must cover every application-owned visible string.
 
 ## Platform and security invariants

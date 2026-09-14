@@ -196,10 +196,7 @@ class _TimetablePageState extends State<TimetablePage>
   }
 
   void _selectUpcomingClass(UpcomingCourse course) {
-    final sourceIds = course.group.meetings
-        .map((meeting) => meeting.sourceId)
-        .toSet();
-    _focusClass(course.group.weekday, sourceIds);
+    _focusClass(course.meeting.weekday, {course.meeting.sourceId});
   }
 
   void _editUpcomingClass(UpcomingCourse course) {
@@ -207,23 +204,21 @@ class _TimetablePageState extends State<TimetablePage>
       _focusTimer?.cancel();
       setState(() {
         _destination = 0;
-        _day = course.group.weekday;
+        _day = course.meeting.weekday;
         _focusedScheduleId = null;
         _focusedCourseSourceIds = const {};
         _editor = _EditorSelection(
-          course.group.weekday,
-          course.group.firstPeriod,
-          course.group.meetings,
+          course.meeting.weekday,
+          course.meeting.firstPeriod,
+          [course.meeting],
         );
       });
       return;
     }
     unawaited(
-      _editCell(
-        course.group.weekday,
-        course.group.firstPeriod,
-        course.group.meetings,
-      ),
+      _editCell(course.meeting.weekday, course.meeting.firstPeriod, [
+        course.meeting,
+      ]),
     );
   }
 
@@ -299,23 +294,20 @@ class _TimetablePageState extends State<TimetablePage>
                   const CourseAppearance(),
         suggestedColor: meetings.isEmpty
             ? widget.appearance.customPalette.first
-            : timetableCourseColor(
-                meetings.first,
-                widget.appearance.paletteSeed,
-                appearance: widget.appearance.courseAppearanceFor(
-                  meetings.first.sourceId,
-                ),
-                blockIdentity: meetings
-                    .map((meeting) => meeting.sourceId)
-                    .join('|'),
-                paletteIndex: widget.appearance.rollPaletteIndex,
-                customPalette: widget.appearance.customPalette,
-              ),
+            : _courseColor(meetings.first),
         onCancel: () => Navigator.pop(dialogContext),
         onResult: (result) => _applyEdit(result, meetings),
       ),
     );
   }
+
+  Color _courseColor(Course meeting) => timetableCourseColors(
+    widget.controller.timetable!,
+    widget.appearance.paletteSeed,
+    courseAppearances: widget.appearance.courseAppearances,
+    paletteIndex: widget.appearance.rollPaletteIndex,
+    customPalette: widget.appearance.customPalette,
+  )[meeting.sourceId]!;
 
   void _applyEdit(CourseEditResult result, List<Course> original) {
     if (result.remove) {
@@ -635,18 +627,7 @@ class _TimetablePageState extends State<TimetablePage>
                                 const CourseAppearance(),
                       suggestedColor: _editor!.meetings.isEmpty
                           ? widget.appearance.customPalette.first
-                          : timetableCourseColor(
-                              _editor!.meetings.first,
-                              widget.appearance.paletteSeed,
-                              appearance: widget.appearance.courseAppearanceFor(
-                                _editor!.meetings.first.sourceId,
-                              ),
-                              blockIdentity: _editor!.meetings
-                                  .map((meeting) => meeting.sourceId)
-                                  .join('|'),
-                              paletteIndex: widget.appearance.rollPaletteIndex,
-                              customPalette: widget.appearance.customPalette,
-                            ),
+                          : _courseColor(_editor!.meetings.first),
                       onCancel: () => setState(() => _editor = null),
                       onResult: (result) =>
                           _applyEdit(result, _editor!.meetings),

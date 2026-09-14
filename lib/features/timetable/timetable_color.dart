@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../domain/course.dart';
+import '../../domain/timetable.dart';
 
 const defaultCourseOutlineColor = Color(0xffff0000);
 const defaultCourseOutlineWidth = 1.5;
@@ -129,23 +132,58 @@ const rollPalettes = <RollPalette>[
   ]),
 ];
 
-Color timetableCourseColor(
-  Course meeting,
+Map<String, Color> timetableCourseColors(
+  Timetable timetable,
   int paletteSeed, {
-  CourseAppearance? appearance,
-  String? blockIdentity,
+  Map<String, CourseAppearance> courseAppearances = const {},
   int paletteIndex = 0,
   List<Color> customPalette = defaultCustomPalette,
 }) {
-  if (appearance?.color case final color?) return color;
-  final hash = (blockIdentity ?? meeting.sourceId).runes.fold(
-    0,
-    (value, rune) => (value * 31 + rune) & 0x7fffffff,
-  );
   final palette = paletteIndex == 0
       ? customPalette
       : rollPalettes[paletteIndex].colors;
-  if (palette.length == 1) return palette.single;
-  final step = 1 + (hash ~/ palette.length) % (palette.length - 1);
-  return palette[(hash + paletteSeed * step) % palette.length];
+  if (palette.isEmpty) throw ArgumentError.value(palette, 'palette');
+  final random = math.Random(paletteSeed);
+  final classSlots = <String, int>{};
+  final sourceSlots = <String, int>{};
+  for (final meeting in timetable.meetings) {
+    var slot = classSlots[meeting.sourceName];
+    if (slot == null) {
+      final overlaps = <int>{};
+      for (final neighbor in timetable.meetings) {
+        if (neighbor.sourceId == meeting.sourceId) continue;
+        if ((neighbor.weekday - meeting.weekday).abs() == 1 &&
+            _periodsOverlap(meeting, neighbor)) {
+          final neighborSlot =
+              sourceSlots[neighbor.sourceId] ?? classSlots[neighbor.sourceName];
+          if (neighborSlot != null) overlaps.add(neighborSlot);
+        } else if (neighbor.weekday == meeting.weekday &&
+            (neighbor.lastPeriod + 1 == meeting.firstPeriod ||
+                meeting.lastPeriod + 1 == neighbor.firstPeriod)) {
+          final neighborSlot = sourceSlots[neighbor.sourceId];
+          if (neighborSlot != null) overlaps.add(neighborSlot);
+        }
+      }
+      var available = [
+        for (var index = 0; index < palette.length; index++)
+          if (!overlaps.contains(index)) index,
+      ];
+      if (available.isEmpty) {
+        available = List.generate(palette.length, (index) => index);
+      }
+      slot = available[random.nextInt(available.length)];
+      classSlots[meeting.sourceName] = slot;
+    }
+    sourceSlots[meeting.sourceId] = slot;
+  }
+  return Map.unmodifiable({
+    for (final meeting in timetable.meetings)
+      meeting.sourceId:
+          courseAppearances[meeting.sourceId]?.color ??
+          palette[sourceSlots[meeting.sourceId]!],
+  });
 }
+
+bool _periodsOverlap(Course left, Course right) =>
+    left.firstPeriod <= right.lastPeriod &&
+    right.firstPeriod <= left.lastPeriod;

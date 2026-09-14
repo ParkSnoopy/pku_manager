@@ -323,7 +323,7 @@ final class AppearanceController extends ChangeNotifier {
           : appearance;
       if (!next.isEmpty) updated[entry.key] = next;
     }
-    final nextSeed = _settings.paletteSeed + Random.secure().nextInt(4) + 1;
+    final nextSeed = Random.secure().nextInt(0x80000000);
     _set(_settings.copyWith(paletteSeed: nextSeed), courseAppearances: updated);
   }
 
