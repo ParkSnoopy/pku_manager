@@ -8,6 +8,46 @@ import 'package:pku_manager/features/calendar/calendar_page.dart';
 import 'package:pku_manager/l10n/app_strings.dart';
 
 void main() {
+  testWidgets('mobile calendar shows one week with days stacked vertically', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = CalendarScheduleController(
+      MemoryCalendarScheduleStore(),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppStrings.supportedLocales,
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        home: CalendarPage(
+          now: DateTime.utc(2026, 9, 7),
+          controller: controller,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final pageView = tester.widget<PageView>(find.byType(PageView));
+    expect(pageView.controller!.viewportFraction, 1);
+    final monday = tester.getRect(
+      find.byKey(const ValueKey('calendar-day-2026-9-7')),
+    );
+    final sunday = tester.getRect(
+      find.byKey(const ValueKey('calendar-day-2026-9-13')),
+    );
+    expect(monday.left, sunday.left);
+    expect(monday.width, sunday.width);
+    expect(monday.top, lessThan(sunday.top));
+    expect(find.text('Monday 7'), findsOneWidget);
+    expect(find.text('Sunday 13'), findsOneWidget);
+  });
+
   testWidgets('real schedule color picker opens in Korean', (tester) async {
     final controller = CalendarScheduleController(
       MemoryCalendarScheduleStore(),

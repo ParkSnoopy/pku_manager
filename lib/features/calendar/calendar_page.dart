@@ -35,6 +35,7 @@ class _CalendarPageState extends State<CalendarPage> {
   late DateTime _month = _beijingDate(widget.now);
   late DateTime _baseWeek;
   late final PageController _weekController;
+  late final PageController _mobileWeekController;
   double _pointerScrollAccumulator = 0;
   int? _pointerScrollTarget;
   int _scrollRevision = 0;
@@ -57,6 +58,10 @@ class _CalendarPageState extends State<CalendarPage> {
       initialPage: _initialWeek + _visibleRows ~/ 2,
       viewportFraction: 1 / _visibleRows,
     );
+    final currentWeek = _month.subtract(Duration(days: _month.weekday - 1));
+    _mobileWeekController = PageController(
+      initialPage: currentWeek.difference(_baseWeek).inDays ~/ 7,
+    );
     widget.controller.addListener(_scheduleChanged);
     _focusSchedule();
   }
@@ -77,6 +82,7 @@ class _CalendarPageState extends State<CalendarPage> {
   void dispose() {
     widget.controller.removeListener(_scheduleChanged);
     _weekController.dispose();
+    _mobileWeekController.dispose();
     super.dispose();
   }
 
@@ -94,21 +100,26 @@ class _CalendarPageState extends State<CalendarPage> {
     final target = _beijingDate(schedule.startsAt);
     final first = DateTime.utc(target.year, target.month);
     final visibleStart = first.subtract(Duration(days: first.weekday - 1));
-    final page =
-        visibleStart.difference(_baseWeek).inDays ~/ 7 + _visibleRows ~/ 2;
+    final week = visibleStart.difference(_baseWeek).inDays ~/ 7;
+    final desktopPage = week + _visibleRows ~/ 2;
     _month = target;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_weekController.hasClients && page >= 0 && page < _weekCount) {
-        _weekController.jumpToPage(page);
+      if (_weekController.hasClients &&
+          desktopPage >= 0 &&
+          desktopPage < _weekCount) {
+        _weekController.jumpToPage(desktopPage);
+      }
+      if (_mobileWeekController.hasClients && week >= 0 && week < _weekCount) {
+        _mobileWeekController.jumpToPage(week);
       }
     });
   }
 
-  void _updateSuperiorMonth(int centerVisibleWeek) {
-    final firstVisibleWeek = centerVisibleWeek - _visibleRows ~/ 2;
+  void _updateSuperiorMonth(int centerVisibleWeek, int visibleRows) {
+    final firstVisibleWeek = centerVisibleWeek - visibleRows ~/ 2;
     final firstDate = _baseWeek.add(Duration(days: firstVisibleWeek * 7));
     final counts = <(int, int), int>{};
-    for (var day = 0; day < _visibleRows * 7; day++) {
+    for (var day = 0; day < visibleRows * 7; day++) {
       final date = firstDate.add(Duration(days: day));
       counts.update(
         (date.year, date.month),
@@ -116,7 +127,7 @@ class _CalendarPageState extends State<CalendarPage> {
         ifAbsent: () => 1,
       );
     }
-    final center = firstDate.add(const Duration(days: 17));
+    final center = firstDate.add(Duration(days: visibleRows * 7 ~/ 2));
     final superior = counts.entries.reduce((left, right) {
       if (left.value != right.value) {
         return left.value > right.value ? left : right;
@@ -130,32 +141,36 @@ class _CalendarPageState extends State<CalendarPage> {
     }
   }
 
-  void _handlePointerSignal(PointerSignalEvent event) {
-    if (event is! PointerScrollEvent || !_weekController.hasClients) return;
+  void _handlePointerSignal(
+    PointerSignalEvent event,
+    PageController controller,
+    int visibleRows,
+  ) {
+    if (event is! PointerScrollEvent || !controller.hasClients) return;
     final delta = event.scrollDelta.dy;
     if (delta == 0) return;
     event.respond(allowPlatformDefault: false);
     final pageThreshold =
-        _weekController.position.viewportDimension /
-        _visibleRows *
+        controller.position.viewportDimension /
+        visibleRows *
         _pointerScrollThresholdInWeeks;
     _pointerScrollAccumulator += delta;
     final weeks = (_pointerScrollAccumulator / pageThreshold).truncate();
     if (weeks == 0) return;
     _pointerScrollAccumulator -= weeks * pageThreshold;
-    _animateByWeeks(weeks);
+    _animateByWeeks(controller, weeks);
   }
 
-  void _animateByWeeks(int weeks) {
+  void _animateByWeeks(PageController controller, int weeks) {
     final current =
-        _pointerScrollTarget ?? _weekController.page?.round() ?? _initialWeek;
-    _animateToWeek(current + weeks);
+        _pointerScrollTarget ?? controller.page?.round() ?? _initialWeek;
+    _animateToWeek(controller, current + weeks);
   }
 
-  void _animateToWeek(int week) {
+  void _animateToWeek(PageController controller, int week) {
     _pointerScrollTarget = week.clamp(0, _weekCount - 1);
     final revision = ++_scrollRevision;
-    _weekController
+    controller
         .animateToPage(
           _pointerScrollTarget!,
           duration: const Duration(milliseconds: 180),
@@ -174,21 +189,24 @@ class _CalendarPageState extends State<CalendarPage> {
     _scrollRevision++;
   }
 
-  void _handleVerticalDragUpdate(DragUpdateDetails details) {
-    if (!_weekController.hasClients) return;
-    final position = _weekController.position;
+  void _handleVerticalDragUpdate(
+    DragUpdateDetails details,
+    PageController controller,
+  ) {
+    if (!controller.hasClients) return;
+    final position = controller.position;
     final target =
         (position.pixels - (details.primaryDelta ?? 0) * _dragSensitivity)
             .clamp(position.minScrollExtent, position.maxScrollExtent)
             .toDouble();
-    _weekController.jumpTo(target);
+    controller.jumpTo(target);
   }
 
-  void _handleVerticalDragEnd(DragEndDetails _) {
-    if (!_weekController.hasClients) return;
-    final page = _weekController.page;
+  void _handleVerticalDragEnd(DragEndDetails _, PageController controller) {
+    if (!controller.hasClients) return;
+    final page = controller.page;
     if (page == null) return;
-    _animateToWeek(page.round());
+    _animateToWeek(controller, page.round());
   }
 
   Future<void> _editSchedule(
@@ -245,6 +263,9 @@ class _CalendarPageState extends State<CalendarPage> {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final today = _beijingDate(widget.now);
+    final mobile = MediaQuery.sizeOf(context).width < 600;
+    final visibleRows = mobile ? 1 : _visibleRows;
+    final controller = mobile ? _mobileWeekController : _weekController;
     return Material(
       key: const ValueKey('calendar-page'),
       color: Theme.of(context).colorScheme.surface,
@@ -266,36 +287,43 @@ class _CalendarPageState extends State<CalendarPage> {
               ],
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                for (var day = 1; day <= 7; day++)
-                  Expanded(
-                    child: Text(
-                      strings.weekday(day).substring(0, 1),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      style: Theme.of(context).textTheme.labelLarge,
+            if (!mobile) ...[
+              Row(
+                children: [
+                  for (var day = 1; day <= 7; day++)
+                    Expanded(
+                      child: Text(
+                        strings.weekday(day).substring(0, 1),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
             Expanded(
               child: Listener(
-                onPointerSignal: _handlePointerSignal,
+                onPointerSignal: (event) =>
+                    _handlePointerSignal(event, controller, visibleRows),
                 child: GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onVerticalDragStart: _handleVerticalDragStart,
-                  onVerticalDragUpdate: _handleVerticalDragUpdate,
-                  onVerticalDragEnd: _handleVerticalDragEnd,
+                  onVerticalDragUpdate: (details) =>
+                      _handleVerticalDragUpdate(details, controller),
+                  onVerticalDragEnd: (details) =>
+                      _handleVerticalDragEnd(details, controller),
                   child: PageView.builder(
                     key: const ValueKey('calendar-month-grid'),
-                    controller: _weekController,
+                    controller: controller,
                     physics: const NeverScrollableScrollPhysics(),
                     scrollDirection: Axis.vertical,
                     itemCount: _weekCount,
-                    onPageChanged: _updateSuperiorMonth,
-                    itemBuilder: (context, weekIndex) => Row(
+                    onPageChanged: (week) =>
+                        _updateSuperiorMonth(week, visibleRows),
+                    itemBuilder: (context, weekIndex) => Flex(
+                      direction: mobile ? Axis.vertical : Axis.horizontal,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         for (var day = 0; day < 7; day++)
@@ -314,6 +342,9 @@ class _CalendarPageState extends State<CalendarPage> {
                                 return _CalendarDay(
                                   date: date,
                                   today: today,
+                                  weekday: mobile
+                                      ? strings.weekday(day + 1)
+                                      : null,
                                   schedules: schedules,
                                   focusedScheduleId: widget.focusedScheduleId,
                                   onAdd: () => _editSchedule(date),
@@ -341,6 +372,7 @@ class _CalendarDay extends StatelessWidget {
   const _CalendarDay({
     required this.date,
     required this.today,
+    required this.weekday,
     required this.schedules,
     required this.focusedScheduleId,
     required this.onAdd,
@@ -350,6 +382,7 @@ class _CalendarDay extends StatelessWidget {
 
   final DateTime date;
   final DateTime today;
+  final String? weekday;
   final List<CalendarSchedule> schedules;
   final int? focusedScheduleId;
   final VoidCallback onAdd;
@@ -396,7 +429,9 @@ class _CalendarDay extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(
-                      '${date.day}',
+                      weekday == null ? '${date.day}' : '$weekday ${date.day}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: colors.onSurface,
                         fontSize: 14,
