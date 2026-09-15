@@ -116,6 +116,14 @@ void main() {
     }
   });
 
+  test('exported timetable without a Sunday column is imported', () {
+    final c = parser.parseCells(bytes, [
+      ['节数', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
+      row('第一节', 'Synthetic Lab(Room A)每周').take(7).toList(),
+    ]);
+    expect(c.records.single.meeting.name, 'Synthetic Lab');
+  });
+
   for (final note in [
     '习题课上课时间：每周四8-9，上课教室：Room B',
     '习题课双周四8-9节，教室：Room B',

@@ -47,12 +47,15 @@ class ScheduleXlsParser implements ScheduleDecoder {
     String normalizeHeader(String value) =>
         value.trim().replaceFirst(RegExp(r'^周'), '星期').replaceAll('星期天', '星期日');
     final headers = cells.map((r) => r.map(normalizeHeader).toList()).toList();
-    final header = headers.indexWhere((r) => days.every(r.contains));
+    final header = headers.indexWhere((r) => days.take(5).every(r.contains));
     if (header < 0) {
-      throw const FormatException('Missing Monday–Sunday timetable header');
+      throw const FormatException('Missing Monday–Friday timetable header');
     }
-    final columns = days.map(headers[header].indexOf).toList();
-    if (days.any((day) => headers[header].where((v) => v == day).length != 1)) {
+    final columns = days
+        .where(headers[header].contains)
+        .map(headers[header].indexOf)
+        .toList();
+    if (days.any((day) => headers[header].where((v) => v == day).length > 1)) {
       throw const FormatException('Duplicate weekday column');
     }
     var indexColumn = headers[header].indexOf('节数');
