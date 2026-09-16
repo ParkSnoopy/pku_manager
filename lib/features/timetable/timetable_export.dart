@@ -508,10 +508,11 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           lineHeight: 1.5,
         );
         var contentTop = item.top + inset + nameHeight;
-        if (meeting.room.isNotEmpty) {
+        final metadata = _courseMetadata(meeting);
+        if (metadata.isNotEmpty) {
           _drawReferenceText(
             canvas,
-            '  ${meeting.room}',
+            metadata,
             ui.Rect.fromLTWH(
               item.left + inset,
               contentTop,
@@ -573,20 +574,25 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
 
 String _xlsxCourseValue(List<Course> meetings, int role) => switch (role) {
   0 => meetings.map((meeting) => meeting.displayName).join('\n'),
-  1 =>
-    meetings
-        .map((meeting) => meeting.room.isEmpty ? '' : '  ${meeting.room}')
-        .join('\n'),
+  1 => meetings.map(_courseMetadata).join('\n'),
   3 => meetings.map((meeting) => meeting.note).join('\n'),
   _ => '',
 };
 
 String _courseText(Course meeting) => [
   meeting.displayName,
-  if (meeting.room.isNotEmpty) '  ${meeting.room}',
+  if (_courseMetadata(meeting).isNotEmpty) _courseMetadata(meeting),
   if (meeting.note.isNotEmpty) '',
   if (meeting.note.isNotEmpty) meeting.note,
 ].join('\n');
+
+String _courseMetadata(Course meeting) {
+  final values = [
+    if (meeting.room.trim().isNotEmpty) meeting.room.trim(),
+    if (meeting.frequencyText.trim().isNotEmpty) meeting.frequencyText.trim(),
+  ];
+  return values.isEmpty ? '' : '  (${values.join(', ')})';
+}
 
 String _xlsxFontFamily(String family) =>
     family.startsWith('PKU ') ? family.substring(4) : family;

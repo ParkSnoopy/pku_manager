@@ -183,13 +183,13 @@ void main() {
       );
       expect(
         sheet.cell(CellIndex.indexByString('B2')).value.toString(),
-        'Algo\n  Room 101\n\nPrepare report',
+        'Algo\n  (Room 101, 每周)\n\nPrepare report',
       );
       expect(sheet.cell(CellIndex.indexByString('B3')).value, isNull);
       expect(sheet.cell(CellIndex.indexByString('B6')).value, isNull);
       expect(
         sheet.cell(CellIndex.indexByString('F6')).value.toString(),
-        'Physics\n  Lab',
+        'Physics\n  (Lab, 双周)',
       );
       expect(
         sheet
