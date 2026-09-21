@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/course.dart';
 import '../../domain/timetable.dart';
 import '../../domain/week_frequency.dart';
 import '../../ui/super_otc_font.dart';
@@ -48,6 +49,32 @@ Color themedTimetableColor(
 
 Color timetableContrastForeground(Color background) =>
     background.computeLuminance() > .5 ? Colors.black : Colors.white;
+
+Color timetableCourseForeground(
+  Color background, {
+  required Brightness brightness,
+  required bool autoTextColor,
+}) => autoTextColor
+    ? timetableContrastForeground(background)
+    : brightness == Brightness.dark
+    ? Colors.white
+    : Colors.black;
+
+String timetableCourseMetadata(Course meeting) {
+  final values = [
+    if (meeting.room.trim().isNotEmpty) meeting.room.trim(),
+    if (meeting.frequencyText.trim().isNotEmpty) meeting.frequencyText.trim(),
+  ];
+  return values.isEmpty ? '' : '  (${values.join(', ')})';
+}
+
+String timetableCourseText(Course meeting) => [
+  meeting.displayName,
+  if (timetableCourseMetadata(meeting).isNotEmpty)
+    timetableCourseMetadata(meeting),
+  if (meeting.note.isNotEmpty) '',
+  if (meeting.note.isNotEmpty) meeting.note,
+].join('\n');
 
 final class TimetableGeometry {
   const TimetableGeometry(this.periodCount);

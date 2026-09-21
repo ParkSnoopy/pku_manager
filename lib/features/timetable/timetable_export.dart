@@ -43,6 +43,7 @@ abstract interface class TimetablePngEncoder {
     String fontFamily = timetableSansFont,
     ui.FontWeight fontWeight = ui.FontWeight.w400,
     ui.Color indexColor = timetableIndexSurface,
+    bool autoTextColor = true,
     ui.Brightness brightness = ui.Brightness.light,
     ui.Color surfaceColor = timetableCanvas,
   });
@@ -104,6 +105,7 @@ final class TimetableExporter {
     String fontFamily = timetableSansFont,
     ui.FontWeight fontWeight = ui.FontWeight.w400,
     ui.Color indexColor = timetableIndexSurface,
+    bool autoTextColor = true,
     ui.Brightness brightness = ui.Brightness.light,
     ui.Color surfaceColor = timetableCanvas,
   }) async {
@@ -119,6 +121,7 @@ final class TimetableExporter {
         fontFamily,
         fontWeight,
         indexColor,
+        autoTextColor,
         brightness,
         surfaceColor,
       ),
@@ -133,6 +136,7 @@ final class TimetableExporter {
         fontFamily: fontFamily,
         fontWeight: fontWeight,
         indexColor: indexColor,
+        autoTextColor: autoTextColor,
         brightness: brightness,
         surfaceColor: surfaceColor,
       ),
@@ -162,6 +166,7 @@ final class TimetableExporter {
     String fontFamily,
     ui.FontWeight fontWeight,
     ui.Color indexColor,
+    bool autoTextColor,
     ui.Brightness brightness,
     ui.Color surfaceColor,
   ) {
@@ -252,7 +257,11 @@ final class TimetableExporter {
             ? brightness == ui.Brightness.dark
                   ? const ui.Color(0xffffffff)
                   : const ui.Color(0xff000000)
-            : timetableContrastForeground(courseColor);
+            : timetableCourseForeground(
+                courseColor,
+                brightness: brightness,
+                autoTextColor: autoTextColor,
+              );
         final outer = ExcelColor.fromHexString('#FF92918D');
         final thin = ExcelColor.fromHexString('#FFE6DFD8');
         cell.cellStyle = CellStyle(
@@ -337,7 +346,7 @@ final class TimetableExporter {
         sheet.merge(
           start,
           CellIndex.indexByColumnRow(columnIndex: day, rowIndex: endRow),
-          customValue: TextCellValue(_courseText(meeting)),
+          customValue: TextCellValue(timetableCourseText(meeting)),
         );
         sheet.cell(start).cellStyle = style;
       }
@@ -361,6 +370,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
     String fontFamily = timetableSansFont,
     ui.FontWeight fontWeight = ui.FontWeight.w400,
     ui.Color indexColor = timetableIndexSurface,
+    bool autoTextColor = true,
     ui.Brightness brightness = ui.Brightness.light,
     ui.Color surfaceColor = timetableCanvas,
   }) async {
@@ -469,7 +479,11 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           surface: surfaceColor,
         );
         canvas.drawRect(item, ui.Paint()..color = background);
-        final foreground = timetableContrastForeground(background);
+        final foreground = timetableCourseForeground(
+          background,
+          brightness: brightness,
+          autoTextColor: autoTextColor,
+        );
         const inset = timetableCourseContentPadding;
         final nameHeight = timetableCourseNameFontSize * fontScale * 1.5;
         final roomHeight = timetableClassroomFontSize * fontScale * 1.5;
@@ -508,7 +522,7 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
           lineHeight: 1.5,
         );
         var contentTop = item.top + inset + nameHeight;
-        final metadata = _courseMetadata(meeting);
+        final metadata = timetableCourseMetadata(meeting);
         if (metadata.isNotEmpty) {
           _drawReferenceText(
             canvas,
@@ -574,25 +588,10 @@ final class CanvasTimetablePngEncoder implements TimetablePngEncoder {
 
 String _xlsxCourseValue(List<Course> meetings, int role) => switch (role) {
   0 => meetings.map((meeting) => meeting.displayName).join('\n'),
-  1 => meetings.map(_courseMetadata).join('\n'),
+  1 => meetings.map(timetableCourseMetadata).join('\n'),
   3 => meetings.map((meeting) => meeting.note).join('\n'),
   _ => '',
 };
-
-String _courseText(Course meeting) => [
-  meeting.displayName,
-  if (_courseMetadata(meeting).isNotEmpty) _courseMetadata(meeting),
-  if (meeting.note.isNotEmpty) '',
-  if (meeting.note.isNotEmpty) meeting.note,
-].join('\n');
-
-String _courseMetadata(Course meeting) {
-  final values = [
-    if (meeting.room.trim().isNotEmpty) meeting.room.trim(),
-    if (meeting.frequencyText.trim().isNotEmpty) meeting.frequencyText.trim(),
-  ];
-  return values.isEmpty ? '' : '  (${values.join(', ')})';
-}
 
 String _xlsxFontFamily(String family) =>
     family.startsWith('PKU ') ? family.substring(4) : family;

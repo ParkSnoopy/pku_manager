@@ -48,6 +48,7 @@ final class AppearanceSettings {
     this.fontWeightValue = 400,
     this.timetableFontScale = 1,
     this.timetableIndexColor = const Color(0xffe8e0d2),
+    this.autoTextColor = true,
     this.darkMode = false,
     this.blendAccentIntoTheme = false,
     this.customPalette = defaultCustomPalette,
@@ -64,6 +65,7 @@ final class AppearanceSettings {
   final int fontWeightValue;
   final double timetableFontScale;
   final Color timetableIndexColor;
+  final bool autoTextColor;
   final bool darkMode;
   final bool blendAccentIntoTheme;
   final List<Color> customPalette;
@@ -80,6 +82,7 @@ final class AppearanceSettings {
     int? fontWeightValue,
     double? timetableFontScale,
     Color? timetableIndexColor,
+    bool? autoTextColor,
     bool? darkMode,
     bool? blendAccentIntoTheme,
     List<Color>? customPalette,
@@ -96,6 +99,7 @@ final class AppearanceSettings {
     fontWeightValue: fontWeightValue ?? this.fontWeightValue,
     timetableFontScale: timetableFontScale ?? this.timetableFontScale,
     timetableIndexColor: timetableIndexColor ?? this.timetableIndexColor,
+    autoTextColor: autoTextColor ?? this.autoTextColor,
     darkMode: darkMode ?? this.darkMode,
     blendAccentIntoTheme: blendAccentIntoTheme ?? this.blendAccentIntoTheme,
     customPalette: customPalette ?? this.customPalette,
@@ -192,6 +196,7 @@ final class AppearanceController extends ChangeNotifier {
   FontWeight get fontWeight => FontWeight.values[fontWeightValue ~/ 100 - 1];
   double get timetableFontScale => _settings.timetableFontScale;
   Color get timetableIndexColor => _settings.timetableIndexColor;
+  bool get autoTextColor => _settings.autoTextColor;
   bool get darkMode => _settings.darkMode;
   bool get blendAccentIntoTheme => _settings.blendAccentIntoTheme;
   List<Color> get customPalette => List.unmodifiable(_settings.customPalette);
@@ -267,6 +272,9 @@ final class AppearanceController extends ChangeNotifier {
 
   void setTimetableIndexColor(Color value) =>
       _set(_settings.copyWith(timetableIndexColor: value));
+
+  void setAutoTextColor(bool value) =>
+      _set(_settings.copyWith(autoTextColor: value));
 
   void setDarkMode(bool value) => _set(_settings.copyWith(darkMode: value));
 

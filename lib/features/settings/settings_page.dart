@@ -247,6 +247,13 @@ class SettingsPage extends StatelessWidget {
               label: Text(AppStrings.of(context).text(AppText.chooseColor)),
             ),
           ),
+          SwitchListTile(
+            key: const ValueKey('auto-text-color'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(AppStrings.of(context).text(AppText.autoTextColor)),
+            value: controller.autoTextColor,
+            onChanged: controller.setAutoTextColor,
+          ),
           const SizedBox(height: 32),
           Text(
             AppStrings.of(context).text(AppText.font),

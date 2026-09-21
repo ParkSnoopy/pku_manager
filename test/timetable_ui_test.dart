@@ -109,6 +109,7 @@ final class _PngEncoder implements TimetablePngEncoder {
   String? fontFamily;
   FontWeight? fontWeight;
   Color? indexColor;
+  bool? autoTextColor;
   Brightness? brightness;
   Color? surfaceColor;
 
@@ -124,6 +125,7 @@ final class _PngEncoder implements TimetablePngEncoder {
     String fontFamily = timetableSansFont,
     FontWeight fontWeight = FontWeight.w400,
     Color indexColor = timetableIndexSurface,
+    bool autoTextColor = true,
     Brightness brightness = Brightness.light,
     Color surfaceColor = timetableCanvas,
   }) async {
@@ -131,6 +133,7 @@ final class _PngEncoder implements TimetablePngEncoder {
     this.fontFamily = fontFamily;
     this.fontWeight = fontWeight;
     this.indexColor = indexColor;
+    this.autoTextColor = autoTextColor;
     this.brightness = brightness;
     this.surfaceColor = surfaceColor;
     return Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -392,6 +395,13 @@ void main() {
         find.byKey(const ValueKey('meeting-content-first')),
       );
       expect(content.padding, const EdgeInsets.all(10));
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('meeting-cell-first')),
+          matching: find.text('  (Room 1, 每周)'),
+        ),
+        findsOneWidget,
+      );
       final note = tester.widget<Text>(
         find.descendant(
           of: find.byKey(const ValueKey('meeting-cell-first')),
@@ -500,8 +510,19 @@ void main() {
       expect(pngEncoder.fontFamily, 'SimSun');
       expect(pngEncoder.fontWeight, FontWeight.w400);
       expect(pngEncoder.indexColor, timetableIndexSurface);
+      expect(pngEncoder.autoTextColor, isTrue);
       expect(pngEncoder.brightness, Brightness.light);
       expect(pngEncoder.surfaceColor, displayedSurface);
+
+      appearance.setAutoTextColor(false);
+      await tester.pump();
+      await tester.tap(find.byTooltip('Export'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Export PNG'));
+      await tester.pumpAndSettle();
+      expect(pngEncoder.autoTextColor, isFalse);
+      appearance.setAutoTextColor(true);
+      await tester.pump();
 
       writer.fail = true;
       await tester.tap(find.byTooltip('Export'));
@@ -921,6 +942,19 @@ void main() {
             .color,
         Colors.white,
       );
+      appearance.setAutoTextColor(false);
+      await tester.pump();
+      expect(
+        tester
+            .widget<DefaultTextStyle>(
+              find.byKey(const ValueKey('meeting-text-style-first')),
+            )
+            .style
+            .color,
+        Colors.black,
+      );
+      appearance.setAutoTextColor(true);
+      await tester.pump();
       expect(find.byKey(const ValueKey('manual-color-first')), findsOneWidget);
       final decoration = tester.widget<DecoratedBox>(
         find.byKey(const ValueKey('meeting-outline-first')),

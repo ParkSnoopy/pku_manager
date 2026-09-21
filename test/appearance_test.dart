@@ -134,6 +134,7 @@ void main() {
     expect(controller.timetableFontScale, 1);
     expect(controller.timetableFontFamily, TimetableFontFamily.app);
     expect(controller.timetableIndexColor, const Color(0xffe8e0d2));
+    expect(controller.autoTextColor, isTrue);
     expect(controller.darkMode, isFalse);
     expect(controller.blendAccentIntoTheme, isFalse);
     expect(controller.applicationCloseAction, ApplicationCloseAction.closeApp);
@@ -170,6 +171,7 @@ void main() {
     controller.setTimetableFontScale(1.6);
     controller.setTimetableFontFamily(TimetableFontFamily.songTi);
     controller.setTimetableIndexColor(const Color(0xff112233));
+    controller.setAutoTextColor(false);
     controller.setDarkMode(true);
     controller.setBlendAccentIntoTheme(true);
     controller.setApplicationCloseAction(
@@ -213,6 +215,7 @@ void main() {
     expect(restored.timetableFontScale, 1.6);
     expect(restored.timetableFontFamily, TimetableFontFamily.songTi);
     expect(restored.timetableIndexColor, const Color(0xff112233));
+    expect(restored.autoTextColor, isFalse);
     expect(restored.darkMode, isTrue);
     expect(restored.blendAccentIntoTheme, isTrue);
     expect(
@@ -494,7 +497,10 @@ void main() {
       find.byKey(const ValueKey('timetable-index-color')),
     );
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('auto-text-color')), findsNothing);
+    expect(controller.autoTextColor, isTrue);
+    await tester.tap(find.byKey(const ValueKey('auto-text-color')));
+    await tester.pump();
+    expect(controller.autoTextColor, isFalse);
     await tester.tap(find.byKey(const ValueKey('timetable-index-color')));
     await tester.pump();
     expect(controller.timetableIndexColor, const Color(0xff234567));
