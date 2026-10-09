@@ -115,7 +115,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(env -u GDK_BACKEND WAYLAND_DISPLAY=missing APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a timeout 15s \
+          test "$(APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a timeout 15s \
             "build/appimage/PKU_Manager_v${VERSION}-amd64-Linux.AppImage" \
             > build/appimage/runtime.log 2>&1; printf '%s' "$?")" = 124
       - name: bash - Launch Firejail AppImage Entrypoint
@@ -130,7 +130,7 @@ jobs:
           test -f "$APPDIR/lib/libayatana-ido3-0.4.so.0"
           test -f "$APPDIR/lib/libdbusmenu-glib.so.4"
           test -f "$APPDIR/lib/libdbusmenu-gtk3.so.4"
-          test "$(GDK_BACKEND=x11 LD_DEBUG=libs xvfb-run -a timeout 15s \
+          test "$(LD_DEBUG=libs xvfb-run -a timeout 15s \
             "$APPDIR/pku_manager" \
             > build/appimage/firejail-entrypoint.log 2>&1; printf '%s' "$?")" = 124
           grep -F "calling init: $APPDIR/lib/libayatana-appindicator3.so.1" build/appimage/firejail-entrypoint.log
