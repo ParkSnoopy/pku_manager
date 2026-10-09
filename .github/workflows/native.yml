@@ -7,10 +7,8 @@ on:
       - main
 
 permissions:
+  actions: read
   contents: read
-
-env:
-  GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
 concurrency:
   group: native-release-${{ github.ref }}
@@ -25,17 +23,19 @@ jobs:
       build_number: ${{ steps.release.outputs.build_number }}
       tag: ${{ steps.release.outputs.tag }}
     steps:
-      - name: actions/checkout@v4 - Check Out Source
-        uses: actions/checkout@v4
+      - name: actions/checkout@v7 - Check Out Source
+        uses: actions/checkout@v7
         with:
           lfs: false
-          token: ${{ env.GITHUB_TOKEN }}
+          token: ${{ github.token }}
       - id: release
         name: bash - Read Release Version
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$GITHUB_TOKEN"
+          test -n "$GH_TOKEN"
           gh api "repos/$GITHUB_REPOSITORY" >/dev/null
           VERSION="$(grep -m1 '^version: ' pubspec.yaml)"
           VERSION="${VERSION#version: }"
@@ -56,11 +56,11 @@ jobs:
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
-      - name: actions/checkout@v4 - Check Out Source
-        uses: actions/checkout@v4
+      - name: actions/checkout@v7 - Check Out Source
+        uses: actions/checkout@v7
         with:
           lfs: false
-          token: ${{ env.GITHUB_TOKEN }}
+          token: ${{ github.token }}
       - name: bash - Download Noto CJK Fonts
         shell: bash
         run: |
@@ -138,8 +138,8 @@ jobs:
           grep -F "calling init: $APPDIR/lib/libayatana-ido3-0.4.so.0" build/appimage/firejail-entrypoint.log
           grep -F "calling init: $APPDIR/lib/libdbusmenu-glib.so.4" build/appimage/firejail-entrypoint.log
           grep -F "calling init: $APPDIR/lib/libdbusmenu-gtk3.so.4" build/appimage/firejail-entrypoint.log
-      - name: actions/upload-artifact@v4 - Upload Linux AppImage
-        uses: actions/upload-artifact@v4
+      - name: actions/upload-artifact@v7 - Upload Linux AppImage
+        uses: actions/upload-artifact@v7
         with:
           name: PKU_Manager_v${{ needs.prepare.outputs.version }}-amd64-Linux.AppImage
           path: build/appimage/PKU_Manager_v${{ needs.prepare.outputs.version }}-amd64-Linux.AppImage
@@ -153,11 +153,11 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
       BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
     steps:
-      - name: actions/checkout@v4 - Check Out Source
-        uses: actions/checkout@v4
+      - name: actions/checkout@v7 - Check Out Source
+        uses: actions/checkout@v7
         with:
           lfs: false
-          token: ${{ env.GITHUB_TOKEN }}
+          token: ${{ github.token }}
       - name: bash - Restore Android Release Key
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -227,8 +227,8 @@ jobs:
         if: always()
         shell: bash
         run: rm -f "$RUNNER_TEMP/pku-manager-release.jks"
-      - name: actions/upload-artifact@v4 - Upload Android APK
-        uses: actions/upload-artifact@v4
+      - name: actions/upload-artifact@v7 - Upload Android APK
+        uses: actions/upload-artifact@v7
         with:
           name: PKU_Manager_v${{ needs.prepare.outputs.version }}-arm64-Android.apk
           path: build/app/outputs/flutter-apk/PKU_Manager_v${{ needs.prepare.outputs.version }}-arm64-Android.apk
@@ -242,11 +242,11 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
       FLUTTER_XCODE_ARCHS: arm64
     steps:
-      - name: actions/checkout@v4 - Check Out Source
-        uses: actions/checkout@v4
+      - name: actions/checkout@v7 - Check Out Source
+        uses: actions/checkout@v7
         with:
           lfs: false
-          token: ${{ env.GITHUB_TOKEN }}
+          token: ${{ github.token }}
       - name: bash - Download Noto CJK Fonts
         shell: bash
         run: |
@@ -282,20 +282,20 @@ jobs:
           ditto -c -k --keepParent build/macos/Build/Products/Release/pku_manager.app "build/PKU_Manager_v${VERSION}-arm64-macOS.zip"
           ditto -c -k --keepParent build/ios/iphoneos/Runner.app "build/PKU_Manager_v${VERSION}-arm64-iOS.zip"
           ditto -c -k --keepParent build/ios/iphonesimulator/Runner.app "build/PKU_Manager_v${VERSION}-arm64-iOS_Simulator.zip"
-      - name: actions/upload-artifact@v4 - Upload macOS Bundle
-        uses: actions/upload-artifact@v4
+      - name: actions/upload-artifact@v7 - Upload macOS Bundle
+        uses: actions/upload-artifact@v7
         with:
           name: PKU_Manager_v${{ needs.prepare.outputs.version }}-arm64-macOS.zip
           path: build/PKU_Manager_v${{ needs.prepare.outputs.version }}-arm64-macOS.zip
           if-no-files-found: error
-      - name: actions/upload-artifact@v4 - Upload iOS Bundle
-        uses: actions/upload-artifact@v4
+      - name: actions/upload-artifact@v7 - Upload iOS Bundle
+        uses: actions/upload-artifact@v7
         with:
           name: PKU_Manager_v${{ needs.prepare.outputs.version }}-arm64-iOS.zip
           path: build/PKU_Manager_v${{ needs.prepare.outputs.version }}-arm64-iOS.zip
           if-no-files-found: error
-      - name: actions/upload-artifact@v4 - Upload iOS Simulator Bundle
-        uses: actions/upload-artifact@v4
+      - name: actions/upload-artifact@v7 - Upload iOS Simulator Bundle
+        uses: actions/upload-artifact@v7
         with:
           name: PKU_Manager_v${{ needs.prepare.outputs.version }}-arm64-iOS_Simulator.zip
           path: build/PKU_Manager_v${{ needs.prepare.outputs.version }}-arm64-iOS_Simulator.zip
@@ -308,11 +308,11 @@ jobs:
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
-      - name: actions/checkout@v4 - Check Out Source
-        uses: actions/checkout@v4
+      - name: actions/checkout@v7 - Check Out Source
+        uses: actions/checkout@v7
         with:
           lfs: false
-          token: ${{ env.GITHUB_TOKEN }}
+          token: ${{ github.token }}
       - name: bash - Download Noto CJK Fonts
         shell: bash
         run: |
@@ -381,8 +381,8 @@ jobs:
           if ($uninstall.ExitCode -ne 0) {
             throw "Uninstall failed with exit code $($uninstall.ExitCode)."
           }
-      - name: actions/upload-artifact@v4 - Upload Windows Installer
-        uses: actions/upload-artifact@v4
+      - name: actions/upload-artifact@v7 - Upload Windows Installer
+        uses: actions/upload-artifact@v7
         with:
           name: PKU_Manager_v${{ needs.prepare.outputs.version }}-amd64-Windows.exe
           path: packaging/windows/PKU_Manager_v${{ needs.prepare.outputs.version }}-amd64-Windows.exe
@@ -393,32 +393,33 @@ jobs:
     needs: [prepare, linux, android, apple, windows]
     runs-on: ubuntu-24.04
     permissions:
+      actions: read
       contents: write
     steps:
       - id: release_lookup
         name: bash - Test Existing Release
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ env.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.tag }}
         run: gh release view "$TAG" --repo "$GITHUB_REPOSITORY"
-      - name: actions/download-artifact@v4 - Download Release Artifacts
-        uses: actions/download-artifact@v4
+      - name: actions/download-artifact@v8 - Download Release Artifacts
+        uses: actions/download-artifact@v8
         with:
           pattern: PKU_Manager_v${{ needs.prepare.outputs.version }}-*
           path: dist
           merge-multiple: true
-          github-token: ${{ env.GITHUB_TOKEN }}
+          github-token: ${{ github.token }}
       - name: bash - Override Existing Release Assets
         if: steps.release_lookup.outcome == 'success'
         env:
-          GH_TOKEN: ${{ env.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.tag }}
         run: gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
       - name: bash - Publish New GitHub Release
         if: steps.release_lookup.outcome == 'failure'
         env:
-          GH_TOKEN: ${{ env.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.tag }}
         shell: bash
         run: |
